@@ -973,6 +973,22 @@ public enum Ui implements XMLPrefsSave {
             return "[horizontal_margin],[vertical_margin],[horizontal_padding],[vertical_padding]";
         }
     },
+    output_tray_max_height {
+        @Override
+        public String defaultValue() {
+            return "0";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.INTEGER;
+        }
+
+        @Override
+        public String info() {
+            return "Maximum height for the expanded output tray in dp. 0 keeps the default adaptive height";
+        }
+    },
     input_field_margins {
         @Override
         public String defaultValue() {

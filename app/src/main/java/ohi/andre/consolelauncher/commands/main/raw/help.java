@@ -3,7 +3,7 @@ package ohi.andre.consolelauncher.commands.main.raw;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 import ohi.andre.consolelauncher.R;
@@ -45,7 +45,11 @@ public class help implements CommandAbstraction {
     public String onNotArgEnough(ExecutePack pack, int nArgs) {
         MainPack info = (MainPack) pack;
         List<String> toPrint = new ArrayList<>(Arrays.asList(info.commandGroup.getCommandNames()));
-        toPrint.removeIf(CommandTuils::isHiddenCommandName);
+        for (Iterator<String> iterator = toPrint.iterator(); iterator.hasNext();) {
+            if (CommandTuils.isHiddenCommandName(iterator.next())) {
+                iterator.remove();
+            }
+        }
 
         Collections.sort(toPrint, Tuils::alphabeticCompare);
 

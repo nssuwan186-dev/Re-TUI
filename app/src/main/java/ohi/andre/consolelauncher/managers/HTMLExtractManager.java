@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -378,32 +379,36 @@ public class HTMLExtractManager {
                             .addHeader("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1")
                             .get();
 
-                    Response response = client.newCall(builder.build()).execute();
-
-                    if(response.code() == 429 && weatherArea) {
-                        Intent i = new Intent(UIManager.ACTION_WEATHER_DELAY);
-                        LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(i);
-
-                        return;
-                    } else if(!response.isSuccessful()) {
-                        String message = context.getString(R.string.internet_error) + Tuils.SPACE + response.code();
-
-                        if(weatherArea) {
-                            Intent i = new Intent(UIManager.ACTION_WEATHER);
-                            i.putExtra(XMLPrefsManager.VALUE_ATTRIBUTE, message);
+                    try (Response response = client.newCall(builder.build()).execute()) {
+                        if(response.code() == 429 && weatherArea) {
+                            Intent i = new Intent(UIManager.ACTION_WEATHER_DELAY);
                             LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(i);
-                        } else {
-                            output(message, context, false);
+
+                            return;
+                        } else if(!response.isSuccessful()) {
+                            String message = context.getString(R.string.internet_error) + Tuils.SPACE + response.code();
+
+                            if(weatherArea) {
+                                Intent i = new Intent(UIManager.ACTION_WEATHER);
+                                i.putExtra(XMLPrefsManager.VALUE_ATTRIBUTE, message);
+                                LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(i);
+                            } else {
+                                output(message, context, false);
+                            }
+
+                            return;
                         }
 
-                        return;
-                    }
+                        if (response.body() == null) {
+                            output(R.string.no_result, context, weatherArea);
+                            return;
+                        }
 
-                    InputStream inputStream = response.body().byteStream();
+                        InputStream inputStream = response.body().byteStream();
 
-                    CharSequence output = Tuils.span(Tuils.EMPTYSTRING, outputColor);
+                        CharSequence output = Tuils.span(Tuils.EMPTYSTRING, outputColor);
 
-                    if(weatherArea) {
+                        if(weatherArea) {
                         String json = Tuils.inputStreamToString(inputStream);
 //                        json = json.replaceAll("\"temp\":([\\d\\.]*)", "\"temp\":-4.3");
 
@@ -430,7 +435,7 @@ public class HTMLExtractManager {
                                         try {
                                             double d = Double.parseDouble(value);
                                             d = Tuils.textCalculus(d, converter);
-                                            value = String.format("%.2f", d);
+                                            value = String.format(Locale.US, "%.2f", d);
                                         } catch (Exception e) {
                                             Tuils.log(e);
                                         }
@@ -449,7 +454,7 @@ public class HTMLExtractManager {
                         Intent i = new Intent(UIManager.ACTION_WEATHER);
                         i.putExtra(XMLPrefsManager.VALUE_ATTRIBUTE, o);
                         LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(i);
-                    } else if(pathType == StoreableValue.Type.xpath) {
+                        } else if(pathType == StoreableValue.Type.xpath) {
                         HtmlCleaner cleaner = new HtmlCleaner();
                         CleanerProperties props = cleaner.getProperties();
                         props.setOmitComments(true);
@@ -478,7 +483,7 @@ public class HTMLExtractManager {
                         }
 
                         output(output, context, weatherArea, TerminalManager.CATEGORY_NO_COLOR);
-                    } else {
+                        } else {
                         Object o = JsonPath.read(inputStream, path);
 
                         if(o instanceof Map) {
@@ -521,6 +526,7 @@ public class HTMLExtractManager {
                             output(output, context, weatherArea, TerminalManager.CATEGORY_NO_COLOR);
                         } else {
                             Tuils.sendOutput(outputColor, context, o.toString());
+                        }
                         }
                     }
                 } catch (Exception e) {

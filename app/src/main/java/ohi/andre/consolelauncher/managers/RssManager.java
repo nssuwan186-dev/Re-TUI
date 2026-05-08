@@ -650,9 +650,8 @@ public class RssManager implements XMLPrefsElement {
 //                        builder.addHeader(IF_NONE_MATCH_FIELD, quotes + feed.etag + quotes);
 //                    }
 
-                    Response response = client.newCall(builder.build()).execute();
-
-                    if(response.isSuccessful() && (firstTime || response.code() != 304)) {
+                    try (Response response = client.newCall(builder.build()).execute()) {
+                        if(response.isSuccessful() && (firstTime || response.code() != 304)) {
                         ResponseBody body = response.body();
 
                         long bytes = 0;
@@ -690,11 +689,10 @@ public class RssManager implements XMLPrefsElement {
 //                        feed.etag = response.header(ETAG_FIELD);
 //                        if(feed.etag != null) feed.etag = feed.etag.replaceAll("\"", Tuils.EMPTYSTRING);
 
-                        response.close();
-
                         if(feed.show) parse(feed, true);
-                    } else {
+                        } else {
 //                        not modified
+                        }
                     }
 
                     feed.lastCheckedClient = System.currentTimeMillis();

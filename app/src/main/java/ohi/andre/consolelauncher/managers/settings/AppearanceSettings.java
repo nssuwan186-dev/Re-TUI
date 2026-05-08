@@ -80,6 +80,12 @@ public final class AppearanceSettings {
         return clampRadius(LauncherSettings.getInt(Ui.output_corner_radius));
     }
 
+    public static int outputTrayMaxHeightDp() {
+        int height = LauncherSettings.getInt(Ui.output_tray_max_height);
+        if (height <= 0) return 0;
+        return Math.min(height, 1200);
+    }
+
     public static int headerCornerRadius() {
         return clampRadius(LauncherSettings.getInt(Ui.header_corner_radius));
     }

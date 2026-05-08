@@ -611,8 +611,9 @@ public class ThemerActivity extends AppCompatActivity {
 
         Uri uri = data.getData();
         try {
-            int flags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
-            getContentResolver().takePersistableUriPermission(uri, flags);
+            if ((data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0) {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
         } catch (Exception ignored) {
         }
 

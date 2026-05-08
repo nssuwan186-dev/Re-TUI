@@ -590,8 +590,13 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
 
         Uri uri = data.getData();
         try {
-            final int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            getContentResolver().takePersistableUriPermission(uri, flags);
+            int flags = data.getFlags();
+            if ((flags & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0) {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+            if ((flags & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0) {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            }
         } catch (Exception ignored) {
         }
 

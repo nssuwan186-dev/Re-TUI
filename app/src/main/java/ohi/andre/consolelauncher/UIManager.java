@@ -883,11 +883,23 @@ public class UIManager implements OnTouchListener {
     }
 
     private int calculateExpandedTerminalTrayHeight(int rootHeight, int collapsedHeight) {
+        int expandedHeight;
         if (rootHeight <= 0) {
-            return Math.max(collapsedHeight, UIUtils.dpToPx(mContext, keyboardVisible ? 220 : 320));
+            expandedHeight = Math.max(collapsedHeight, UIUtils.dpToPx(mContext, keyboardVisible ? 220 : 320));
+        } else {
+            float trayPercent = keyboardVisible ? 0.34f : 0.48f;
+            expandedHeight = Math.max(collapsedHeight, Math.round(rootHeight * trayPercent));
         }
-        float trayPercent = keyboardVisible ? 0.34f : 0.48f;
-        return Math.max(collapsedHeight, Math.round(rootHeight * trayPercent));
+        return applyTerminalTrayMaxHeight(expandedHeight, collapsedHeight);
+    }
+
+    private int applyTerminalTrayMaxHeight(int expandedHeight, int collapsedHeight) {
+        int maxHeightDp = AppearanceSettings.outputTrayMaxHeightDp();
+        if (maxHeightDp <= 0) {
+            return expandedHeight;
+        }
+        int maxHeight = UIUtils.dpToPx(mContext, maxHeightDp);
+        return Math.max(collapsedHeight, Math.min(expandedHeight, maxHeight));
     }
 
     private void updateTerminalTrayToggleText() {
