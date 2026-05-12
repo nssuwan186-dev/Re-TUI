@@ -75,7 +75,7 @@ public class NotificationManager implements XMLPrefsElement {
 
     private XMLPrefsList values;
     private List<NotificatedApp> apps;
-    private List<Pattern> filters;
+    private List<FilterRule> filters;
     private List<XMLPrefsManager.IdValue> formats;
 
     public static NotificationManager instance = null;
@@ -145,10 +145,15 @@ public class NotificationManager implements XMLPrefsElement {
                     if (node.getNodeType() == Node.ELEMENT_NODE) {
                         Element e = (Element) node;
 
-                        Pattern pattern;
-
                         String regex = XMLPrefsManager.getStringAttribute(e, VALUE_ATTRIBUTE);
                         if (regex == null) continue;
+                        int filterId;
+                        try {
+                            filterId = e.hasAttribute(ID_ATTRIBUTE) ? Integer.parseInt(e.getAttribute(ID_ATTRIBUTE)) : -1;
+                        } catch (NumberFormatException exc) {
+                            filterId = -1;
+                        }
+                        Pattern pattern;
                         try {
                             int id = Integer.parseInt(regex);
                             pattern = RegexManager.instance.get(id).regex;
@@ -160,7 +165,7 @@ public class NotificationManager implements XMLPrefsElement {
                             }
                         }
 
-                        filters.add(pattern);
+                        filters.add(new FilterRule(filterId, regex, pattern));
                     }
                 } else if(nn.equals(FORMAT_ATTRIBUTE)) {
                     if (node.getNodeType() == Node.ELEMENT_NODE) {
@@ -278,7 +283,14 @@ public class NotificationManager implements XMLPrefsElement {
     }
 
     public static String addFilter(String pattern, int id) {
-        return XMLPrefsManager.add(new File(Tuils.getFolder(), PATH), FILTER_ATTRIBUTE, new String[] {ID_ATTRIBUTE, VALUE_ATTRIBUTE}, new String[] {String.valueOf(id), pattern});
+        File file = new File(Tuils.getFolder(), PATH);
+        int filterId = id >= 0 ? id : nextFilterId(file);
+        return XMLPrefsManager.add(file, FILTER_ATTRIBUTE, new String[] {ID_ATTRIBUTE, VALUE_ATTRIBUTE}, new String[] {String.valueOf(filterId), pattern});
+    }
+
+    public static String addLiteralFilter(String value) {
+        if(value == null || value.length() == 0) return Tuils.EMPTYSTRING;
+        return addFilter(Pattern.quote(value), -1);
     }
 
     public static String addFormat(String format, int id) {
@@ -296,10 +308,10 @@ public class NotificationManager implements XMLPrefsElement {
     public boolean match(String text) {
 //        if(pkg.equals(BuildConfig.APPLICATION_ID)) return true;
 
-        for(Pattern f : filters) {
+        for(FilterRule f : filters) {
 
-            Matcher m = f.matcher(text);
-            if(m.matches() || m.find() || text.equals(f.pattern())) {
+            Matcher m = f.pattern.matcher(text);
+            if(m.matches() || m.find() || text.equals(f.rawPattern)) {
                 return true;
             }
         }
@@ -341,8 +353,13 @@ public class NotificationManager implements XMLPrefsElement {
         if(filters.isEmpty()) {
             builder.append(" []");
         } else {
-            for(Pattern filter : filters) {
-                builder.append(Tuils.NEWLINE).append("- ").append(filter.pattern());
+            for(FilterRule filter : filters) {
+                builder.append(Tuils.NEWLINE)
+                        .append("- ");
+                if (filter.id >= 0) {
+                    builder.append("[").append(filter.id).append("] ");
+                }
+                builder.append(displayPattern(filter.rawPattern));
             }
         }
 
@@ -375,6 +392,49 @@ public class NotificationManager implements XMLPrefsElement {
         @Override
         public String toString() {
             return pkg;
+        }
+    }
+
+    private static int nextFilterId(File file) {
+        int max = -1;
+        try {
+            Object[] o = XMLPrefsManager.buildDocument(file, null);
+            if(o == null) return 0;
+            Element root = (Element) o[1];
+            NodeList nodes = root.getElementsByTagName(FILTER_ATTRIBUTE);
+            for(int i = 0; i < nodes.getLength(); i++) {
+                Node node = nodes.item(i);
+                if(!(node instanceof Element)) continue;
+                Element element = (Element) node;
+                try {
+                    max = Math.max(max, Integer.parseInt(element.getAttribute(ID_ATTRIBUTE)));
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception e) {
+            Tuils.log(e);
+        }
+        return max + 1;
+    }
+
+    private static String displayPattern(String rawPattern) {
+        if(rawPattern == null) return Tuils.EMPTYSTRING;
+        if(rawPattern.startsWith("\\Q") && rawPattern.endsWith("\\E")) {
+            return rawPattern.substring(2, rawPattern.length() - 2)
+                    .replace("\\E\\\\E\\Q", "\\E");
+        }
+        return rawPattern;
+    }
+
+    private static class FilterRule {
+        final int id;
+        final String rawPattern;
+        final Pattern pattern;
+
+        FilterRule(int id, String rawPattern, Pattern pattern) {
+            this.id = id;
+            this.rawPattern = rawPattern;
+            this.pattern = pattern;
         }
     }
 }

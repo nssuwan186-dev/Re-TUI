@@ -134,10 +134,9 @@ public class LongClickableSpan extends ClickableSpan {
                         int id = item.getItemId();
 
                         if (id == R.id.exclude_app) {
-                            NotificationManager.setState(n.pkg, false);
+                            excludeApp(v.getContext(), n);
                         } else if (id == R.id.exclude_notification) {
-                            Tuils.log(n.text);
-                            NotificationManager.addFilter(n.text, -1);
+                            excludeNotification(v.getContext(), n);
                         } else if (id == R.id.reply_notification) {
                             Intent intent = new Intent(PrivateIOReceiver.ACTION_INPUT);
                             intent.putExtra(PrivateIOReceiver.TEXT, "reply -to " + n.pkg + Tuils.SPACE);
@@ -158,12 +157,23 @@ public class LongClickableSpan extends ClickableSpan {
 
                         LocalBroadcastManager.getInstance(v.getContext().getApplicationContext()).sendBroadcast(intent);
                     }
-                    else if(showExcludeNotification) NotificationManager.addFilter(n.text, -1);
-                    else if(showExcludeApp) NotificationManager.setState(n.pkg, false);
+                    else if(showExcludeNotification) excludeNotification(v.getContext(), n);
+                    else if(showExcludeApp) excludeApp(v.getContext(), n);
                 }
             }
         }
 
         return true;
+    }
+
+    private static void excludeApp(Context context, NotificationService.Notification notification) {
+        NotificationManager.setState(notification.pkg, false);
+        NotificationService.requestReload(context.getApplicationContext());
+    }
+
+    private static void excludeNotification(Context context, NotificationService.Notification notification) {
+        Tuils.log(notification.text);
+        NotificationManager.addLiteralFilter(notification.text);
+        NotificationService.requestReload(context.getApplicationContext());
     }
 }
