@@ -8,6 +8,7 @@
 -keep class ohi.andre.consolelauncher.tuils.libsuperuser.**
 -keep class ohi.andre.consolelauncher.managers.suggestions.HideSuggestionViewValues
 -keep public class it.andreuzzi.comparestring2.**
+-keep class org.luaj.** { *; }
 
 -dontwarn ohi.andre.consolelauncher.commands.main.raw.**
 
@@ -23,6 +24,7 @@
 -dontwarn org.htmlcleaner.**
 -dontwarn com.jayway.jsonpath.**
 -dontwarn org.slf4j.**
+-dontwarn org.luaj.**
 
 -dontwarn org.jdom2.**
 -dontwarn org.jsoup.**

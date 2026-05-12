@@ -43,7 +43,7 @@ public final class LuaWidgetEngine {
                 callIfPresent("on_load");
                 lastResult = result;
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             lastResult = RenderResult.error(errorMessage(e));
         }
         return lastResult.copy();
@@ -57,7 +57,7 @@ public final class LuaWidgetEngine {
                 result.body = "No on_click handler in " + id + ".";
             }
             lastResult = result;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             lastResult = RenderResult.error(errorMessage(e));
         }
         return lastResult.copy();
@@ -203,7 +203,7 @@ public final class LuaWidgetEngine {
         return body + "\n" + (line == null ? "" : line);
     }
 
-    private static String errorMessage(Exception e) {
+    private static String errorMessage(Throwable e) {
         if (e instanceof LuaError && e.getMessage() != null) {
             return e.getMessage();
         }

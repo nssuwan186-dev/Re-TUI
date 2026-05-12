@@ -99,7 +99,7 @@ public class widget implements CommandAbstraction {
                 return "Invalid widget action index: " + args.get(2);
             }
             send(pack, "lua_click", id, index);
-            return "Widget action dispatched: " + id + " #" + index;
+            return null;
         }
 
         if ("-rm".equals(option) || "-remove".equals(option)) {

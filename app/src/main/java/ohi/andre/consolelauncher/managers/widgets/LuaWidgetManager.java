@@ -184,11 +184,15 @@ public final class LuaWidgetManager {
         }
 
         int index = 1;
+        boolean hasRefreshButton = false;
         for (String button : result.buttons) {
             appendSuggest(out, button, "widget -click " + normalizeId(id) + " " + index);
+            hasRefreshButton = hasRefreshButton || "refresh".equals(normalizeActionLabel(button));
             index += 1;
         }
-        appendSuggest(out, "refresh", "module -refresh " + normalizeId(id));
+        if (!hasRefreshButton) {
+            appendSuggest(out, "refresh", "module -refresh " + normalizeId(id));
+        }
         appendSuggest(out, "edit", "widget -edit " + normalizeId(id));
         return out.toString().trim();
     }
@@ -214,6 +218,10 @@ public final class LuaWidgetManager {
             if (part.length() > 1) out.append(part.substring(1));
         }
         return out.length() == 0 ? id : out.toString();
+    }
+
+    private static String normalizeActionLabel(String label) {
+        return label == null ? "" : label.trim().toLowerCase(Locale.US);
     }
 
     private static void appendDirective(StringBuilder out, String key, String value) {
