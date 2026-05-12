@@ -56,6 +56,7 @@ import ohi.andre.consolelauncher.managers.WebhookManager;
 import ohi.andre.consolelauncher.managers.modules.ModuleManager;
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache;
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeManager;
+import ohi.andre.consolelauncher.managers.widgets.LuaWidgetManager;
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager;
 import ohi.andre.consolelauncher.managers.xml.classes.XMLPrefsSave;
 import ohi.andre.consolelauncher.managers.xml.options.Apps;
@@ -1059,6 +1060,10 @@ public class SuggestionsManager {
             suggestions.add(new Suggestion(null, "module -dock add", false, Suggestion.TYPE_PERMANENT));
             suggestions.add(new Suggestion(null, "module -dock remove", false, Suggestion.TYPE_PERMANENT));
         }
+
+        if ("widget".startsWith(lower) || "widgets".startsWith(lower)) {
+            suggestWidgetRootActions(suggestions, lower);
+        }
     }
 
     private void suggestClockCommandArgs(MainPack pack, List<Suggestion> suggestions, String afterLastSpace, String beforeLastSpace) {
@@ -1129,6 +1134,60 @@ public class SuggestionsManager {
             suggestions.add(new Suggestion(beforeLastSpace, "server termux:/data/data/com.termux/files/home/retui/server-health.sh", false, Suggestion.TYPE_COMMAND));
         } else if ("module -dock".equals(normalized) || normalized.startsWith("module -dock ")) {
             suggestDockCommand(suggestions, afterLastSpace, beforeLastSpace);
+        } else if ("widget".equals(normalized)) {
+            suggestWidgetOptions(suggestions, afterLastSpace, beforeLastSpace);
+        } else if ("widget -edit".equals(normalized)
+                || "widget -show".equals(normalized)
+                || "widget -refresh".equals(normalized)
+                || "widget -rm".equals(normalized)
+                || "widget -remove".equals(normalized)
+                || "widget -click".equals(normalized)) {
+            suggestWidgetIds(suggestions, afterLastSpace, beforeLastSpace);
+        }
+    }
+
+    private void suggestWidgetRootActions(List<Suggestion> suggestions, String typed) {
+        addWidgetRootAction(suggestions, typed, "widget -ls", true);
+        addWidgetRootAction(suggestions, typed, "widget -samples", true);
+        addWidgetRootAction(suggestions, typed, "widget -new", false);
+        addWidgetRootAction(suggestions, typed, "widget -edit", false);
+        addWidgetRootAction(suggestions, typed, "widget -show", false);
+        addWidgetRootAction(suggestions, typed, "widget -refresh", false);
+        addWidgetRootAction(suggestions, typed, "widget -rm", false);
+    }
+
+    private void addWidgetRootAction(List<Suggestion> suggestions, String typed, String command, boolean exec) {
+        String filter = typed == null ? Tuils.EMPTYSTRING : typed.toLowerCase();
+        if (filter.length() == 0 || command.startsWith(filter) || "widgets".startsWith(filter)) {
+            suggestions.add(new Suggestion(null, command, exec && clickToLaunch, Suggestion.TYPE_COMMAND));
+        }
+    }
+
+    private void suggestWidgetOptions(List<Suggestion> suggestions, String lastWord, String beforeLastSpace) {
+        String filter = lastWord == null ? Tuils.EMPTYSTRING : lastWord.toLowerCase();
+        addWidgetOption(suggestions, beforeLastSpace, "-ls", true, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-samples", true, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-new", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-edit", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-show", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-refresh", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-rm", false, filter);
+    }
+
+    private void addWidgetOption(List<Suggestion> suggestions, String beforeLastSpace, String option, boolean exec, String filter) {
+        String normalizedFilter = filter == null ? Tuils.EMPTYSTRING : filter.replace("-", Tuils.EMPTYSTRING);
+        String normalizedOption = option.replace("-", Tuils.EMPTYSTRING);
+        if (filter == null || filter.length() == 0 || option.startsWith(filter) || normalizedOption.startsWith(normalizedFilter)) {
+            suggestions.add(new Suggestion(beforeLastSpace, option, exec && clickToLaunch, Suggestion.TYPE_COMMAND));
+        }
+    }
+
+    private void suggestWidgetIds(List<Suggestion> suggestions, String lastWord, String beforeLastSpace) {
+        String filter = lastWord == null ? Tuils.EMPTYSTRING : LuaWidgetManager.normalizeId(lastWord);
+        for (String id : LuaWidgetManager.listIds()) {
+            if (filter.length() == 0 || id.startsWith(filter)) {
+                suggestions.add(new Suggestion(beforeLastSpace, id, false, Suggestion.TYPE_COMMAND));
+            }
         }
     }
 
