@@ -26,6 +26,20 @@ Use it after direct file edits or when you want to force a clean visual refresh.
 
 Refresh launcher-managed data such as apps, aliases, music, and contacts.
 
+### `search`
+
+Open a provider-specific search. Pick a provider chip first, then enter the query.
+
+Useful forms:
+
+- `search -gg <query>` for Google
+- `search -ps <app>` for Play Store
+- `search -yt <query>` for YouTube
+- `search -dd <query>` for DuckDuckGo
+- `search -u <url>` for a URL
+
+`install` remains as a deprecated compatibility command, but new flows should use `search -ps`.
+
 ## Settings and Theming
 
 ### `settings`
@@ -256,7 +270,7 @@ Common commands:
 - `module -dock add notifications`
 - `module -dock remove music`
 - `module -add server termux:/data/data/com.termux/files/home/retui/server-health.sh`
-- `module -add counter lua:aio_counter`
+- `module -add counter lua:retui_counter`
 - `module -refresh server`
 - `module -rm server`
 - `module -hide music`
@@ -285,14 +299,25 @@ Create, edit, and test prototype Lua widgets from inside Re:T-UI.
 
 Useful forms:
 
-- `widget -samples`
+- `widget -add counter`
 - `widget -new counter`
 - `widget -edit counter`
+- `widget -rename counter better_counter`
 - `widget -show counter`
 - `widget -refresh counter`
+- `widget -check counter`
+- `widget -info counter`
+- `widget -approve counter`
+- `widget -copy-error counter`
+- `widget -disable counter`
+- `widget -enable counter`
+- `widget -export counter`
+- `widget -toggle counter`
+- `widget -expand counter`
+- `widget -collapse counter`
 - `widget -rm counter`
 
-Widgets are saved under Re:T-UI's local widget folder and registered as `lua:<id>` modules. This is the paste/write-your-own test surface for a future verified widget marketplace.
+Widgets are saved under Re:T-UI's local widget folder and can register as `lua:<id>` modules. The document name is the module title; the id is the storage/command slug. Widgets can expose indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, expandable/collapsed render modes, active ticking, and clipboard export. Use `widget -add <name>` to open the editor and paste shared Lua manually. Sensitive Lua capabilities require `-- permissions = "..."` metadata and `widget -approve <id>` consent; this does not add Android manifest permissions. Runtime errors surface recovery chips for check/copy-error/disable.
 
 ### `webhook`
 

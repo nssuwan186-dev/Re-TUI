@@ -19,8 +19,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,6 +59,7 @@ import ohi.andre.consolelauncher.managers.modules.ModuleManager;
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache;
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeManager;
 import ohi.andre.consolelauncher.managers.widgets.LuaWidgetManager;
+import ohi.andre.consolelauncher.managers.widgets.LuaWidgetEngine;
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager;
 import ohi.andre.consolelauncher.managers.xml.classes.XMLPrefsSave;
 import ohi.andre.consolelauncher.managers.xml.options.Apps;
@@ -86,6 +89,7 @@ public class SuggestionsManager {
     private final String[] FILE_SPLITTERS = {Tuils.SPACE, "-", "_"};
     private final String[] XML_PREFS_SPLITTERS = {"_"};
     private static final String HIDDEN_SUGGESTION_COMMAND = "time";
+    private static final int MAX_LUA_SUGGESTION_ENGINES = 8;
 
     private boolean showAliasDefault, clickToLaunch, showAppsGpDefault, enabled;
     private int minCmdPriority;
@@ -99,6 +103,7 @@ public class SuggestionsManager {
     private SuggestionsManager.Suggestion lastFirst;
 
     private TerminalManager mTerminalAdapter;
+    private final LinkedHashMap<String, LuaWidgetEngine> luaSuggestionEngines = new LinkedHashMap<>();
 
     private View.OnClickListener clickListener = v -> {
         Suggestion suggestion = (Suggestion) v.getTag(R.id.suggestion_id);
@@ -735,6 +740,7 @@ public class SuggestionsManager {
                 }
 
                 suggestCommand(pack, suggestionList, lastWord, beforeLastSpace );
+                suggestLuaScripts(suggestionList, lastWord);
                 suggestAlias(pack.aliasManager, suggestionList, lastWord);
                 suggestApp(pack, suggestionList, lastWord, Tuils.EMPTYSTRING);
                 suggestAppGroup(pack, suggestionList, lastWord, beforeLastSpace );
@@ -748,6 +754,59 @@ public class SuggestionsManager {
 
     private boolean needsFileSuggestion(String cmd) {
         return cmd.equalsIgnoreCase("ls") || cmd.equalsIgnoreCase("cd") || cmd.equalsIgnoreCase("mv") || cmd.equalsIgnoreCase("cp") || cmd.equalsIgnoreCase("rm") || cmd.equalsIgnoreCase("cat");
+    }
+
+    private void suggestLuaScripts(List<Suggestion> suggestions, String query) {
+        String safeQuery = query == null ? Tuils.EMPTYSTRING : query.trim();
+        if (safeQuery.length() == 0) {
+            return;
+        }
+        int added = 0;
+        for (String id : LuaWidgetManager.listIds()) {
+            try {
+                String script = LuaWidgetManager.readScript(id);
+                String type = LuaWidgetManager.metadata(script).get("type");
+                if (!"suggest".equalsIgnoreCase(type) && !"command".equalsIgnoreCase(type)) {
+                    continue;
+                }
+                if (!LuaWidgetManager.isEnabled(id)) {
+                    continue;
+                }
+                if (!LuaWidgetManager.isTrusted(id)) {
+                    continue;
+                }
+                LuaWidgetEngine engine = luaSuggestionEngine(id, script);
+                LuaWidgetEngine.RenderResult result = engine.suggest(safeQuery);
+                for (LuaWidgetEngine.RenderAction action : result.commands) {
+                    suggestions.add(new Suggestion(null, action.label, true, Suggestion.TYPE_MODULE, action.command));
+                    added++;
+                    if (added >= 12) {
+                        return;
+                    }
+                }
+            } catch (Exception e) {
+                Tuils.log(e);
+            }
+        }
+    }
+
+    private synchronized LuaWidgetEngine luaSuggestionEngine(String id, String script) {
+        String normalized = LuaWidgetManager.normalizeId(id);
+        long version = LuaWidgetManager.version(normalized);
+        LuaWidgetEngine engine = luaSuggestionEngines.get(normalized);
+        if (engine == null || engine.version() != version) {
+            engine = new LuaWidgetEngine(pack.context, normalized, script, version, null);
+            luaSuggestionEngines.put(normalized, engine);
+            while (luaSuggestionEngines.size() > MAX_LUA_SUGGESTION_ENGINES) {
+                Iterator<Map.Entry<String, LuaWidgetEngine>> iterator = luaSuggestionEngines.entrySet().iterator();
+                if (!iterator.hasNext()) {
+                    break;
+                }
+                iterator.next();
+                iterator.remove();
+            }
+        }
+        return engine;
     }
 
     private boolean isHelpQuickstart(String value) {
@@ -1061,9 +1120,6 @@ public class SuggestionsManager {
             suggestions.add(new Suggestion(null, "module -dock remove", false, Suggestion.TYPE_PERMANENT));
         }
 
-        if ("widget".startsWith(lower) || "widgets".startsWith(lower)) {
-            suggestWidgetRootActions(suggestions, lower);
-        }
     }
 
     private void suggestClockCommandArgs(MainPack pack, List<Suggestion> suggestions, String afterLastSpace, String beforeLastSpace) {
@@ -1137,40 +1193,47 @@ public class SuggestionsManager {
         } else if ("widget".equals(normalized)) {
             suggestWidgetOptions(suggestions, afterLastSpace, beforeLastSpace);
         } else if ("widget -edit".equals(normalized)
-                || "widget -show".equals(normalized)
-                || "widget -refresh".equals(normalized)
+                || "widget -check".equals(normalized)
+                || "widget -info".equals(normalized)
+                || "widget -approve".equals(normalized)
+                || "widget -trust".equals(normalized)
+                || "widget -copy-error".equals(normalized)
+                || "widget -export".equals(normalized)
+                || "widget -disable".equals(normalized)
+                || "widget -enable".equals(normalized)
+                || "widget -rename".equals(normalized)
                 || "widget -rm".equals(normalized)
-                || "widget -remove".equals(normalized)
+                || "widget -remove".equals(normalized)) {
+            suggestWidgetIds(suggestions, afterLastSpace, beforeLastSpace, false);
+        } else if ("widget -show".equals(normalized)
+                || "widget -refresh".equals(normalized)
+                || "widget -expand".equals(normalized)
+                || "widget -collapse".equals(normalized)
+                || "widget -toggle".equals(normalized)
                 || "widget -click".equals(normalized)) {
-            suggestWidgetIds(suggestions, afterLastSpace, beforeLastSpace);
-        }
-    }
-
-    private void suggestWidgetRootActions(List<Suggestion> suggestions, String typed) {
-        addWidgetRootAction(suggestions, typed, "widget -ls", true);
-        addWidgetRootAction(suggestions, typed, "widget -samples", true);
-        addWidgetRootAction(suggestions, typed, "widget -new", false);
-        addWidgetRootAction(suggestions, typed, "widget -edit", false);
-        addWidgetRootAction(suggestions, typed, "widget -show", false);
-        addWidgetRootAction(suggestions, typed, "widget -refresh", false);
-        addWidgetRootAction(suggestions, typed, "widget -rm", false);
-    }
-
-    private void addWidgetRootAction(List<Suggestion> suggestions, String typed, String command, boolean exec) {
-        String filter = typed == null ? Tuils.EMPTYSTRING : typed.toLowerCase();
-        if (filter.length() == 0 || command.startsWith(filter) || "widgets".startsWith(filter)) {
-            suggestions.add(new Suggestion(null, command, exec && clickToLaunch, Suggestion.TYPE_COMMAND));
+            suggestWidgetIds(suggestions, afterLastSpace, beforeLastSpace, true);
         }
     }
 
     private void suggestWidgetOptions(List<Suggestion> suggestions, String lastWord, String beforeLastSpace) {
         String filter = lastWord == null ? Tuils.EMPTYSTRING : lastWord.toLowerCase();
         addWidgetOption(suggestions, beforeLastSpace, "-ls", true, filter);
-        addWidgetOption(suggestions, beforeLastSpace, "-samples", true, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-add", false, filter);
         addWidgetOption(suggestions, beforeLastSpace, "-new", false, filter);
         addWidgetOption(suggestions, beforeLastSpace, "-edit", false, filter);
         addWidgetOption(suggestions, beforeLastSpace, "-show", false, filter);
         addWidgetOption(suggestions, beforeLastSpace, "-refresh", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-check", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-info", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-approve", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-copy-error", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-disable", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-enable", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-export", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-expand", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-collapse", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-toggle", false, filter);
+        addWidgetOption(suggestions, beforeLastSpace, "-rename", false, filter);
         addWidgetOption(suggestions, beforeLastSpace, "-rm", false, filter);
     }
 
@@ -1182,20 +1245,31 @@ public class SuggestionsManager {
         }
     }
 
-    private void suggestWidgetIds(List<Suggestion> suggestions, String lastWord, String beforeLastSpace) {
+    private void suggestWidgetIds(List<Suggestion> suggestions, String lastWord, String beforeLastSpace, boolean dockableOnly) {
         String filter = lastWord == null ? Tuils.EMPTYSTRING : LuaWidgetManager.normalizeId(lastWord);
+        String prefix = beforeLastSpace == null ? Tuils.EMPTYSTRING : beforeLastSpace.trim();
         for (String id : LuaWidgetManager.listIds()) {
-            if (filter.length() == 0 || id.startsWith(filter)) {
-                suggestions.add(new Suggestion(beforeLastSpace, id, false, Suggestion.TYPE_COMMAND));
+            if (dockableOnly && !LuaWidgetManager.isDockable(id)) {
+                continue;
+            }
+            String label = LuaWidgetManager.getName(id);
+            String normalizedLabel = LuaWidgetManager.normalizeId(label);
+            if (filter.length() == 0 || id.startsWith(filter) || normalizedLabel.startsWith(filter)) {
+                String command = prefix.length() == 0 ? id : prefix + Tuils.SPACE + id;
+                suggestions.add(new Suggestion(null, label, false, Suggestion.TYPE_MODULE, command));
             }
         }
     }
 
     private void suggestModules(List<Suggestion> suggestions, String lastWord, String beforeLastSpace) {
         String filter = lastWord == null ? Tuils.EMPTYSTRING : lastWord.toLowerCase();
+        String prefix = beforeLastSpace == null ? Tuils.EMPTYSTRING : beforeLastSpace.trim();
         for (String module : ModuleManager.listAll(pack.context)) {
-            if (filter.length() == 0 || module.startsWith(filter)) {
-                suggestions.add(new Suggestion(beforeLastSpace, module, false, Suggestion.TYPE_COMMAND));
+            String label = ModuleManager.displayTitle(pack.context, module);
+            String normalizedLabel = ModuleManager.normalize(label);
+            if (filter.length() == 0 || module.startsWith(filter) || normalizedLabel.startsWith(filter)) {
+                String command = prefix.length() == 0 ? module : prefix + Tuils.SPACE + module;
+                suggestions.add(new Suggestion(null, label, false, Suggestion.TYPE_MODULE, command));
             }
         }
     }
@@ -1258,8 +1332,11 @@ public class SuggestionsManager {
             if (selected.contains(module)) {
                 continue;
             }
-            if (filter.length() == 0 || module.startsWith(filter)) {
-                suggestions.add(new Suggestion(suggestionPrefix, module, false, Suggestion.TYPE_COMMAND));
+            String label = ModuleManager.displayTitle(pack.context, module);
+            String normalizedLabel = ModuleManager.normalize(label);
+            if (filter.length() == 0 || module.startsWith(filter) || normalizedLabel.startsWith(filter)) {
+                String command = suggestionPrefix.length() == 0 ? module : suggestionPrefix + Tuils.SPACE + module;
+                suggestions.add(new Suggestion(null, label, false, Suggestion.TYPE_MODULE, command));
             }
         }
     }

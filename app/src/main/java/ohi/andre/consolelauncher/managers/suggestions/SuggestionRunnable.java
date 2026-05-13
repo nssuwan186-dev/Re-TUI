@@ -48,6 +48,7 @@ public class SuggestionRunnable implements Runnable {
             scrollView.fullScroll(View.FOCUS_LEFT);
         }
     };
+    private String lastSuggestionSignature = "";
 
     private int n;
     private TextView[] toRecycle;
@@ -115,6 +116,10 @@ public class SuggestionRunnable implements Runnable {
 
     @Override
     public void run() {
+        String nextSignature = suggestionSignature();
+        boolean sameSuggestions = nextSignature.equals(lastSuggestionSignature);
+        int previousScrollX = scrollView == null ? 0 : scrollView.getScrollX();
+
         if (n < 0) {
             for (int count = toRecycle.length; count < suggestionsView.getChildCount(); count++) {
                 suggestionsView.removeViewAt(count--);
@@ -191,7 +196,31 @@ public class SuggestionRunnable implements Runnable {
             }
         }
 
-        scrollView.post(scrollRunnable);
+        lastSuggestionSignature = nextSignature;
+        if (scrollView != null) {
+            if (sameSuggestions) {
+                scrollView.post(() -> scrollView.scrollTo(previousScrollX, 0));
+            } else {
+                scrollView.post(scrollRunnable);
+            }
+        }
+    }
+
+    private String suggestionSignature() {
+        if (suggestions == null || suggestions.isEmpty()) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder();
+        for (SuggestionsManager.Suggestion suggestion : suggestions) {
+            if (suggestion == null) continue;
+            if (out.length() > 0) out.append('\n');
+            out.append(suggestion.type)
+                    .append('|')
+                    .append(suggestion.text == null ? "" : suggestion.text)
+                    .append('|')
+                    .append(suggestion.object == null ? "" : suggestion.object.toString());
+        }
+        return out.toString();
     }
 
     public void interrupt() {

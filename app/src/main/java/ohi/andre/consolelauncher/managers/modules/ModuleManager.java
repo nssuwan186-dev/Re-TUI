@@ -43,9 +43,10 @@ public final class ModuleManager {
 
     public static List<String> getDock(Context context) {
         String raw = prefs(context).getString(KEY_DOCK, null);
-        if (TextUtils.isEmpty(raw)) {
+        if (raw == null) {
             return new ArrayList<>(BUILT_INS);
         }
+        if (raw.trim().length() == 0) return new ArrayList<>();
         return parseList(raw);
     }
 
@@ -158,14 +159,78 @@ public final class ModuleManager {
         ids.remove(id);
         LinkedHashSet<String> dock = new LinkedHashSet<>(getDock(context));
         dock.remove(id);
-        prefs(context).edit()
+        SharedPreferences.Editor editor = prefs(context).edit()
                 .putStringSet(KEY_SCRIPT_IDS, ids)
                 .putString(KEY_DOCK, TextUtils.join(",", dock))
                 .remove(KEY_SCRIPT_PREFIX + id)
                 .remove(KEY_SCRIPT_PATH_PREFIX + id)
                 .remove(KEY_SCRIPT_TITLE_PREFIX + id)
-                .remove(KEY_SCRIPT_SUGGESTIONS_PREFIX + id)
-                .apply();
+                .remove(KEY_SCRIPT_SUGGESTIONS_PREFIX + id);
+        if (TextUtils.equals(getActiveModule(context), id)) {
+            editor.putString(KEY_ACTIVE_MODULE, "");
+        }
+        editor.apply();
+    }
+
+    public static void renameScriptModule(Context context, String oldModule, String newModule, String newSource) {
+        String oldId = normalize(oldModule);
+        String newId = normalize(newModule);
+        if (TextUtils.isEmpty(oldId) || TextUtils.isEmpty(newId)
+                || TextUtils.equals(oldId, newId)
+                || BUILT_INS.contains(oldId)
+                || BUILT_INS.contains(newId)) {
+            return;
+        }
+
+        SharedPreferences store = prefs(context);
+        LinkedHashSet<String> ids = new LinkedHashSet<>(getScriptIds(context));
+        if (!ids.remove(oldId) || ids.contains(newId)) {
+            return;
+        }
+        ids.add(newId);
+
+        ArrayList<String> dock = new ArrayList<>();
+        for (String module : getDock(context)) {
+            String id = normalize(module);
+            if (TextUtils.equals(id, oldId)) {
+                id = newId;
+            }
+            if (!dock.contains(id)) {
+                dock.add(id);
+            }
+        }
+
+        String path = TextUtils.isEmpty(newSource) ? getScriptPath(context, oldId) : newSource;
+        String body = store.getString(KEY_SCRIPT_PREFIX + oldId, null);
+        String title = store.getString(KEY_SCRIPT_TITLE_PREFIX + oldId, null);
+        String suggestions = store.getString(KEY_SCRIPT_SUGGESTIONS_PREFIX + oldId, null);
+
+        SharedPreferences.Editor editor = store.edit()
+                .putStringSet(KEY_SCRIPT_IDS, ids)
+                .putString(KEY_DOCK, TextUtils.join(",", dock))
+                .remove(KEY_SCRIPT_PREFIX + oldId)
+                .remove(KEY_SCRIPT_PATH_PREFIX + oldId)
+                .remove(KEY_SCRIPT_TITLE_PREFIX + oldId)
+                .remove(KEY_SCRIPT_SUGGESTIONS_PREFIX + oldId);
+
+        if (TextUtils.isEmpty(path)) {
+            editor.remove(KEY_SCRIPT_PATH_PREFIX + newId);
+        } else {
+            editor.putString(KEY_SCRIPT_PATH_PREFIX + newId, normalizeModuleSource(path));
+        }
+        if (body != null) {
+            editor.putString(KEY_SCRIPT_PREFIX + newId, body);
+        }
+        if (title != null) {
+            editor.putString(KEY_SCRIPT_TITLE_PREFIX + newId, title);
+        }
+        if (suggestions != null) {
+            editor.putString(KEY_SCRIPT_SUGGESTIONS_PREFIX + newId, suggestions);
+        }
+        if (TextUtils.equals(getActiveModule(context), oldId)) {
+            editor.putString(KEY_ACTIVE_MODULE, newId);
+        }
+        editor.apply();
     }
 
     public static String getScriptText(Context context, String module) {
@@ -247,13 +312,13 @@ public final class ModuleManager {
 
     public static String displayTitle(Context context, String module) {
         String id = normalize(module);
-        String title = getScriptTitle(context, id);
-        if (!TextUtils.isEmpty(title)) {
-            return title;
-        }
         String source = getModuleSource(context, id);
         if (isLuaSource(source)) {
             return LuaWidgetManager.getName(luaWidgetId(source));
+        }
+        String title = getScriptTitle(context, id);
+        if (!TextUtils.isEmpty(title)) {
+            return title;
         }
         return displayName(id);
     }

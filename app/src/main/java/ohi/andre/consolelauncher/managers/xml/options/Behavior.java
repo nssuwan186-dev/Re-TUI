@@ -191,6 +191,22 @@ public enum Behavior implements XMLPrefsSave {
             return XMLPrefsSave.BOOLEAN;
         }
     },
+    show_module_dock {
+        @Override
+        public String defaultValue() {
+            return "true";
+        }
+
+        @Override
+        public String info() {
+            return "If false, Re:T-UI will hide the module dock row while keeping modules available through commands";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.BOOLEAN;
+        }
+    },
     clear_after_cmds {
         @Override
         public String defaultValue() {

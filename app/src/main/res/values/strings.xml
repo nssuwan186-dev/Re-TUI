@@ -242,7 +242,7 @@
         \n$ module -prompt reminder edit
         \n$ module -prompt reminder remove
         \n$ module -add server termux:/data/data/com.termux/files/home/retui/server-health.sh
-        \n$ module -add counter lua:aio_counter
+        \n$ module -add counter lua:retui_counter
         \n$ module -add events termux:/data/data/com.termux/files/home/retui/events.sh
         \n$ module -refresh server
         \n$ module -rm server
@@ -250,17 +250,29 @@
         \n$ module -dock add server
         \n$ module -dock remove music
         \n$ module -close
-        \n\nModules are backed by native panels, Termux scripts, launcher providers, or prototype Lua widgets. Re:T-UI can safely resolve %RETUI_* placeholders before Termux dispatch so scripts can consume launcher-provided values. Scripts emit ::title, ::body, and ::suggest metadata. Native prompt sessions let supported modules ask for user input step by step.</string>
+        \n\nModules are backed by native panels, Termux scripts, launcher providers, or prototype Lua widgets. Re:T-UI can safely resolve %RETUI_* placeholders before Termux dispatch so scripts can consume launcher-provided values. Scripts emit ::title, ::body, and ::suggest metadata. Native prompt sessions let supported modules ask for user input step by step.
+        \n\nAn empty dock stays empty. To hide the dock row entirely, turn off show_module_dock in Behavior settings or run config -set show_module_dock false.</string>
     <string name="help_widget">Create, edit, and test prototype Lua widgets inside Re:T-UI.
         \n\nUsage:
         \n$ widget -ls
-        \n$ widget -samples
+        \n$ widget -add counter
         \n$ widget -new counter
         \n$ widget -edit counter
+        \n$ widget -rename counter better_counter
         \n$ widget -show counter
         \n$ widget -refresh counter
+        \n$ widget -check counter
+        \n$ widget -info counter
+        \n$ widget -approve counter
+        \n$ widget -copy-error counter
+        \n$ widget -disable counter
+        \n$ widget -enable counter
+        \n$ widget -export counter
+        \n$ widget -toggle counter
+        \n$ widget -expand counter
+        \n$ widget -collapse counter
         \n$ widget -rm counter
-        \n\nWidgets are saved locally under Re:T-UI\'s widgets folder, registered as lua:[name] modules, and shown in the shared module dock. This is a test surface for paste/write-your-own widgets, not a production marketplace runtime yet.</string>
+        \n\nWidgets are saved locally under Re:T-UI\'s widgets folder and can register as lua:[id] modules in the shared dock. Use widget -add [name] to open the editor, paste shared Lua, then save/run. Scripts that use network, clipboard, vibration, local widget files, or active ticking must declare -- permissions and be approved with widget -approve [id]; this does not add Android manifest permissions. Broken scripts expose check/copy-error/disable controls. The document name is the module title; changing it in the editor can rename the widget id/folder. Lua widgets support ui, prefs, files, json, date, fmt, strings, colors, debug, async http, expandable state, direct command chips, parameterized action chips, choice-dialog chips, active-widget ticking, Lua suggestion scripts, system helpers, export, on_load/on_resume/on_alarm/on_tick/on_click/on_action/on_dialog_action/on_suggest, and backup/restore.</string>
     <!-- status -->
     <string name="battery_label">Battery:</string>
     <string name="mobile_data_label">Mobile data:</string>
@@ -341,7 +353,7 @@
     <string name="help_changelog">Show the changelog of the current version</string>
     <string name="help_config">-set [option] [value] -> set the value of an option
         \n-append [option] [value] -> append the given string to the value of the selected option
-        \n-file [file] -> open a config file (behavior.xml, ui.xml, theme.xml, ...)
+        \n-file [file] -> edit a config file in the document editor (behavior.xml, ui.xml, theme.xml, ...)
         \n-erase [option] -> set the value of an option to \"\"
         \n-setr [option] [value] -> same to \"-set\", but restarts Re:T-UI automatically
         \n-get [option] -> get the value of an option
@@ -418,7 +430,8 @@
         \n-check [ID or packageName] -> check the last notification from the application bound with the given ID
         \n-tutorial -> open the tutorial page on GitHub</string>
     <string name="help_restart">Restart Re:T-UI and load modified values</string>
-    <string name="help_search">-gg [search this...] -> Google Search
+    <string name="help_search">Choose a search provider before entering a query.
+        \n\n-gg [search this...] -> Google Search
         \n-ps [search this...] -> Google Play Store
         \n-u [URL] -> open the URL
         \n-yt [search this...] -> YouTube
@@ -438,7 +451,7 @@
     <string name="help_time">Print the current time with the given format
         \n\nUsage:
         \n$ time [index] (index means the index of the desired time_format</string>
-    <string name="help_tuixt">Open the text editor.
+    <string name="help_tuixt">Open the Re:T-UI document editor.
         \n\nUsage:
         \n$ tuixt [textFile]
     </string>
@@ -457,9 +470,9 @@
         \n\nUsage:
         \n$ uninstall [appName]
     </string>
-    <string name="help_install">Search and install an application from the Play Store
+    <string name="help_install">Deprecated. Use search -ps [appName] to search the Play Store.
         \n\nUsage:
-        \n$ install [appName]
+        \n$ search -ps [appName]
     </string>
     <string name="help_post">Send an HTTP POST request to a URL.
         \n\nUsage:

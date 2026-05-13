@@ -36,6 +36,7 @@ public class CommandTuils {
             "ctrlc",
             "data",
             "devutils",
+            "install",
             "shell",
             "termuxopen",
             "theme",

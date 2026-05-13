@@ -1,13 +1,9 @@
 package ohi.andre.consolelauncher.commands.main.raw;
 
-import android.content.Intent;
-import android.net.Uri;
-
 import ohi.andre.consolelauncher.R;
 import ohi.andre.consolelauncher.commands.CommandAbstraction;
 import ohi.andre.consolelauncher.commands.ExecutePack;
 import ohi.andre.consolelauncher.commands.main.MainPack;
-import ohi.andre.consolelauncher.tuils.Tuils;
 
 public class install implements CommandAbstraction {
 
@@ -20,24 +16,8 @@ public class install implements CommandAbstraction {
             return info.res.getString(helpRes());
         }
 
-        try {
-            Uri marketUri = Uri.parse("market://search?q=" + Uri.encode(appName));
-            Intent marketIntent = new Intent(Intent.ACTION_VIEW, marketUri);
-            marketIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            info.context.startActivity(marketIntent);
-        } catch (Exception e) {
-            // Fallback to browser search if Play Store app is not installed
-            try {
-                Uri webUri = Uri.parse("https://play.google.com/store/search?q=" + Uri.encode(appName) + "&c=apps");
-                Intent webIntent = new Intent(Intent.ACTION_VIEW, webUri);
-                webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                info.context.startActivity(webIntent);
-            } catch (Exception e2) {
-                return e2.toString();
-            }
-        }
-
-        return "Searching for \"" + appName + "\" on Play Store...";
+        search.playstoreSearch(appName, info.context);
+        return "install is deprecated. Use search -ps " + appName + ".";
     }
 
     @Override
@@ -52,7 +32,7 @@ public class install implements CommandAbstraction {
 
     @Override
     public int priority() {
-        return 3;
+        return 0;
     }
 
     @Override

@@ -137,7 +137,7 @@ public class module implements CommandAbstraction {
                 ModuleManager.removeFromDock(pack.context, modules);
             }
             send(pack, "rebuild", null);
-            return "Module dock " + verb + ": " + TextUtils.join(", ", ModuleManager.getDock(pack.context));
+            return "Module dock " + verb + ": " + formatDock(pack);
         }
 
         return pack.context.getString(R.string.output_invalid_param) + " " + parts[0];
@@ -145,8 +145,13 @@ public class module implements CommandAbstraction {
 
     private String listModules(ExecutePack pack) {
         return "Modules: " + TextUtils.join(", ", ModuleManager.listAll(pack.context))
-                + "\nDock: " + TextUtils.join(", ", ModuleManager.getDock(pack.context))
+                + "\nDock: " + formatDock(pack)
                 + "\nUse module -add [name] termux:/path/script.sh, module -refresh [name], module -show [name], events -access, module -prompt reminder add|edit|remove, module -hide [name], module -dock add [name], module -dock remove [name], module -rm [name], module -close.";
+    }
+
+    private String formatDock(ExecutePack pack) {
+        List<String> dock = ModuleManager.getDock(pack.context);
+        return dock.isEmpty() ? "<empty>" : TextUtils.join(", ", dock);
     }
 
     private void send(ExecutePack pack, String command, String module) {

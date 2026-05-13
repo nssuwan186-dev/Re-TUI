@@ -36,6 +36,7 @@ Current built-ins:
 - `reminder`
 
 The dock is intentionally deliberate. Hiding a module from the dock does not delete it from the registry.
+Removing every module from the dock now leaves the dock intentionally empty instead of restoring the default module list. To hide the dock row itself, turn off `show_module_dock` in Behavior settings or run `config -set show_module_dock false`; modules remain available through `module -show`, `module -dock add`, and related commands.
 
 ## Script Modules
 
@@ -51,35 +52,35 @@ module -show server
 
 Simple stdout becomes the module body.
 
-## Prototype Lua Widgets
+## Lua Widgets
 
-Lua widgets are an experimental in-app scripting surface for regular users who do not want to manage Termux files. They are saved in Re:T-UI's local `widgets/<id>/main.lua` folder, included in personal backup/restore, and registered as `lua:<id>` modules so they share the same module dock as built-ins and Termux modules.
+Lua widgets are an in-app scripting surface for regular users who do not want to manage Termux files. They are saved in Re:T-UI's local `widgets/<id>/main.lua` folder, included in personal backup/restore, and can register as `lua:<id>` modules so they share the same module dock as built-ins and Termux modules.
 
 Test commands:
 
 ```text
-widget -samples
+widget -add counter
 widget -new counter
 widget -edit counter
+widget -rename counter better_counter
 widget -show counter
 widget -refresh counter
+widget -check counter
+widget -info counter
+widget -export counter
+widget -toggle counter
+widget -expand counter
+widget -collapse counter
 widget -rm counter
 ```
 
-The current prototype supports a deliberately small API:
+The current platform supports launcher-native UI output, persistent `prefs`, widget-local `files`, JSON, small standard libraries, async HTTP callbacks, expandable state, indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, active-widget ticking, Lua suggestion scripts, editor paste flow, clipboard export, and basic `system`/`aio` helpers. See the full scripting reference: [Lua Widgets](./Lua-Widgets.md).
 
-- `on_load()`
-- `on_resume()`
-- `on_click(index)`
-- `ui:set_title(text)`
-- `ui:show_text(text)`
-- `ui:show_lines(lines)`
-- `ui:show_buttons(labels)`
-- `ui:show_progress_bar(label, current, max)`
+Lua permissions are script-level consent only. Scripts that use `network`, `clipboard`, `vibrate`, `local-files`, or `active-tick` must declare `-- permissions = "..."` and be approved with `widget -approve <id>`. Re:T-UI does not add Android manifest permissions for Lua.
 
-Button labels become module suggestion chips. Tapping a chip dispatches `widget -click <id> <index>`, which calls the widget's `on_click(index)` handler and repaints the active module.
+Lua scripts can declare `-- retui = "1"` for API compatibility. Runtime failures show recovery controls, and `widget -disable <id>` parks a broken script without deleting it.
 
-This is a test surface, not the final marketplace runtime. The bundled samples are adapted from the AIO Launcher sample style and are intentionally dev-only.
+Button labels become module suggestion chips. Tapping a chip dispatches `widget -click <id> <index>`, which calls the widget's `on_click(index)` handler and repaints the active module. Scripts can also expose payload chips with `ui:show_action(label, value)` and handle them with `on_action(value)`.
 
 ## Launcher Variables For Scripts
 

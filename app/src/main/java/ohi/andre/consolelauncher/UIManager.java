@@ -111,6 +111,7 @@ import ohi.andre.consolelauncher.managers.modules.ModulePromptManager;
 import ohi.andre.consolelauncher.managers.notifications.NotificationService;
 import ohi.andre.consolelauncher.managers.notifications.reply.ReplyManager;
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings;
+import ohi.andre.consolelauncher.managers.settings.LauncherSettings;
 import ohi.andre.consolelauncher.managers.settings.MusicSettings;
 import ohi.andre.consolelauncher.managers.settings.NotificationSettings;
 import ohi.andre.consolelauncher.managers.suggestions.SuggestionTextWatcher;
@@ -190,6 +191,7 @@ public class UIManager implements OnTouchListener {
     public static final String EXTRA_MODULE_COMMAND = "module_command";
     public static final String EXTRA_MODULE_NAME = "module_name";
     public static final String EXTRA_WIDGET_ACTION_INDEX = "widget_action_index";
+    public static final String EXTRA_WIDGET_ACTION_VALUE = "widget_action_value";
     private static final String TERMUX_PACKAGE = "com.termux";
     private static final String TERMUX_RUN_COMMAND_PERMISSION = "com.termux.permission.RUN_COMMAND";
     private static final String TERMUX_RUN_COMMAND_ACTION = "com.termux.RUN_COMMAND";
@@ -317,9 +319,11 @@ public class UIManager implements OnTouchListener {
     private boolean keyboardVisible = false;
     private boolean hasLastLayoutState = false;
     private int lastObservedRootHeight = -1;
+    private View moduleDockScroll;
     private LinearLayout moduleDock;
     private final LinkedHashMap<String, TextView> moduleDockButtons = new LinkedHashMap<>();
     private final HashMap<String, LuaWidgetEngine> luaWidgetEngines = new HashMap<>();
+    private boolean bundledLuaSamplesPruned = false;
     private String activeModule = "";
     private Intent lastClockStateIntent;
     private Intent lastPomodoroStateIntent;
@@ -421,6 +425,12 @@ public class UIManager implements OnTouchListener {
             }
             refreshLauncherModule(ModuleManager.EVENTS, source, false);
             scheduleEventsRefreshIfNeeded();
+        }
+    };
+    private final Runnable luaWidgetTickRunnable = new Runnable() {
+        @Override
+        public void run() {
+            tickActiveLuaWidget();
         }
     };
 
@@ -1056,10 +1066,12 @@ public class UIManager implements OnTouchListener {
     }
 
     private void setupHomeWidgetsPage(View homePage) {
+        moduleDockScroll = homePage.findViewById(R.id.module_dock_scroll);
         moduleDock = homePage.findViewById(R.id.module_dock);
         homeWidgetsContainer = homePage.findViewById(R.id.home_widgets_container);
         if (homeWidgetsContainer == null) return;
 
+        pruneBundledLuaSamples();
         activeModule = "";
         ModuleManager.setActiveModule(mContext, "");
         homeWidgetsContainer.removeAllViews();
@@ -1067,11 +1079,33 @@ public class UIManager implements OnTouchListener {
         refreshSuggestionsForActiveModule();
     }
 
+    private void pruneBundledLuaSamples() {
+        if (bundledLuaSamplesPruned || mContext == null) return;
+        bundledLuaSamplesPruned = true;
+        ArrayList<String> ids = new ArrayList<>(LuaWidgetManager.bundledSampleIds());
+        for (String id : LuaWidgetManager.listIds()) {
+            if (LuaWidgetManager.isBundledSample(id) && !ids.contains(id)) {
+                ids.add(id);
+            }
+        }
+        for (String id : ids) {
+            LuaWidgetManager.delete(id);
+            ModuleManager.removeScriptModule(mContext, id);
+            luaWidgetEngines.remove(id);
+        }
+    }
+
     private void rebuildModuleDock() {
+        pruneBundledLuaSamples();
+        boolean showDock = LauncherSettings.getBoolean(Behavior.show_module_dock);
+        if (moduleDockScroll != null) {
+            moduleDockScroll.setVisibility(showDock ? View.VISIBLE : View.GONE);
+        }
         if (moduleDock == null) return;
 
         moduleDock.removeAllViews();
         moduleDockButtons.clear();
+        if (!showDock) return;
 
         for (String module : ModuleManager.getDock(mContext)) {
             addModuleDockButton(module);
@@ -1082,7 +1116,7 @@ public class UIManager implements OnTouchListener {
 
     private void addModuleDockButton(String module) {
         TextView button = new TextView(mContext);
-        button.setText("close".equals(module) ? "X" : ModuleManager.displayName(module));
+        button.setText("close".equals(module) ? "X" : ModuleManager.displayTitle(mContext, module));
         button.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD);
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         button.setSingleLine(true);
@@ -1153,6 +1187,7 @@ public class UIManager implements OnTouchListener {
 
         if (handler != null) {
             handler.removeCallbacks(eventsRefreshRunnable);
+            handler.removeCallbacks(luaWidgetTickRunnable);
         }
         activeModule = id;
         ModuleManager.setActiveModule(mContext, id);
@@ -1365,6 +1400,7 @@ public class UIManager implements OnTouchListener {
     private void closeHomeModule() {
         if (handler != null) {
             handler.removeCallbacks(eventsRefreshRunnable);
+            handler.removeCallbacks(luaWidgetTickRunnable);
         }
         activeModule = "";
         ModuleManager.setActiveModule(mContext, "");
@@ -1407,6 +1443,59 @@ public class UIManager implements OnTouchListener {
         long now = System.currentTimeMillis();
         long delay = EVENTS_REFRESH_FALLBACK_MS - (now % EVENTS_REFRESH_FALLBACK_MS) + EVENTS_REFRESH_GRACE_MS;
         handler.postDelayed(eventsRefreshRunnable, delay);
+    }
+
+    private void scheduleLuaWidgetTickIfNeeded(String module, LuaWidgetEngine.RenderResult result) {
+        if (handler == null) {
+            return;
+        }
+        handler.removeCallbacks(luaWidgetTickRunnable);
+        String id = ModuleManager.normalize(module);
+        if (!id.equals(activeModule) || result == null || result.tickIntervalMs <= 0L) {
+            return;
+        }
+        String source = ModuleManager.getModuleSource(mContext, id);
+        if (!ModuleManager.isLuaSource(source)) {
+            return;
+        }
+        handler.postDelayed(luaWidgetTickRunnable, result.tickIntervalMs);
+    }
+
+    private void tickActiveLuaWidget() {
+        String id = ModuleManager.normalize(activeModule);
+        if (TextUtils.isEmpty(id)) {
+            return;
+        }
+        String source = ModuleManager.getModuleSource(mContext, id);
+        String widgetId = ModuleManager.luaWidgetId(source);
+        if (TextUtils.isEmpty(widgetId) || !LuaWidgetManager.exists(widgetId)) {
+            return;
+        }
+        if (!LuaWidgetManager.isEnabled(widgetId)) {
+            handler.removeCallbacks(luaWidgetTickRunnable);
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.disabledPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+                rebuildModuleDock();
+            }
+            return;
+        }
+        if (!LuaWidgetManager.isTrusted(widgetId)) {
+            handler.removeCallbacks(luaWidgetTickRunnable);
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.consentPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+                rebuildModuleDock();
+            }
+            return;
+        }
+
+        LuaWidgetEngine.RenderResult result = getLuaWidgetEngine(widgetId).tick();
+        ModuleManager.setScriptText(mContext, id, LuaWidgetManager.modulePayload(widgetId, result));
+        if (id.equals(activeModule)) {
+            repaintActiveTextModule(id);
+            scheduleLuaWidgetTickIfNeeded(id, result);
+        }
     }
 
     private void updateMusicModuleText(View musicWidget) {
@@ -1508,6 +1597,17 @@ public class UIManager implements OnTouchListener {
         } else if ("lua_click".equals(command)) {
             int index = intent.getIntExtra(EXTRA_WIDGET_ACTION_INDEX, 0);
             clickLuaWidget(module, index);
+        } else if ("lua_action".equals(command)) {
+            actionLuaWidget(module, intent.getStringExtra(EXTRA_WIDGET_ACTION_VALUE));
+        } else if ("lua_dialog".equals(command)) {
+            int index = intent.getIntExtra(EXTRA_WIDGET_ACTION_INDEX, 0);
+            dialogLuaWidget(module, index);
+        } else if ("lua_expand".equals(command)) {
+            setLuaWidgetExpanded(module, true);
+        } else if ("lua_collapse".equals(command)) {
+            setLuaWidgetExpanded(module, false);
+        } else if ("lua_toggle".equals(command)) {
+            toggleLuaWidgetExpanded(module);
         }
     }
 
@@ -1561,10 +1661,17 @@ public class UIManager implements OnTouchListener {
         if (TextUtils.isEmpty(widgetId) || !LuaWidgetManager.exists(widgetId)) {
             ModuleManager.setScriptText(mContext, id, "::title " + ModuleManager.displayName(id)
                     + "\n::body Lua widget source not found: " + widgetId);
+        } else if (!LuaWidgetManager.isEnabled(widgetId)) {
+            handler.removeCallbacks(luaWidgetTickRunnable);
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.disabledPayload(widgetId));
+        } else if (!LuaWidgetManager.isTrusted(widgetId)) {
+            handler.removeCallbacks(luaWidgetTickRunnable);
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.consentPayload(widgetId));
         } else {
             LuaWidgetEngine engine = getLuaWidgetEngine(widgetId);
-            LuaWidgetEngine.RenderResult result = engine.render();
+            LuaWidgetEngine.RenderResult result = engine.render(announce);
             ModuleManager.setScriptText(mContext, id, LuaWidgetManager.modulePayload(widgetId, result));
+            scheduleLuaWidgetTickIfNeeded(id, result);
         }
 
         if (repaint && id.equals(activeModule)) {
@@ -1587,10 +1694,175 @@ public class UIManager implements OnTouchListener {
             Tuils.sendOutput(mContext, "Lua widget source not found: " + id);
             return;
         }
+        if (!LuaWidgetManager.isEnabled(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.disabledPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+        if (!LuaWidgetManager.isTrusted(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.consentPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
 
         LuaWidgetEngine engine = getLuaWidgetEngine(widgetId);
         LuaWidgetEngine.RenderResult result = engine.click(index);
         ModuleManager.setScriptText(mContext, id, LuaWidgetManager.modulePayload(widgetId, result));
+        scheduleLuaWidgetTickIfNeeded(id, result);
+        if (id.equals(activeModule)) {
+            repaintActiveTextModule(id);
+        }
+        rebuildModuleDock();
+    }
+
+    private void actionLuaWidget(String module, String value) {
+        String id = ModuleManager.normalize(module);
+        if (TextUtils.isEmpty(id)) {
+            return;
+        }
+        String source = ModuleManager.getModuleSource(mContext, id);
+        String widgetId = ModuleManager.luaWidgetId(source);
+        if (TextUtils.isEmpty(widgetId) || !LuaWidgetManager.exists(widgetId)) {
+            Tuils.sendOutput(mContext, "Lua widget source not found: " + id);
+            return;
+        }
+        if (!LuaWidgetManager.isEnabled(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.disabledPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+        if (!LuaWidgetManager.isTrusted(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.consentPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+
+        LuaWidgetEngine.RenderResult result = getLuaWidgetEngine(widgetId).action(value);
+        ModuleManager.setScriptText(mContext, id, LuaWidgetManager.modulePayload(widgetId, result));
+        scheduleLuaWidgetTickIfNeeded(id, result);
+        if (id.equals(activeModule)) {
+            repaintActiveTextModule(id);
+        }
+        rebuildModuleDock();
+    }
+
+    private void dialogLuaWidget(String module, int index) {
+        String id = ModuleManager.normalize(module);
+        if (TextUtils.isEmpty(id)) {
+            return;
+        }
+        String source = ModuleManager.getModuleSource(mContext, id);
+        String widgetId = ModuleManager.luaWidgetId(source);
+        if (TextUtils.isEmpty(widgetId) || !LuaWidgetManager.exists(widgetId)) {
+            Tuils.sendOutput(mContext, "Lua widget source not found: " + id);
+            return;
+        }
+        if (!LuaWidgetManager.isEnabled(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.disabledPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+        if (!LuaWidgetManager.isTrusted(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.consentPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+
+        LuaWidgetEngine.RenderResult result = getLuaWidgetEngine(widgetId).dialog(index);
+        ModuleManager.setScriptText(mContext, id, LuaWidgetManager.modulePayload(widgetId, result));
+        scheduleLuaWidgetTickIfNeeded(id, result);
+        if (id.equals(activeModule)) {
+            repaintActiveTextModule(id);
+        }
+        rebuildModuleDock();
+    }
+
+    private void setLuaWidgetExpanded(String module, boolean expanded) {
+        String id = ModuleManager.normalize(module);
+        if (TextUtils.isEmpty(id)) {
+            return;
+        }
+        String source = ModuleManager.getModuleSource(mContext, id);
+        String widgetId = ModuleManager.luaWidgetId(source);
+        if (TextUtils.isEmpty(widgetId) || !LuaWidgetManager.exists(widgetId)) {
+            Tuils.sendOutput(mContext, "Lua widget source not found: " + id);
+            return;
+        }
+        if (!LuaWidgetManager.isEnabled(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.disabledPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+        if (!LuaWidgetManager.isTrusted(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.consentPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+
+        LuaWidgetEngine.RenderResult result = getLuaWidgetEngine(widgetId).setExpanded(expanded);
+        ModuleManager.setScriptText(mContext, id, LuaWidgetManager.modulePayload(widgetId, result));
+        scheduleLuaWidgetTickIfNeeded(id, result);
+        if (id.equals(activeModule)) {
+            repaintActiveTextModule(id);
+        }
+        rebuildModuleDock();
+    }
+
+    private void toggleLuaWidgetExpanded(String module) {
+        String id = ModuleManager.normalize(module);
+        if (TextUtils.isEmpty(id)) {
+            return;
+        }
+        String source = ModuleManager.getModuleSource(mContext, id);
+        String widgetId = ModuleManager.luaWidgetId(source);
+        if (TextUtils.isEmpty(widgetId) || !LuaWidgetManager.exists(widgetId)) {
+            Tuils.sendOutput(mContext, "Lua widget source not found: " + id);
+            return;
+        }
+        if (!LuaWidgetManager.isEnabled(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.disabledPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+        if (!LuaWidgetManager.isTrusted(widgetId)) {
+            ModuleManager.setScriptText(mContext, id, LuaWidgetManager.consentPayload(widgetId));
+            if (id.equals(activeModule)) {
+                repaintActiveTextModule(id);
+            }
+            rebuildModuleDock();
+            return;
+        }
+
+        LuaWidgetEngine.RenderResult result = getLuaWidgetEngine(widgetId).toggleExpanded();
+        ModuleManager.setScriptText(mContext, id, LuaWidgetManager.modulePayload(widgetId, result));
+        scheduleLuaWidgetTickIfNeeded(id, result);
         if (id.equals(activeModule)) {
             repaintActiveTextModule(id);
         }
@@ -1602,10 +1874,44 @@ public class UIManager implements OnTouchListener {
         long version = LuaWidgetManager.version(id);
         LuaWidgetEngine engine = luaWidgetEngines.get(id);
         if (engine == null || engine.version() != version) {
-            engine = new LuaWidgetEngine(id, LuaWidgetManager.readScript(id), version);
+            engine = new LuaWidgetEngine(mContext, id, LuaWidgetManager.readScript(id), version, (updatedWidgetId, result) -> {
+                List<String> modules = modulesForLuaWidget(updatedWidgetId);
+                if (modules.isEmpty()) {
+                    return;
+                }
+                for (String module : modules) {
+                    if (!LuaWidgetManager.isEnabled(updatedWidgetId)) {
+                        ModuleManager.setScriptText(mContext, module, LuaWidgetManager.disabledPayload(updatedWidgetId));
+                        handler.removeCallbacks(luaWidgetTickRunnable);
+                    } else if (!LuaWidgetManager.isTrusted(updatedWidgetId)) {
+                        ModuleManager.setScriptText(mContext, module, LuaWidgetManager.consentPayload(updatedWidgetId));
+                        handler.removeCallbacks(luaWidgetTickRunnable);
+                    } else {
+                        ModuleManager.setScriptText(mContext, module, LuaWidgetManager.modulePayload(updatedWidgetId, result));
+                    }
+                    if (module.equals(activeModule)) {
+                        repaintActiveTextModule(module);
+                        scheduleLuaWidgetTickIfNeeded(module, result);
+                    }
+                }
+                rebuildModuleDock();
+            });
             luaWidgetEngines.put(id, engine);
         }
         return engine;
+    }
+
+    private List<String> modulesForLuaWidget(String widgetId) {
+        ArrayList<String> modules = new ArrayList<>();
+        String normalizedWidget = LuaWidgetManager.normalizeId(widgetId);
+        for (String module : ModuleManager.listAll(mContext)) {
+            String source = ModuleManager.getModuleSource(mContext, module);
+            if (ModuleManager.isLuaSource(source)
+                    && TextUtils.equals(normalizedWidget, ModuleManager.luaWidgetId(source))) {
+                modules.add(ModuleManager.normalize(module));
+            }
+        }
+        return modules;
     }
 
     private void repaintActiveTextModule(String id) {
@@ -5025,6 +5331,7 @@ public class UIManager implements OnTouchListener {
         closeKeyboard();
         handler.removeCallbacks(musicTimeRunnable);
         handler.removeCallbacks(eventsRefreshRunnable);
+        handler.removeCallbacks(luaWidgetTickRunnable);
         if (handler != null) {
             handler.removeCallbacks(fontRefreshRunnable);
         }

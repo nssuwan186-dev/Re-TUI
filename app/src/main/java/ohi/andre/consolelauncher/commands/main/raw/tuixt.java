@@ -8,7 +8,7 @@ import java.io.IOException;
 
 import ohi.andre.consolelauncher.LauncherActivity;
 import ohi.andre.consolelauncher.R;
-import ohi.andre.consolelauncher.commands.tuixt.TuixtActivity;
+import ohi.andre.consolelauncher.commands.tuixt.WidgetEditorActivity;
 import ohi.andre.consolelauncher.commands.CommandAbstraction;
 import ohi.andre.consolelauncher.commands.ExecutePack;
 import ohi.andre.consolelauncher.commands.main.MainPack;
@@ -38,8 +38,8 @@ public class tuixt implements CommandAbstraction {
             return info.res.getString(R.string.output_isdirectory);
         }
 
-        Intent intent = new Intent(info.context, TuixtActivity.class);
-        intent.putExtra(TuixtActivity.PATH, file.getAbsolutePath());
+        Intent intent = new Intent(info.context, WidgetEditorActivity.class);
+        intent.putExtra(WidgetEditorActivity.EXTRA_FILE_PATH, file.getAbsolutePath());
         ((Activity) info.context).startActivityForResult(intent, LauncherActivity.TUIXT_REQUEST);
 
         return Tuils.EMPTYSTRING;

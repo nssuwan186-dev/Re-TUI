@@ -1,18 +1,23 @@
 package ohi.andre.consolelauncher.commands.main.raw;
 
-import android.content.ActivityNotFoundException;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.SharedPreferences;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import ohi.andre.consolelauncher.LauncherActivity;
 import ohi.andre.consolelauncher.R;
 import ohi.andre.consolelauncher.UIManager;
 import ohi.andre.consolelauncher.commands.CommandAbstraction;
 import ohi.andre.consolelauncher.commands.ExecutePack;
 import ohi.andre.consolelauncher.commands.main.MainPack;
 import ohi.andre.consolelauncher.commands.main.specific.ParamCommand;
+import ohi.andre.consolelauncher.commands.tuixt.WidgetEditorActivity;
 import ohi.andre.consolelauncher.managers.AppsManager;
 import ohi.andre.consolelauncher.managers.RssManager;
 import ohi.andre.consolelauncher.managers.notifications.NotificationManager;
@@ -59,6 +64,10 @@ public class config extends ParamCommand {
                             .putLong(UIManager.NEXT_UNLOCK_CYCLE_RESTART, 0)
                             .putInt(UIManager.UNLOCK_KEY, 0)
                             .apply();
+                } else if(save == Behavior.show_module_dock) {
+                    Intent intent = new Intent(UIManager.ACTION_MODULE_COMMAND);
+                    intent.putExtra(UIManager.EXTRA_MODULE_COMMAND, "rebuild");
+                    LocalBroadcastManager.getInstance(pack.context.getApplicationContext()).sendBroadcast(intent);
                 }
 
                 return null;
@@ -95,14 +104,13 @@ public class config extends ParamCommand {
             public String exec(ExecutePack pack) {
                 File file = new File(Tuils.getFolder(), pack.getString());
 
-                try {
-                    pack.context.startActivity(Tuils.openFile(pack.context, file));
-                } catch (ActivityNotFoundException e) {
-                    Tuils.log("nf");
-                    Tuils.toFile(e);
-                } catch (Exception ex) {
-                    Tuils.log(ex);
-                    Tuils.toFile(ex);
+                Intent intent = new Intent(pack.context, WidgetEditorActivity.class);
+                intent.putExtra(WidgetEditorActivity.EXTRA_FILE_PATH, file.getAbsolutePath());
+                if (pack.context instanceof Activity) {
+                    ((Activity) pack.context).startActivityForResult(intent, LauncherActivity.TUIXT_REQUEST);
+                } else {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    pack.context.startActivity(intent);
                 }
 
                 return null;

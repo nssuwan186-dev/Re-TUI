@@ -35,7 +35,7 @@ public class search extends ParamCommand {
             @Override
             public String exec(ExecutePack pack) {
                 List<String> args = pack.getList();
-                return playstore(args, pack.context);
+                return playstoreSearch(args, pack.context);
             }
         },
 //        file {
@@ -156,13 +156,21 @@ public class search extends ParamCommand {
         return Tuils.EMPTYSTRING;
     }
 
-    private static String playstore(List<String> args, Context c) {
-        String toSearch = Tuils.toPlanString(args, "%20");
+    public static String playstoreSearch(List<String> args, Context c) {
+        return playstoreSearch(Tuils.toPlanString(args, " "), c);
+    }
+
+    public static String playstoreSearch(String query, Context c) {
+        String toSearch = Uri.encode(query);
 
         try {
             c.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(PLAYSTORE_PREFIX + toSearch)));
-        } catch (android.content.ActivityNotFoundException anfe) {
-            c.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(PLAYSTORE_BROWSER_PREFIX + toSearch)));
+        } catch (Exception firstError) {
+            try {
+                c.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(PLAYSTORE_BROWSER_PREFIX + toSearch + "&c=apps")));
+            } catch (Exception secondError) {
+                return secondError.toString();
+            }
         }
 
         return Tuils.EMPTYSTRING;
