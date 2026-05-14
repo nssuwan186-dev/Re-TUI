@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Re:T-UI</title>
-  <meta name="description" content="A visual, phone-first showcase for Re:T-UI, the command-first Android launcher with terminal styling, modules, Termux integration, settings, files, and automation.">
+  <meta name="description" content="A visual, phone-first showcase for Re:T-UI, the command-first Android launcher with terminal styling, Lua scripting, modules, Termux integration, settings, files, and automation.">
   <style>
     :root {
       color-scheme: dark;
@@ -381,6 +381,23 @@
       margin-top: 22px;
     }
 
+    .lua-showcase {
+      display: grid;
+      grid-template-columns: minmax(0, 0.84fr) minmax(320px, 1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .lua-shot-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .lua-shot-figure {
+      min-width: 0;
+    }
+
     .download-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -615,11 +632,13 @@
 
       .command-grid,
       .feature-grid,
+      .lua-showcase,
       .download-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .feature-grid {
+      .feature-grid,
+      .lua-showcase {
         grid-template-columns: 1fr;
       }
 
@@ -699,6 +718,7 @@
 
     @media (max-width: 520px) {
       .command-grid,
+      .lua-shot-grid,
       .download-grid {
         grid-template-columns: 1fr;
       }
@@ -730,6 +750,7 @@
       <a href="#downloads">Downloads</a>
       <a href="#preset-gallery">Gallery</a>
       <a href="#commands">Commands</a>
+      <a href="#lua-scripting">Lua</a>
       <a href="#customize">Customize</a>
       <a href="modules.html">Modules</a>
       <a href="#integrations">Integrations</a>
@@ -745,13 +766,14 @@
         <div class="meta" aria-label="Capture metadata">
           <span>Visual Android showcase</span>
           <span>Screen: 1260x2800</span>
-          <span>Updated: 7 May 2026</span>
+          <span>Updated: 14 May 2026</span>
           <span>Separate tutorial pages</span>
         </div>
         <div class="cta-row" aria-label="Project links">
           <a href="https://github.com/DvilSpawn/Re-TUI">GitHub repo</a>
           <a href="https://github.com/DvilSpawn/Re-TUI/wiki">Wiki</a>
           <a href="modules.html">Modules</a>
+          <a href="#lua-scripting">Lua scripting</a>
           <a href="#downloads">Downloads</a>
           <a class="secondary" href="#support">Support Re:T-UI</a>
         </div>
@@ -832,8 +854,38 @@
         <div class="tile"><code>preset -save name</code><p>Save a stable theme snapshot after you like the look.</p></div>
         <div class="tile"><code>alias -add ll apps -ls</code><p>Create short commands for workflows you repeat often.</p></div>
         <div class="tile"><code>search -gg query</code><p>Launch web searches without leaving the command-first flow.</p></div>
+        <div class="tile"><code>widget -add focus</code><p>Create launcher-native Lua widgets with persistent prefs, local files, actions, and config surfaces.</p></div>
         <div class="tile"><code>termux -setup</code><p>Print the checklist for script dispatch through Termux.</p></div>
         <div class="tile"><code>debug -settings</code><p>Inspect effective runtime settings when the UI does not match what you expected.</p></div>
+      </div>
+    </section>
+
+    <section class="guide lua-showcase" id="lua-scripting">
+      <div class="copy">
+        <div class="kicker">Lua scripting</div>
+        <h2>Build widgets that feel native to the launcher.</h2>
+        <p>Lua widgets run inside Re:T-UI, render into the module dock, and keep state in widget-owned storage. They are for small, inspectable tools: timers, todos, status panels, quick actions, note pads, and suggestion scripts.</p>
+        <p>The runtime keeps a firm boundary between the live preview, user-facing config, and source editing. <strong>edit</strong> opens a widget config surface when the script provides one; <strong>edit script</strong> opens the Lua source editor.</p>
+        <div class="terminal-list">
+          <div><strong>Create:</strong> <code>widget -add focus_sprint</code>, paste Lua, then Save/Run.</div>
+          <div><strong>Validate:</strong> <code>widget -check focus_sprint</code> checks render output and config schema.</div>
+          <div><strong>Configure:</strong> <code>widget -config focus_sprint</code> opens text, number, toggle, select, or textarea fields.</div>
+          <div><strong>Persist:</strong> small settings go into <code>prefs</code>; larger notes or JSON go into widget-local <code>files</code>.</div>
+        </div>
+        <div class="cta-row" aria-label="Lua scripting links">
+          <a href="https://github.com/DvilSpawn/Re-TUI/wiki/Lua-Widgets">Lua widgets guide</a>
+          <a class="secondary" href="https://github.com/DvilSpawn/Re-TUI/wiki/Command-Reference">Widget commands</a>
+        </div>
+      </div>
+      <div class="lua-shot-grid" aria-label="Lua widget screenshots">
+        <figure class="lua-shot-figure">
+          <img src="phone-blog-assets/lua-widget-preview.png" alt="Re:T-UI Lua Focus widget preview rendered in the module dock">
+          <figcaption>A Lua widget renders live state into the module dock and exposes widget-specific action chips.</figcaption>
+        </figure>
+        <figure class="lua-shot-figure">
+          <img src="phone-blog-assets/lua-widget-config.png" alt="Re:T-UI Lua widget config panel with text, number, toggle, select, and textarea fields">
+          <figcaption>The same widget opens a terminal-styled config panel generated from the Lua schema.</figcaption>
+        </figure>
       </div>
     </section>
 
