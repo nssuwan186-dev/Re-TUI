@@ -51,7 +51,6 @@ import ohi.andre.consolelauncher.managers.TimeManager;
 import ohi.andre.consolelauncher.UIManager;
 import ohi.andre.consolelauncher.managers.notifications.KeeperService;
 import ohi.andre.consolelauncher.managers.notifications.NotificationManager;
-import ohi.andre.consolelauncher.managers.notifications.NotificationMonitorService;
 import ohi.andre.consolelauncher.managers.notifications.NotificationService;
 import ohi.andre.consolelauncher.managers.modules.ModuleManager;
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings;
@@ -277,7 +276,7 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
                 homePath = Tuils.getFolder().getAbsolutePath();
             }
             keeperIntent.putExtra(KeeperService.PATH_KEY, homePath);
-            startService(keeperIntent);
+            startKeeperServiceSafely(keeperIntent);
         } else {
             try {
                 stopService(keeperIntent);
@@ -326,15 +325,12 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
                         }
                     }
 
-                    Intent monitor = new Intent(this, NotificationMonitorService.class);
-                    startService(monitor);
-
-                    Intent notificationIntent = new Intent(this, NotificationService.class);
-                    startService(notificationIntent);
                     NotificationService.requestListenerRebind(this);
                 } catch (NoClassDefFoundError er) {
                     Intent intent = new Intent(PrivateIOReceiver.ACTION_OUTPUT);
                     intent.putExtra(PrivateIOReceiver.TEXT, getString(R.string.output_notification_error) + Tuils.SPACE + er.toString());
+                } catch (RuntimeException er) {
+                    Tuils.toFile(er);
                 }
             } else {
                 Tuils.sendOutput(Color.RED, this, R.string.notification_low_api);
@@ -377,6 +373,18 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
         ui.activateTerminalInput(openKeyboardOnStart);
 
         System.gc();
+    }
+
+    private void startKeeperServiceSafely(Intent keeperIntent) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(this, keeperIntent);
+            } else {
+                startService(keeperIntent);
+            }
+        } catch (RuntimeException e) {
+            Tuils.toFile(e);
+        }
     }
 
     private boolean shouldRequestAllFilesAccess() {

@@ -198,10 +198,6 @@ public class NotificationService extends NotificationListenerService {
 
         requestListenerRebind(context);
 
-        Intent intent = new Intent(context, NotificationService.class);
-        intent.setAction(ACTION_RELOAD_NOTIFICATION_CONFIG);
-        context.startService(intent);
-
         LocalBroadcastManager.getInstance(context.getApplicationContext())
                 .sendBroadcast(new Intent(ACTION_RELOAD_NOTIFICATION_CONFIG));
     }

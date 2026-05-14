@@ -1286,7 +1286,6 @@ public class UIManager implements OnTouchListener {
             return;
         }
         try {
-            mContext.startService(new Intent(mContext, NotificationService.class));
             NotificationService.requestListenerRebind(mContext);
         } catch (Exception e) {
             Tuils.log(e);
