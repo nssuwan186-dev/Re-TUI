@@ -64,6 +64,8 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import ohi.andre.consolelauncher.BuildConfig;
+import ohi.andre.consolelauncher.managers.ClockManager;
+import ohi.andre.consolelauncher.managers.PomodoroManager;
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings;
 import ohi.andre.consolelauncher.tuils.Tuils;
 
@@ -75,6 +77,12 @@ public final class LuaWidgetEngine {
     private static final int MAX_HTTP_RESPONSE_BYTES = 256 * 1024;
     private static final long MAX_WIDGET_FILE_BYTES = 256L * 1024L;
     private static final long MAX_WIDGET_FILES_TOTAL_BYTES = 1024L * 1024L;
+    private static final int DEFAULT_PROGRESS_BAR_WIDTH = 12;
+    private static final int MAX_PROGRESS_BAR_WIDTH = 32;
+    private static final String PROGRESS_EMPTY = "\u2591";
+    private static final String PROGRESS_LOW = "\u2592";
+    private static final String PROGRESS_HIGH = "\u2593";
+    private static final String PROGRESS_FULL = "\u2588";
     private static final MediaType TEXT_MEDIA_TYPE = MediaType.parse("text/plain; charset=utf-8");
     private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
     private static final String PREF_EXPANDABLE = "_retui_expandable";
@@ -286,6 +294,7 @@ public final class LuaWidgetEngine {
         globals.set("debug", buildDebugTable());
         globals.set("date", buildDateTable());
         globals.set("fmt", buildFmtTable());
+        globals.set("clock", buildClockTable());
         globals.set("strings", buildStringsTable());
         globals.set("colors", buildColorsTable());
         buildPrefsHelpers(prefsTable);
@@ -518,9 +527,9 @@ public final class LuaWidgetEngine {
         ui.set("show_progress_bar", new UiFunction(args -> {
             String label = stringAt(args, 1, "Progress");
             double current = numberAt(args, 2, 0);
-            double max = Math.max(1, numberAt(args, 3, 100));
-            int pct = (int) Math.round(Math.max(0, Math.min(100, (current * 100d) / max)));
-            lastResult.body = appendLine(lastResult.body, label + ": " + pct + "%");
+            double max = numberAt(args, 3, 100);
+            int width = (int) numberAt(args, 4, DEFAULT_PROGRESS_BAR_WIDTH);
+            lastResult.body = appendLine(lastResult.body, formatProgressLine(label, current, max, width));
         }));
         ui.set("set_progress", new UiFunction(args -> {
             double pct = Math.max(0, Math.min(100, numberAt(args, 1, 0)));
@@ -843,6 +852,12 @@ public final class LuaWidgetEngine {
             double max = Math.max(1, numberAt(args, 2, 100));
             return LuaValue.valueOf(Math.round((value * 100d) / max) + "%");
         }));
+        fmt.set("progress_bar", new ValueFunction(args -> {
+            double value = numberAt(args, 1, 0);
+            double max = numberAt(args, 2, 100);
+            int width = (int) numberAt(args, 3, DEFAULT_PROGRESS_BAR_WIDTH);
+            return LuaValue.valueOf(formatProgressBar(value, max, width));
+        }));
         fmt.set("bytes", new ValueFunction(args -> LuaValue.valueOf(formatBytes(numberAt(args, 1, 0)))));
         fmt.set("round", new ValueFunction(args -> LuaValue.valueOf(Math.round(numberAt(args, 1, 0)))));
         fmt.set("fixed", new ValueFunction(args -> {
@@ -853,6 +868,18 @@ public final class LuaWidgetEngine {
         fmt.set("pad_left", new ValueFunction(args -> LuaValue.valueOf(pad(stringAt(args, 1, ""), (int) numberAt(args, 2, 0), true))));
         fmt.set("pad_right", new ValueFunction(args -> LuaValue.valueOf(pad(stringAt(args, 1, ""), (int) numberAt(args, 2, 0), false))));
         return fmt;
+    }
+
+    private LuaTable buildClockTable() {
+        LuaTable clock = new LuaTable();
+        clock.set("timer", new ValueFunction(args -> timerState()));
+        clock.set("stopwatch", new ValueFunction(args -> stopwatchState()));
+        clock.set("pomodoro", new ValueFunction(args -> pomodoroState()));
+        clock.set("format_duration", new ValueFunction(args ->
+                LuaValue.valueOf(ClockManager.formatDuration((long) numberAt(args, 1, 0)))));
+        clock.set("parse_duration", new ValueFunction(args ->
+                LuaValue.valueOf(ClockManager.parseDurationMillis(stringAt(args, 1, "")))));
+        return clock;
     }
 
     private LuaTable buildStringsTable() {
@@ -878,6 +905,66 @@ public final class LuaWidgetEngine {
 
     private LuaTable buildColorsTable() {
         return colorsTable();
+    }
+
+    private LuaTable timerState() {
+        LuaTable table = new LuaTable();
+        if (context == null) {
+            table.set("running", LuaValue.FALSE);
+            table.set("remaining_ms", LuaValue.ZERO);
+            table.set("total_ms", LuaValue.ZERO);
+            table.set("elapsed_ms", LuaValue.ZERO);
+            return table;
+        }
+        ClockManager clockManager = ClockManager.getInstance(context);
+        long remaining = clockManager.getTimerRemainingMillis();
+        long total = clockManager.getTimerTotalMillis();
+        table.set("running", clockManager.isTimerRunning() ? LuaValue.TRUE : LuaValue.FALSE);
+        table.set("remaining_ms", LuaValue.valueOf(remaining));
+        table.set("total_ms", LuaValue.valueOf(total));
+        table.set("elapsed_ms", LuaValue.valueOf(Math.max(0L, total - remaining)));
+        return table;
+    }
+
+    private LuaTable stopwatchState() {
+        LuaTable table = new LuaTable();
+        if (context == null) {
+            table.set("running", LuaValue.FALSE);
+            table.set("elapsed_ms", LuaValue.ZERO);
+            return table;
+        }
+        ClockManager clockManager = ClockManager.getInstance(context);
+        table.set("running", clockManager.isStopwatchRunning() ? LuaValue.TRUE : LuaValue.FALSE);
+        table.set("elapsed_ms", LuaValue.valueOf(clockManager.getStopwatchElapsedMillis()));
+        return table;
+    }
+
+    private LuaTable pomodoroState() {
+        LuaTable table = new LuaTable();
+        if (context == null) {
+            table.set("running", LuaValue.FALSE);
+            table.set("remaining_ms", LuaValue.ZERO);
+            table.set("total_ms", LuaValue.ZERO);
+            table.set("elapsed_ms", LuaValue.ZERO);
+            table.set("task", "");
+            table.set("type", "idle");
+            table.set("cycle", LuaValue.ZERO);
+            return table;
+        }
+        PomodoroManager pomodoro = PomodoroManager.getInstance(context);
+        long remaining = pomodoro.getRemainingMillis();
+        long total = pomodoro.getTotalDuration();
+        String type = pomodoro.getCurrentType() == null
+                ? "idle"
+                : pomodoro.getCurrentType().name().toLowerCase(Locale.US);
+        table.set("running", pomodoro.isRunning() ? LuaValue.TRUE : LuaValue.FALSE);
+        table.set("remaining_ms", LuaValue.valueOf(remaining));
+        table.set("total_ms", LuaValue.valueOf(total));
+        table.set("elapsed_ms", LuaValue.valueOf(Math.max(0L, total - remaining)));
+        table.set("task", LuaValue.valueOf(pomodoro.getTaskName() == null ? "" : pomodoro.getTaskName()));
+        table.set("type", LuaValue.valueOf(type));
+        table.set("cycle", LuaValue.valueOf(pomodoro.getCompletedFocuses()));
+        return table;
     }
 
     private LuaTable safeOsTable() {
@@ -1208,6 +1295,44 @@ public final class LuaWidgetEngine {
         StringBuilder spaces = new StringBuilder();
         for (int i = text.length(); i < width; i++) spaces.append(' ');
         return left ? spaces + text : text + spaces;
+    }
+
+    private static String formatProgressLine(String label, double current, double max, int width) {
+        String prefix = TextUtils.isEmpty(label) ? "" : label + ": ";
+        return prefix + formatProgressBar(current, max, width) + " " + progressPercent(current, max) + "%";
+    }
+
+    private static String formatProgressBar(double current, double max, int width) {
+        int cells = Math.max(1, Math.min(MAX_PROGRESS_BAR_WIDTH, width));
+        double fill = progressRatio(current, max) * cells;
+        StringBuilder out = new StringBuilder(cells);
+        for (int i = 0; i < cells; i++) {
+            double cellFill = fill - i;
+            if (cellFill >= 1d) {
+                out.append(PROGRESS_FULL);
+            } else if (cellFill >= 0.67d) {
+                out.append(PROGRESS_HIGH);
+            } else if (cellFill > 0d) {
+                out.append(PROGRESS_LOW);
+            } else {
+                out.append(PROGRESS_EMPTY);
+            }
+        }
+        return out.toString();
+    }
+
+    private static int progressPercent(double current, double max) {
+        return (int) Math.round(progressRatio(current, max) * 100d);
+    }
+
+    private static double progressRatio(double current, double max) {
+        if (Double.isNaN(current) || Double.isInfinite(current)) {
+            current = 0d;
+        }
+        if (Double.isNaN(max) || Double.isInfinite(max) || max <= 0d) {
+            max = 100d;
+        }
+        return Math.max(0d, Math.min(1d, current / max));
     }
 
     private static String formatBytes(double value) {
@@ -1783,7 +1908,7 @@ public final class LuaWidgetEngine {
             if ("date".equals(name) || "fmt".equals(name) || "strings".equals(name)
                     || "colors".equals(name) || "debug".equals(name) || "files".equals(name)
                     || "http".equals(name) || "system".equals(name) || "ui".equals(name)
-                    || "suggest".equals(name) || "aio".equals(name)) {
+                    || "suggest".equals(name) || "aio".equals(name) || "clock".equals(name)) {
                 return globals.get(name);
             }
             return LuaValue.error("module not found: " + name);

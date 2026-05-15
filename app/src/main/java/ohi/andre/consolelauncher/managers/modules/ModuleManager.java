@@ -330,6 +330,11 @@ public final class ModuleManager {
             return suggestions;
         }
 
+        if (isLuaSource(getModuleSource(context, id))) {
+            suggestions.addAll(getScriptSuggestions(context, id));
+            return suggestions;
+        }
+
         if (TIMER.equals(id)) {
             suggestions.add(ModuleSuggestion.command("+5m", "timer -add 5m"));
             suggestions.add(ModuleSuggestion.command("+15m", "timer -add 15m"));

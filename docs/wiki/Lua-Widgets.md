@@ -105,7 +105,7 @@ end
 - `ui:show_module(module, label)`
 - `ui:show_radio_dialog(title, items, selected_index)`
 - `ui:show_list_dialog(title, items, selected_index)`
-- `ui:show_progress_bar(label, current, max)`
+- `ui:show_progress_bar(label, current, max, width)` renders a bounded Unicode bar using `░▒▓█`; `width` is optional and capped.
 - `ui:set_progress(percent)`
 - `ui:set_tick_interval(seconds)`
 - `ui:set_tick(seconds)`
@@ -239,7 +239,7 @@ local text = json.encode({ ok = true, count = 3 })
 Small Re:TUI libraries are available through `require`:
 
 - `date`: `now()`, `seconds()`, `format(pattern, seconds)`, `parts()`
-- `fmt`: `upper(text)`, `lower(text)`, `title(text)`, `percent(value, max)`, `bytes(value)`, `round(value)`, `fixed(value, places)`, `pad_left(text, width)`, `pad_right(text, width)`
+- `fmt`: `upper(text)`, `lower(text)`, `title(text)`, `percent(value, max)`, `progress_bar(value, max, width)`, `bytes(value)`, `round(value)`, `fixed(value, places)`, `pad_left(text, width)`, `pad_right(text, width)`
 - `strings`: `trim(text)`, `contains(text, needle)`, `starts_with(text, prefix)`, `ends_with(text, suffix)`, `replace(text, old, new)`, `split(text, delimiter)`, `join(table, delimiter)`
 - `colors`: current launcher color values such as `accent`, `primary_text`, `button`
 - `debug`: `log(text)`, `toast(text)`, `show()`, `clear()`
@@ -327,6 +327,14 @@ Supported calls:
 - `system:app_version_code()`
 - `system:widget_id()`
 - `system:widget_name()`
+
+## Clock Helpers
+
+- `clock:timer()` returns `{ running, remaining_ms, total_ms, elapsed_ms }`.
+- `clock:stopwatch()` returns `{ running, elapsed_ms }`.
+- `clock:pomodoro()` returns `{ running, remaining_ms, total_ms, elapsed_ms, task, type, cycle }`.
+- `clock:format_duration(milliseconds)` returns the launcher timer format.
+- `clock:parse_duration(text)` parses values such as `30s`, `5m`, or `1h` into milliseconds.
 
 ## Launcher Helpers
 

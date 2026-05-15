@@ -1071,6 +1071,7 @@ public class UIManager implements OnTouchListener {
         homeWidgetsContainer = homePage.findViewById(R.id.home_widgets_container);
         if (homeWidgetsContainer == null) return;
 
+        ensureSystemLuaModules();
         pruneBundledLuaSamples();
         activeModule = "";
         ModuleManager.setActiveModule(mContext, "");
@@ -1195,7 +1196,9 @@ public class UIManager implements OnTouchListener {
         applyTerminalTrayState(false);
         homeWidgetsContainer.removeAllViews();
 
-        if (ModuleManager.MUSIC.equals(id)) {
+        if (showLuaModuleIfSource(id)) {
+            // Rendered above.
+        } else if (ModuleManager.MUSIC.equals(id)) {
             showMusicModule();
         } else if (ModuleManager.NOTIFICATIONS.equals(id)) {
             showNotificationsModule();
@@ -1216,6 +1219,33 @@ public class UIManager implements OnTouchListener {
         }
         refreshSuggestionsForActiveModule();
         scheduleEventsRefreshIfNeeded();
+    }
+
+    private void ensureSystemLuaModules() {
+        if (mContext == null) {
+            return;
+        }
+        try {
+            LuaWidgetManager.ensureSystemTimerWidget();
+            String timerSource = LuaWidgetManager.SOURCE_PREFIX + LuaWidgetManager.SYSTEM_TIMER_WIDGET_ID;
+            String currentSource = ModuleManager.getModuleSource(mContext, ModuleManager.TIMER);
+            if (TextUtils.isEmpty(currentSource) || TextUtils.equals(currentSource, timerSource)) {
+                ModuleManager.setScriptModule(mContext, ModuleManager.TIMER, timerSource);
+            }
+        } catch (Exception e) {
+            Tuils.log(e);
+        }
+    }
+
+    private boolean showLuaModuleIfSource(String id) {
+        String source = ModuleManager.getModuleSource(mContext, id);
+        if (!ModuleManager.isLuaSource(source)) {
+            return false;
+        }
+        renderLuaWidgetModule(id, false, false);
+        String text = ModuleManager.getScriptText(mContext, id);
+        showTextModule(id, TextUtils.isEmpty(text) ? "No module output yet." : text);
+        return true;
     }
 
     private void refreshLauncherModuleTextIfNeeded(String module) {
@@ -1306,7 +1336,7 @@ public class UIManager implements OnTouchListener {
         if (body != null) {
             body.setText(text);
             body.setTextColor(AppearanceSettings.notificationWidgetTextColor());
-            body.setTypeface(Tuils.getTypeface(mContext));
+            applyModuleBodyTypeface(body, text);
             constrainEventModuleScroll(module, scroll, body);
         }
         if (close != null) {
@@ -1358,6 +1388,30 @@ public class UIManager implements OnTouchListener {
                 return true;
             }
         });
+    }
+
+    private void applyModuleBodyTypeface(TextView body, CharSequence text) {
+        if (body == null) {
+            return;
+        }
+        if (containsProgressBlockGlyphs(text)) {
+            body.setTypeface(Typeface.MONOSPACE);
+        } else {
+            body.setTypeface(Tuils.getTypeface(mContext));
+        }
+    }
+
+    private static boolean containsProgressBlockGlyphs(CharSequence text) {
+        if (text == null) {
+            return false;
+        }
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '\u2591' || c == '\u2592' || c == '\u2593' || c == '\u2588') {
+                return true;
+            }
+        }
+        return false;
     }
 
     private int calculateCalendarTextHeight(TextView body) {
@@ -5424,7 +5478,11 @@ public class UIManager implements OnTouchListener {
             TextView textView = (TextView) view;
             Typeface current = textView.getTypeface();
             int style = current != null ? current.getStyle() : Typeface.NORMAL;
-            textView.setTypeface(typeface, style);
+            if (textView.getId() == R.id.module_text_body && containsProgressBlockGlyphs(textView.getText())) {
+                textView.setTypeface(Typeface.MONOSPACE, style);
+            } else {
+                textView.setTypeface(typeface, style);
+            }
         }
 
         if (view instanceof ViewGroup) {

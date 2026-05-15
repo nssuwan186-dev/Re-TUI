@@ -31,6 +31,7 @@ public final class LuaWidgetManager {
     public static final String WIDGETS_DIR = "widgets";
     public static final String SCRIPT_FILE = "main.lua";
     public static final String MANIFEST_FILE = "manifest.json";
+    public static final String SYSTEM_TIMER_WIDGET_ID = "timer";
     private static final String[] BUNDLED_SAMPLE_IDS = new String[] {
             "aio_counter",
             "aio_progress",
@@ -277,6 +278,50 @@ public final class LuaWidgetManager {
         if (previousManifest != null && previousManifest.optBoolean("disabled", false)) {
             manifest.put("disabled", true);
         }
+        write(manifestFile(normalized), manifest.toString(2) + "\n");
+    }
+
+    public static void ensureSystemTimerWidget() throws Exception {
+        ensureSystemWidget(SYSTEM_TIMER_WIDGET_ID, "Timer", systemTimerScript());
+    }
+
+    private static void ensureSystemWidget(String id, String name, String script) throws Exception {
+        String normalized = normalizeId(id);
+        JSONObject manifest = readManifest(normalized);
+        if (exists(normalized) && (manifest == null || !manifest.optBoolean("systemManaged", false))) {
+            return;
+        }
+        saveSystem(normalized, name, script);
+    }
+
+    private static void saveSystem(String id, String name, String script) throws Exception {
+        String normalized = normalizeId(id);
+        if (TextUtils.isEmpty(normalized)) {
+            throw new IllegalArgumentException("Widget id is required");
+        }
+        String code = script == null ? "" : script;
+        Map<String, String> meta = metadata(code);
+        String hash = scriptHash(code);
+        List<String> requiredPermissions = requiredPermissions(code);
+        write(scriptFile(normalized), code);
+
+        JSONObject manifest = new JSONObject();
+        manifest.put("type", "retui-widget");
+        manifest.put("schema", 1);
+        manifest.put("id", normalized);
+        manifest.put("name", TextUtils.isEmpty(name) ? displayName(normalized) : name);
+        manifest.put("engine", ENGINE);
+        manifest.put("devOnly", false);
+        manifest.put("systemManaged", true);
+        JSONObject metadata = new JSONObject();
+        for (Map.Entry<String, String> entry : meta.entrySet()) {
+            metadata.put(entry.getKey(), entry.getValue());
+        }
+        manifest.put("metadata", metadata);
+        manifest.put("scriptHash", hash);
+        manifest.put("permissions", TextUtils.join(",", requiredPermissions));
+        manifest.put("approvedScriptHash", hash);
+        manifest.put("approvedPermissions", TextUtils.join(",", requiredPermissions));
         write(manifestFile(normalized), manifest.toString(2) + "\n");
     }
 
@@ -637,6 +682,9 @@ public final class LuaWidgetManager {
                 || code.contains("files:delete")
                 || code.contains("files:list")
                 || code.contains("files:exists"), "local-files");
+        addCapability(capabilities, code.contains("require \"clock\"")
+                || code.contains("require 'clock'")
+                || code.contains("clock:"), "clock");
         addCapability(capabilities, code.contains("suggest:"), "suggestions");
         return capabilities;
     }
@@ -807,6 +855,85 @@ public final class LuaWidgetManager {
         }
     }
 
+    private static String systemTimerScript() {
+        return ""
+                + "-- name = \"Timer\"\n"
+                + "-- type = \"widget\"\n"
+                + "-- retui = \"1\"\n"
+                + "-- description = \"System timer module backed by Re:T-UI clock state\"\n"
+                + "\n"
+                + "local clock = require \"clock\"\n"
+                + "local fmt = require \"fmt\"\n"
+                + "\n"
+                + "local BAR_WIDTH = 14\n"
+                + "\n"
+                + "local function ms(value)\n"
+                + "    local n = tonumber(value or 0) or 0\n"
+                + "    return math.max(0, n)\n"
+                + "end\n"
+                + "\n"
+                + "local function duration(value)\n"
+                + "    return clock:format_duration(ms(value))\n"
+                + "end\n"
+                + "\n"
+                + "local function pct(elapsed, total)\n"
+                + "    if total <= 0 then return 0 end\n"
+                + "    return math.floor((elapsed * 100 / total) + 0.5)\n"
+                + "end\n"
+                + "\n"
+                + "local function countdown_line(label, state)\n"
+                + "    local total = ms(state.total_ms)\n"
+                + "    local remaining = ms(state.remaining_ms)\n"
+                + "    if state.running and total > 0 then\n"
+                + "        local elapsed = math.max(0, total - remaining)\n"
+                + "        ui:add_line(label .. \": \" .. fmt.progress_bar(elapsed, total, BAR_WIDTH) .. \" \" .. pct(elapsed, total) .. \"% \" .. duration(remaining))\n"
+                + "    else\n"
+                + "        ui:add_line(label .. \": idle\")\n"
+                + "    end\n"
+                + "end\n"
+                + "\n"
+                + "local function stopwatch_line(state)\n"
+                + "    local elapsed = ms(state.elapsed_ms)\n"
+                + "    if state.running or elapsed > 0 then\n"
+                + "        ui:add_line(\"Stopwatch: \" .. duration(elapsed))\n"
+                + "    else\n"
+                + "        ui:add_line(\"Stopwatch: idle\")\n"
+                + "    end\n"
+                + "end\n"
+                + "\n"
+                + "local function pomodoro_line(state)\n"
+                + "    if state.running and state.type == \"finished\" then\n"
+                + "        ui:add_line(\"Pomodoro: finished\")\n"
+                + "    elseif state.running then\n"
+                + "        local label = \"Pomodoro \" .. (state.type or \"focus\")\n"
+                + "        countdown_line(label, state)\n"
+                + "        if state.task and state.task ~= \"\" then\n"
+                + "            ui:add_line(\"Task: \" .. state.task)\n"
+                + "        end\n"
+                + "    else\n"
+                + "        ui:add_line(\"Pomodoro: idle\")\n"
+                + "    end\n"
+                + "end\n"
+                + "\n"
+                + "local function render()\n"
+                + "    ui:set_title(\"Timer\")\n"
+                + "    countdown_line(\"Timer\", clock:timer())\n"
+                + "    stopwatch_line(clock:stopwatch())\n"
+                + "    pomodoro_line(clock:pomodoro())\n"
+                + "    ui:show_command(\"25m\", \"timer 25m\")\n"
+                + "    ui:show_command(\"+5m\", \"timer -add 5m\")\n"
+                + "    ui:show_command(\"stop\", \"timer -stop\")\n"
+                + "    ui:show_command(\"status\", \"timer -status\")\n"
+                + "    ui:show_command(\"watch\", \"stopwatch\")\n"
+                + "    ui:show_command(\"reset watch\", \"stopwatch -reset\")\n"
+                + "    ui:show_command(\"pomodoro\", \"pomodoro\")\n"
+                + "    ui:show_command(\"stop pomo\", \"pomodoro -stop\")\n"
+                + "end\n"
+                + "\n"
+                + "function on_load() render() end\n"
+                + "function on_resume() render() end\n";
+    }
+
     private static Map<String, Sample> samples() {
         LinkedHashMap<String, Sample> samples = new LinkedHashMap<>();
         samples.put("retui_counter", new Sample("Re:TUI Counter", ""
@@ -853,7 +980,7 @@ public final class LuaWidgetManager {
                 + "    local battery = system:battery_info()\n"
                 + "    ui:set_title(\"Re:TUI Progress\")\n"
                 + "    ui:show_text(\"Progress: \" .. prefs.progress .. \"%\\nBattery: \" .. battery.percent .. \"%\")\n"
-                + "    ui:show_progress_bar(\"Widget progress\", prefs.progress, 100)\n"
+                + "    ui:show_progress_bar(\"Widget progress\", prefs.progress, 100, 14)\n"
                 + "    ui:set_progress(prefs.progress)\n"
                 + "    ui:show_buttons({\"+\" .. prefs.step, \"-\" .. prefs.step, \"Reset\", \"Prefs\"})\n"
                 + "end\n"
@@ -992,7 +1119,7 @@ public final class LuaWidgetManager {
                 + "    ui:show_kv({\n"
                 + "        time = date.format(\"%Y-%m-%d %H:%M:%S\"),\n"
                 + "        storage = fmt.bytes(123456789),\n"
-                + "        progress = fmt.percent(42, 100),\n"
+                + "        progress = fmt.progress_bar(42, 100, 10) .. \" \" .. fmt.percent(42, 100),\n"
                 + "        has_tui = tostring(strings.contains(\"Re:TUI\", \"TUI\")),\n"
                 + "        accent = colors.accent,\n"
                 + "    })\n"

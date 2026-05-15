@@ -77,6 +77,7 @@ public class ClockManager {
     private final Handler handler;
 
     private long timerEndElapsedRealtime = -1L;
+    private long timerTotalDuration = 0L;
     private boolean timerRunning = false;
 
     private long stopwatchStartElapsedRealtime = -1L;
@@ -94,6 +95,7 @@ public class ClockManager {
                 if (remaining <= 0L) {
                     timerRunning = false;
                     timerEndElapsedRealtime = -1L;
+                    timerTotalDuration = 0L;
                     playCompletionTone();
                     message = "Timer finished.";
                 } else {
@@ -124,6 +126,7 @@ public class ClockManager {
         }
 
         timerEndElapsedRealtime = SystemClock.elapsedRealtime() + durationMs;
+        timerTotalDuration = durationMs;
         timerRunning = true;
         scheduleTicker();
         broadcastState();
@@ -139,6 +142,7 @@ public class ClockManager {
         }
 
         timerEndElapsedRealtime += durationMs;
+        timerTotalDuration = Math.max(timerTotalDuration, getTimerRemainingMillis()) + durationMs;
         scheduleTicker();
         broadcastState();
         return "Added " + formatDuration(durationMs) + " to timer.";
@@ -151,6 +155,7 @@ public class ClockManager {
 
         timerRunning = false;
         timerEndElapsedRealtime = -1L;
+        timerTotalDuration = 0L;
         broadcastState();
         return "Timer stopped.";
     }
@@ -164,6 +169,17 @@ public class ClockManager {
 
     public synchronized boolean isTimerRunning() {
         return timerRunning;
+    }
+
+    public synchronized long getTimerRemainingMillis() {
+        if (!timerRunning) {
+            return 0L;
+        }
+        return Math.max(0L, timerEndElapsedRealtime - SystemClock.elapsedRealtime());
+    }
+
+    public synchronized long getTimerTotalMillis() {
+        return timerRunning ? Math.max(0L, timerTotalDuration) : 0L;
     }
 
     public synchronized String startStopwatch() {
@@ -205,6 +221,17 @@ public class ClockManager {
         return "Stopwatch: " + formatDuration(getStopwatchElapsedMillis()) + ".";
     }
 
+    public synchronized boolean isStopwatchRunning() {
+        return stopwatchRunning;
+    }
+
+    public synchronized long getStopwatchElapsedMillis() {
+        if (stopwatchRunning && stopwatchStartElapsedRealtime > 0L) {
+            return stopwatchBaseElapsed + (SystemClock.elapsedRealtime() - stopwatchStartElapsedRealtime);
+        }
+        return stopwatchBaseElapsed;
+    }
+
     public synchronized void broadcastState() {
         broadcastState(null);
     }
@@ -219,20 +246,6 @@ public class ClockManager {
             intent.putExtra(EXTRA_MESSAGE, message);
         }
         lbm.sendBroadcast(intent);
-    }
-
-    private long getTimerRemainingMillis() {
-        if (!timerRunning) {
-            return 0L;
-        }
-        return Math.max(0L, timerEndElapsedRealtime - SystemClock.elapsedRealtime());
-    }
-
-    private long getStopwatchElapsedMillis() {
-        if (stopwatchRunning && stopwatchStartElapsedRealtime > 0L) {
-            return stopwatchBaseElapsed + (SystemClock.elapsedRealtime() - stopwatchStartElapsedRealtime);
-        }
-        return stopwatchBaseElapsed;
     }
 
     private void scheduleTicker() {
