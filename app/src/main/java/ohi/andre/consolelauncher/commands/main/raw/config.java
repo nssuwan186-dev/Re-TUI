@@ -68,6 +68,12 @@ public class config extends ParamCommand {
                     Intent intent = new Intent(UIManager.ACTION_MODULE_COMMAND);
                     intent.putExtra(UIManager.EXTRA_MODULE_COMMAND, "rebuild");
                     LocalBroadcastManager.getInstance(pack.context.getApplicationContext()).sendBroadcast(intent);
+                } else if(save == Behavior.orientation && pack.context instanceof LauncherActivity) {
+                    ((LauncherActivity) pack.context).applyOrientationPreference();
+                } else if((save == Ui.display_margin_mm || save == Ui.display_margin_landscape_mm)
+                        && pack.context instanceof LauncherActivity
+                        && ((LauncherActivity) pack.context).getUIManager() != null) {
+                    ((LauncherActivity) pack.context).getUIManager().refreshDisplayMargins();
                 }
 
                 return null;
@@ -286,6 +292,13 @@ public class config extends ParamCommand {
                 LauncherSettings.set(pack.context, save, save.defaultValue());
 
                 ((Reloadable) pack.context).addMessage(save.parent().path(), save.label() + " -> " + save.defaultValue());
+                if(save == Behavior.orientation && pack.context instanceof LauncherActivity) {
+                    ((LauncherActivity) pack.context).applyOrientationPreference();
+                } else if((save == Ui.display_margin_mm || save == Ui.display_margin_landscape_mm)
+                        && pack.context instanceof LauncherActivity
+                        && ((LauncherActivity) pack.context).getUIManager() != null) {
+                    ((LauncherActivity) pack.context).getUIManager().refreshDisplayMargins();
+                }
 
                 return null;
             }

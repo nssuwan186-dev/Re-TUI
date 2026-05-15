@@ -15,6 +15,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -630,6 +631,14 @@ public class UIManager implements OnTouchListener {
 
     private ViewPager2 viewPager;
     private ViewGroup homeWidgetsContainer;
+    private View mainContainer;
+    private View landscapeSplitContainer;
+    private ViewGroup landscapeLeftPane;
+    private ViewGroup landscapeRightPane;
+    private FrameLayout.LayoutParams portraitMainParams;
+    private FrameLayout.LayoutParams portraitTrayParams;
+    private boolean landscapeLayoutActive = false;
+    private int imeBottomOffset = 0;
 
     private int strokeWidth, cornerRadius;
     private String[] bgRectColors;
@@ -655,6 +664,10 @@ public class UIManager implements OnTouchListener {
 
     private void setupTerminalPage(View terminalPage) {
         terminalTrayContainer = mRootView.findViewById(R.id.terminal_tray_container);
+        if (terminalTrayContainer != null && portraitTrayParams == null
+                && terminalTrayContainer.getLayoutParams() instanceof FrameLayout.LayoutParams) {
+            portraitTrayParams = new FrameLayout.LayoutParams((FrameLayout.LayoutParams) terminalTrayContainer.getLayoutParams());
+        }
         terminalContainer = terminalPage.findViewById(R.id.terminal_container);
         terminalOutputBorder = terminalPage.findViewById(R.id.terminal_output_border);
         terminalTrayToggle = terminalPage.findViewById(R.id.terminal_tray_toggle);
@@ -797,6 +810,118 @@ public class UIManager implements OnTouchListener {
         scheduleTypefaceRefreshes();
     }
 
+    private void setupResponsiveLandscapeLayout(ViewGroup rootView) {
+        mainContainer = rootView.findViewById(R.id.main_container);
+        landscapeSplitContainer = rootView.findViewById(R.id.landscape_split_container);
+        landscapeLeftPane = rootView.findViewById(R.id.landscape_left_pane);
+        landscapeRightPane = rootView.findViewById(R.id.landscape_right_pane);
+
+        if (mainContainer != null && portraitMainParams == null
+                && mainContainer.getLayoutParams() instanceof FrameLayout.LayoutParams) {
+            portraitMainParams = new FrameLayout.LayoutParams((FrameLayout.LayoutParams) mainContainer.getLayoutParams());
+        }
+    }
+
+    private void applyResponsiveLandscapeLayout(Configuration configuration) {
+        applyDisplayMarginsForConfiguration(configuration);
+
+        if (mainContainer == null || terminalTrayContainer == null || landscapeSplitContainer == null
+                || landscapeLeftPane == null || landscapeRightPane == null || !(mRootView instanceof ViewGroup)) {
+            return;
+        }
+
+        boolean shouldUseLandscape = configuration != null
+                && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE;
+        if (shouldUseLandscape == landscapeLayoutActive) {
+            applyTerminalTrayState(false);
+            return;
+        }
+
+        if (shouldUseLandscape) {
+            activateLandscapeLayout();
+        } else {
+            restorePortraitLayout();
+        }
+        applyTerminalTrayState(false);
+    }
+
+    private void activateLandscapeLayout() {
+        ViewGroup root = (ViewGroup) mRootView;
+        detachFromParent(mainContainer);
+        detachFromParent(terminalTrayContainer);
+
+        landscapeLayoutActive = true;
+        landscapeSplitContainer.setVisibility(View.VISIBLE);
+
+        landscapeLeftPane.addView(mainContainer, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        landscapeRightPane.addView(terminalTrayContainer, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        if (root.indexOfChild(landscapeSplitContainer) < 0) {
+            root.addView(landscapeSplitContainer, 0);
+        }
+    }
+
+    private void restorePortraitLayout() {
+        ViewGroup root = (ViewGroup) mRootView;
+        detachFromParent(mainContainer);
+        detachFromParent(terminalTrayContainer);
+
+        landscapeLayoutActive = false;
+        landscapeSplitContainer.setVisibility(View.GONE);
+
+        FrameLayout.LayoutParams mainParams = portraitMainParams != null
+                ? new FrameLayout.LayoutParams(portraitMainParams)
+                : new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        FrameLayout.LayoutParams trayParams = portraitTrayParams != null
+                ? new FrameLayout.LayoutParams(portraitTrayParams)
+                : new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
+
+        root.addView(mainContainer, 0, mainParams);
+        root.addView(terminalTrayContainer, Math.min(1, root.getChildCount()), trayParams);
+    }
+
+    private void detachFromParent(View view) {
+        if (view == null) {
+            return;
+        }
+        ViewGroup parent = (ViewGroup) view.getParent();
+        if (parent != null) {
+            parent.removeView(view);
+        }
+    }
+
+    public void applyImeBottomOffset(int keyboardOffset) {
+        imeBottomOffset = Math.max(0, keyboardOffset);
+        applyDisplayMarginsForConfiguration(mContext != null ? mContext.getResources().getConfiguration() : null);
+    }
+
+    public void refreshDisplayMargins() {
+        applyDisplayMarginsForConfiguration(mContext != null ? mContext.getResources().getConfiguration() : null);
+    }
+
+    private void applyDisplayMarginsForConfiguration(Configuration configuration) {
+        if (mRootView == null || mContext == null) {
+            return;
+        }
+
+        boolean landscape = configuration != null
+                && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE;
+        int[] displayMargins = getListOfIntValues(
+                XMLPrefsManager.get(landscape ? Ui.display_margin_landscape_mm : Ui.display_margin_mm),
+                4,
+                0);
+        DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
+        mRootView.setPadding(
+                Tuils.mmToPx(metrics, displayMargins[0]),
+                Tuils.mmToPx(metrics, displayMargins[1]),
+                Tuils.mmToPx(metrics, displayMargins[2]),
+                Tuils.mmToPx(metrics, displayMargins[3]) + imeBottomOffset);
+    }
+
     private void styleTerminalTrayToggle() {
         if (terminalTrayToggle == null) {
             return;
@@ -846,7 +971,7 @@ public class UIManager implements OnTouchListener {
             }
         } catch (Exception ignored) {}
         terminalTrayToggle.setOnClickListener(v -> {
-            if (isOutputTrayToggledMode()) {
+            if (!landscapeLayoutActive && isOutputTrayToggledMode()) {
                 setTerminalTrayExpanded(!terminalTrayExpanded);
             }
         });
@@ -886,11 +1011,35 @@ public class UIManager implements OnTouchListener {
             return;
         }
 
+        if (landscapeLayoutActive) {
+            ViewGroup.LayoutParams params = terminalContainer.getLayoutParams();
+            if (params instanceof LinearLayout.LayoutParams) {
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) params;
+                if (lp.height != 0 || lp.weight != 1f) {
+                    lp.height = 0;
+                    lp.weight = 1f;
+                    terminalContainer.setLayoutParams(lp);
+                }
+            } else if (params != null) {
+                params.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                terminalContainer.setLayoutParams(params);
+            }
+            updateTerminalTrayToggleText();
+            if (refocusInput && mTerminalAdapter != null) {
+                mTerminalAdapter.requestInputFocus();
+                mTerminalAdapter.scrollToEnd();
+            }
+            return;
+        }
+
         int rootHeight = mRootView != null ? mRootView.getHeight() : 0;
         int collapsedHeight = calculateCollapsedTerminalTrayHeight();
         int expandedHeight = calculateExpandedTerminalTrayHeight(rootHeight, collapsedHeight);
 
         ViewGroup.LayoutParams params = terminalContainer.getLayoutParams();
+        if (params instanceof LinearLayout.LayoutParams) {
+            ((LinearLayout.LayoutParams) params).weight = 0f;
+        }
         int targetHeight;
         if (isOutputTrayNativeMode()) {
             targetHeight = calculateNativeTerminalTrayHeight(expandedHeight);
@@ -943,6 +1092,14 @@ public class UIManager implements OnTouchListener {
                 return;
             }
             terminalTrayToggle.setVisibility(View.VISIBLE);
+
+            if (landscapeLayoutActive) {
+                terminalTrayToggle.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, null, null);
+                if (!TextUtils.equals(terminalTrayToggle.getText(), "OUTPUT")) {
+                    terminalTrayToggle.setText("OUTPUT");
+                }
+                return;
+            }
 
             boolean collapsed = !terminalTrayExpanded;
             if (isOutputHeaderArrowsOnly()) {
@@ -2391,6 +2548,7 @@ public class UIManager implements OnTouchListener {
         styleHackOverlay(rootView);
         setupTermuxConsole(rootView);
         setupFileConsole(rootView);
+        setupResponsiveLandscapeLayout(rootView);
 
 //        scrolllllll
         rootView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
@@ -2550,9 +2708,7 @@ public class UIManager implements OnTouchListener {
             appsDrawerRoot.setOnClickListener(v -> hideAppsDrawer());
         }
 
-        int[] displayMargins = getListOfIntValues(XMLPrefsManager.get(Ui.display_margin_mm), 4, 0);
-        DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
-        rootView.setPadding(Tuils.mmToPx(metrics, displayMargins[0]), Tuils.mmToPx(metrics, displayMargins[1]), Tuils.mmToPx(metrics, displayMargins[2]), Tuils.mmToPx(metrics, displayMargins[3]));
+        applyDisplayMarginsForConfiguration(mContext.getResources().getConfiguration());
 
         labelSizes[Label.time.ordinal()] = XMLPrefsManager.getInt(Ui.time_size);
         labelSizes[Label.ram.ordinal()] = XMLPrefsManager.getInt(Ui.ram_size);
@@ -2866,6 +3022,7 @@ public class UIManager implements OnTouchListener {
         viewPager.setAdapter(new PagerAdapter());
         viewPager.setOffscreenPageLimit(1);
         setupTerminalPage(mRootView);
+        applyResponsiveLandscapeLayout(mContext.getResources().getConfiguration());
 
         styleClockOverlay(rootView);
 
@@ -5345,7 +5502,7 @@ public class UIManager implements OnTouchListener {
             hideAppsDrawer();
             return;
         }
-        if (terminalTrayExpanded) {
+        if (!landscapeLayoutActive && terminalTrayExpanded) {
             setTerminalTrayExpanded(false);
             return;
         }
@@ -5456,6 +5613,14 @@ public class UIManager implements OnTouchListener {
             intent.putExtra(PomodoroManager.EXTRA_POMODORO_TYPE, pomodoro.getCurrentType().name());
             intent.putExtra(PomodoroManager.EXTRA_POMODORO_CYCLE, pomodoro.getCompletedFocuses());
             updatePomodoroOverlay(intent);
+        }
+    }
+
+    public void onConfigurationChanged(Configuration newConfig) {
+        applyResponsiveLandscapeLayout(newConfig);
+        if (mTerminalAdapter != null) {
+            mTerminalAdapter.scrollToEnd();
+            mTerminalAdapter.focusInputEnd();
         }
     }
 

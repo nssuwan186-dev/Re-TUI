@@ -618,7 +618,23 @@ public enum Ui implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "[left margin],[top margin],[right margin],[bottom margin]";
+            return "Portrait/default display margin in millimeters. [left margin],[top margin],[right margin],[bottom margin]";
+        }
+    },
+    display_margin_landscape_mm {
+        @Override
+        public String defaultValue() {
+            return "0,0,0,0";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.TEXT;
+        }
+
+        @Override
+        public String info() {
+            return "Landscape display margin in millimeters. [left margin],[top margin],[right margin],[bottom margin]";
         }
     },
     ignore_bar_color {

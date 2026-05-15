@@ -56,6 +56,7 @@ import ohi.andre.consolelauncher.managers.notifications.reply.BoundApp;
 import ohi.andre.consolelauncher.managers.notifications.reply.ReplyManager;
 import ohi.andre.consolelauncher.managers.WebhookManager;
 import ohi.andre.consolelauncher.managers.modules.ModuleManager;
+import ohi.andre.consolelauncher.managers.settings.LauncherSettings;
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache;
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeManager;
 import ohi.andre.consolelauncher.managers.widgets.LuaWidgetManager;
@@ -592,6 +593,8 @@ public class SuggestionsManager {
             if (beforeLastSpace .length() == 0) {
                 comparator.noInput = true;
 
+                suggestLandscapeCommandIfPortrait(suggestionList);
+
                 if (suggestActiveModule(suggestionList)) {
                     Collections.sort(suggestionList, comparator);
                     return suggestionList;
@@ -750,6 +753,12 @@ public class SuggestionsManager {
 
         Collections.sort(suggestionList, comparator);
         return suggestionList;
+    }
+
+    private void suggestLandscapeCommandIfPortrait(List<Suggestion> suggestions) {
+        if (LauncherSettings.getInt(Behavior.orientation) == 1) {
+            suggestions.add(new Suggestion(null, "landscape", true, Suggestion.TYPE_PERMANENT));
+        }
     }
 
     private boolean needsFileSuggestion(String cmd) {

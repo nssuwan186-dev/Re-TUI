@@ -402,6 +402,10 @@
         \n-ls [type] -> shows the expressions of the given type
         \n-tutorial -> show the tutorial on GitHub
         \n-file -> open the file htmlextract.xml</string>
+    <string name="help_landscape">Force Re:T-UI into landscape mode and enable the split landscape overlay.
+        \n\nUsage:
+        \n$ landscape
+        \n\nThis sets orientation to landscape. Use config -set orientation 1 for portrait or config -set orientation 2 for auto-rotate.</string>
     <string name="help_music">-next -> play the next song
         \n-previous -> play the previous song
         \n-play -> play/pause the player

@@ -410,12 +410,16 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
             int systemBottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
             int keyboardOffset = Math.max(0, imeBottom - systemBottom);
 
-            view.setPadding(
-                    originalLeft,
-                    originalTop,
-                    originalRight,
-                    originalBottom + keyboardOffset
-            );
+            if (ui != null) {
+                ui.applyImeBottomOffset(keyboardOffset);
+            } else {
+                view.setPadding(
+                        originalLeft,
+                        originalTop,
+                        originalRight,
+                        originalBottom + keyboardOffset
+                );
+            }
             return insets;
         });
         ViewCompat.requestApplyInsets(mainView);
@@ -439,6 +443,10 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
         } else {
             setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         }
+    }
+
+    public void applyOrientationPreference() {
+        fixOrientation();
     }
 
     @Override
@@ -589,6 +597,9 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        if (ui != null) {
+            ui.onConfigurationChanged(newConfig);
+        }
     }
 
     public enum ReloadMessageCategory {
