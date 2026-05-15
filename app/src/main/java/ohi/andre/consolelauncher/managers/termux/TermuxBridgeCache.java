@@ -2,16 +2,27 @@ package ohi.andre.consolelauncher.managers.termux;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class TermuxBridgeCache {
 
     private static final long REQUEST_TTL_MS = 2500;
-    private static final Map<String, Entry> dirs = new HashMap<>();
-    private static final Map<String, Entry> files = new HashMap<>();
-    private static final Map<String, Long> requests = new HashMap<>();
+    private static final int MAX_CACHE_ENTRIES = 64;
+    private static final int MAX_REQUEST_ENTRIES = 128;
+    private static final Map<String, Entry> dirs = newBoundedMap(MAX_CACHE_ENTRIES);
+    private static final Map<String, Entry> files = newBoundedMap(MAX_CACHE_ENTRIES);
+    private static final Map<String, Long> requests = newBoundedMap(MAX_REQUEST_ENTRIES);
+
+    private static <T> Map<String, T> newBoundedMap(final int maxEntries) {
+        return new LinkedHashMap<String, T>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, T> eldest) {
+                return size() > maxEntries;
+            }
+        };
+    }
 
     public static synchronized void putDirs(String path, String stdout) {
         dirs.put(path, new Entry(parse(stdout)));

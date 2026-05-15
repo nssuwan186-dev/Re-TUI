@@ -118,6 +118,9 @@ public class NotificationService extends NotificationListenerService {
     private int lastMediaDuration;
     private int lastMediaPosition;
     private boolean hasLastMediaState;
+    private boolean controlReceiverRegistered;
+    private boolean feedRequestReceiverRegistered;
+    private boolean reloadReceiverRegistered;
     private final Runnable clearExternalMusicRunnable = new Runnable() {
         @Override
         public void run() {
@@ -432,10 +435,17 @@ public class NotificationService extends NotificationListenerService {
     public void onCreate() {
         super.onCreate();
 
+        registerControlReceiverIfNeeded();
+        init();
+    }
+
+    private void registerControlReceiverIfNeeded() {
+        if (controlReceiverRegistered) {
+            return;
+        }
         IntentFilter filter = new IntentFilter(MusicService.ACTION_MUSIC_CONTROL);
         LocalBroadcastManager.getInstance(this).registerReceiver(controlReceiver, filter);
-
-        init();
+        controlReceiverRegistered = true;
     }
 
     @Override
@@ -477,6 +487,7 @@ public class NotificationService extends NotificationListenerService {
     }
 
     private void init() {
+        registerControlReceiverIfNeeded();
         try {
             Tuils.init(this);
             notificationManager = NotificationManager.create(this);
@@ -691,8 +702,14 @@ public class NotificationService extends NotificationListenerService {
         pastNotifications = new HashMap<>();
 
         queue = new ArrayBlockingQueue<>(5);
-        LocalBroadcastManager.getInstance(this).registerReceiver(feedRequestReceiver, new android.content.IntentFilter(ACTION_REQUEST_NOTIFICATION_FEED));
-        LocalBroadcastManager.getInstance(this).registerReceiver(reloadReceiver, new android.content.IntentFilter(ACTION_RELOAD_NOTIFICATION_CONFIG));
+        if (!feedRequestReceiverRegistered) {
+            LocalBroadcastManager.getInstance(this).registerReceiver(feedRequestReceiver, new android.content.IntentFilter(ACTION_REQUEST_NOTIFICATION_FEED));
+            feedRequestReceiverRegistered = true;
+        }
+        if (!reloadReceiverRegistered) {
+            LocalBroadcastManager.getInstance(this).registerReceiver(reloadReceiver, new android.content.IntentFilter(ACTION_RELOAD_NOTIFICATION_CONFIG));
+            reloadReceiverRegistered = true;
+        }
         loadConfig();
         seedActiveNotifications();
         bgThread.start();
@@ -713,7 +730,11 @@ public class NotificationService extends NotificationListenerService {
             }
 
             boolean destroy = intent.getBooleanExtra(DESTROY, false);
-            if(destroy) dispose();
+            if(destroy) {
+                dispose();
+                stopSelf(startId);
+                return START_NOT_STICKY;
+            }
         }
 
         if(!active) init();
@@ -725,14 +746,21 @@ public class NotificationService extends NotificationListenerService {
         cancelExternalMusicClear();
         handler.removeCallbacks(progressUpdateRunnable);
         handler.removeCallbacks(pastNotificationCleanupRunnable);
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(controlReceiver);
+        if (controlReceiverRegistered) {
+            try {
+                LocalBroadcastManager.getInstance(this).unregisterReceiver(controlReceiver);
+            } catch (Exception ignored) {}
+            controlReceiverRegistered = false;
+        }
         if (mediaSessionManager != null && sessionsChangedListener != null) {
             mediaSessionManager.removeOnActiveSessionsChangedListener(sessionsChangedListener);
         }
-        for (MediaController controller : activeControllers) {
-            controller.unregisterCallback(mediaCallback);
+        synchronized (activeControllers) {
+            for (MediaController controller : activeControllers) {
+                controller.unregisterCallback(mediaCallback);
+            }
+            activeControllers.clear();
         }
-        activeControllers.clear();
         clearRememberedMediaState();
 
         if(replyManager != null) {
@@ -745,11 +773,13 @@ public class NotificationService extends NotificationListenerService {
             notificationManager = null;
         }
 
-        bgThread.interrupt();
-        synchronized (queueLock) {
-            queueLock.notifyAll();
+        if(bgThread != null) {
+            bgThread.interrupt();
+            synchronized (queueLock) {
+                queueLock.notifyAll();
+            }
+            bgThread = null;
         }
-        bgThread = null;
 
         if(pastNotifications != null) {
             pastNotifications.clear();
@@ -758,8 +788,18 @@ public class NotificationService extends NotificationListenerService {
 
         overlayNotifications.clear();
         broadcastOverlayNotifications();
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(feedRequestReceiver);
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(reloadReceiver);
+        if (feedRequestReceiverRegistered) {
+            try {
+                LocalBroadcastManager.getInstance(this).unregisterReceiver(feedRequestReceiver);
+            } catch (Exception ignored) {}
+            feedRequestReceiverRegistered = false;
+        }
+        if (reloadReceiverRegistered) {
+            try {
+                LocalBroadcastManager.getInstance(this).unregisterReceiver(reloadReceiver);
+            } catch (Exception ignored) {}
+            reloadReceiverRegistered = false;
+        }
 
         if(queue != null) {
             queue.clear();
@@ -771,9 +811,8 @@ public class NotificationService extends NotificationListenerService {
 
     @Override
     public void onDestroy() {
+        dispose();
         super.onDestroy();
-
-//        ondestroy won't ever be called
     }
 
     @Override

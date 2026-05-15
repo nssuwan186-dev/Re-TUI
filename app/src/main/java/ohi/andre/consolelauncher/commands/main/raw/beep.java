@@ -2,6 +2,8 @@ package ohi.andre.consolelauncher.commands.main.raw;
 
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.os.Handler;
+import android.os.Looper;
 
 import ohi.andre.consolelauncher.R;
 import ohi.andre.consolelauncher.commands.CommandAbstraction;
@@ -19,6 +21,7 @@ public class beep implements CommandAbstraction {
         try {
             ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 50);
             toneG.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 1000);
+            new Handler(Looper.getMainLooper()).postDelayed(toneG::release, 1100L);
         } catch (Exception e) {
             return e.toString();
         }

@@ -259,6 +259,7 @@ public class ClockManager {
         try {
             ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_ALARM, 70);
             toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 1200);
+            handler.postDelayed(toneGenerator::release, 1300L);
         } catch (Exception ignored) {
         }
     }

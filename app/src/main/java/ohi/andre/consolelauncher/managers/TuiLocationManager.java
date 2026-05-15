@@ -18,6 +18,7 @@ import android.os.Looper;
 import androidx.core.app.ActivityCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +36,8 @@ public class TuiLocationManager {
 
     private static final int MAX_DELAY = 10000;
 
-    Context context;
+    private final Context context;
+    private WeakReference<Activity> permissionActivity;
     BroadcastReceiver receiver;
 
     LocationListener locationListener;
@@ -47,14 +49,17 @@ public class TuiLocationManager {
 
     private List<String> actionsPool;
 
+    @SuppressLint("StaticFieldLeak")
     private static TuiLocationManager instance;
-    public static TuiLocationManager instance(Context context) {
+    public static synchronized TuiLocationManager instance(Context context) {
         if(instance == null) instance = new TuiLocationManager(context);
+        else instance.setPermissionActivity(context);
         return instance;
     }
 
     private TuiLocationManager(final Context context) {
-        this.context = context;
+        this.context = context.getApplicationContext();
+        setPermissionActivity(context);
         actionsPool = new ArrayList<>();
 
         locationListener = new LocationListener() {
@@ -67,7 +72,7 @@ public class TuiLocationManager {
 
                 locationAvailable = true;
 
-                LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(context.getApplicationContext());
+                LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(TuiLocationManager.this.context);
 
                 for(String s : actionsPool) {
                     Intent i = new Intent(s);
@@ -108,19 +113,39 @@ public class TuiLocationManager {
             }
         };
 
+        registerPermissionReceiver();
+    }
+
+    private void setPermissionActivity(Context context) {
+        if (context instanceof Activity) {
+            permissionActivity = new WeakReference<>((Activity) context);
+        }
+    }
+
+    private boolean receiverRegistered = false;
+
+    private void registerPermissionReceiver() {
+        if (receiverRegistered) return;
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_GOT_PERMISSION);
-
-        LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(receiver, filter);
+        LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter);
+        receiverRegistered = true;
     }
 
     private boolean registered = false;
 
     @SuppressLint("MissingPermission")
     private void register() {
+        registerPermissionReceiver();
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions((Activity) context, new String[] {Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, LauncherActivity.LOCATION_REQUEST_PERMISSION);
+            Activity activity = permissionActivity != null ? permissionActivity.get() : null;
+            if (activity != null && !activity.isFinishing()) {
+                ActivityCompat.requestPermissions(activity, new String[] {Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, LauncherActivity.LOCATION_REQUEST_PERMISSION);
+            } else {
+                broadcastFailure();
+                dispose();
+            }
             return;
         }
 
@@ -150,17 +175,19 @@ public class TuiLocationManager {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(context.getApplicationContext());
-
-                for(String s : actionsPool) {
-                    Intent i = new Intent(s);
-                    i.putExtra(FAIL, true);
-                    localBroadcastManager.sendBroadcast(i);
-                }
-
+                broadcastFailure();
                 dispose();
             }
         }, MAX_DELAY);
+    }
+
+    private void broadcastFailure() {
+        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(context);
+        for(String s : actionsPool) {
+            Intent i = new Intent(s);
+            i.putExtra(FAIL, true);
+            localBroadcastManager.sendBroadcast(i);
+        }
     }
 
     public void add(String action) {
@@ -176,7 +203,13 @@ public class TuiLocationManager {
     @SuppressLint("MissingPermission")
     private void dispose() {
         actionsPool.clear();
-        LocalBroadcastManager.getInstance(context.getApplicationContext()).unregisterReceiver(receiver);
+        if (receiverRegistered) {
+            try {
+                LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver);
+            } catch (Exception ignored) {}
+            receiverRegistered = false;
+        }
+        registered = false;
 
         LocationManager manager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         if(manager != null) {

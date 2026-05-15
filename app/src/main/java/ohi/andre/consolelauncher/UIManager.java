@@ -4720,9 +4720,10 @@ public class UIManager implements OnTouchListener {
 
     private boolean isCurrentNotificationReplyable() {
         NotificationService.Notification notification = currentNotification();
+        ReplyManager replyManager = ReplyManager.getInstance();
         return notification != null
-                && ReplyManager.instance != null
-                && ReplyManager.instance.canReplyTo(notification.pkg);
+                && replyManager != null
+                && replyManager.canReplyTo(notification.pkg);
     }
 
     private NotificationService.Notification currentNotification() {
@@ -5380,12 +5381,19 @@ public class UIManager implements OnTouchListener {
     }
 
     public void pause() {
-        closeKeyboard();
-        handler.removeCallbacks(musicTimeRunnable);
-        handler.removeCallbacks(eventsRefreshRunnable);
-        handler.removeCallbacks(luaWidgetTickRunnable);
+        if (mTerminalAdapter != null) {
+            closeKeyboard();
+        }
         if (handler != null) {
+            handler.removeCallbacks(musicTimeRunnable);
+            handler.removeCallbacks(eventsRefreshRunnable);
+            handler.removeCallbacks(luaWidgetTickRunnable);
             handler.removeCallbacks(fontRefreshRunnable);
+        }
+        setMusicVisualizerPlaying(false);
+        View pomodoroOverlay = mRootView != null ? mRootView.findViewById(R.id.pomodoro_root) : null;
+        if (pomodoroOverlay != null) {
+            pomodoroOverlay.setKeepScreenOn(false);
         }
 
         if (ramManager != null) ramManager.stop();
@@ -5394,6 +5402,13 @@ public class UIManager implements OnTouchListener {
         if (networkManager != null) networkManager.stop();
         if (tuiTimeManager != null) tuiTimeManager.stop();
         if (unlockManager != null) unlockManager.stop();
+    }
+
+    private void setMusicVisualizerPlaying(boolean playing) {
+        MusicVisualizerView visualizer = mRootView != null ? mRootView.findViewById(R.id.music_visualizer) : null;
+        if (visualizer != null) {
+            visualizer.setPlaying(playing);
+        }
     }
 
     private void scheduleInternalMusicTickerIfNeeded() {
@@ -5415,6 +5430,10 @@ public class UIManager implements OnTouchListener {
     }
 
     public void resume() {
+        if (handler == null) {
+            return;
+        }
+        setMusicVisualizerPlaying(lastMusicPlaying);
         scheduleInternalMusicTickerIfNeeded();
         scheduleEventsRefreshIfNeeded();
         scheduleTypefaceRefreshes();

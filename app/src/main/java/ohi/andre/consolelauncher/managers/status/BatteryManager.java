@@ -38,6 +38,7 @@ public class BatteryManager implements OnBatteryUpdate {
 
     private boolean charging;
     private float lastPercentage = -1;
+    private boolean registered;
 
     private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
@@ -54,7 +55,7 @@ public class BatteryManager implements OnBatteryUpdate {
     };
 
     public BatteryManager(Context context, int size, int mediumPercentage, int lowPercentage, StatusUpdateListener listener) {
-        this.context = context;
+        this.context = context.getApplicationContext();
         this.size = size;
         this.mediumPercentage = mediumPercentage;
         this.lowPercentage = lowPercentage;
@@ -62,16 +63,24 @@ public class BatteryManager implements OnBatteryUpdate {
     }
 
     public void start() {
+        if (registered) {
+            return;
+        }
         IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         ContextCompat.registerReceiver(context, batteryReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        registered = true;
     }
 
     public void stop() {
+        if (!registered) {
+            return;
+        }
         try {
             context.unregisterReceiver(batteryReceiver);
         } catch (IllegalArgumentException e) {
             // Receiver not registered
         }
+        registered = false;
     }
 
     @Override

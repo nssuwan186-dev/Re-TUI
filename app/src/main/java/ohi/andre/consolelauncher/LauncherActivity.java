@@ -453,6 +453,9 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
 
     @Override
     protected void onPause() {
+        if (ui != null) {
+            ui.pause();
+        }
         super.onPause();
     }
 
@@ -476,8 +479,11 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         dispose();
+        if (instance == this) {
+            instance = null;
+        }
+        super.onDestroy();
     }
 
     public UIManager getUIManager() {

@@ -209,6 +209,7 @@ public class PomodoroManager {
         try {
             ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
             toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 2000);
+            handler.postDelayed(toneGenerator::release, 2100L);
         } catch (Exception ignored) {}
     }
 

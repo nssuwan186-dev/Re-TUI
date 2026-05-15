@@ -23,6 +23,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXParseException;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -65,7 +66,7 @@ public class ReplyManager implements XMLPrefsElement {
 
     private BroadcastReceiver receiver;
 
-    public static ReplyManager instance;
+    private static WeakReference<ReplyManager> instance;
     private XMLPrefsList values;
 
     private boolean enabled;
@@ -85,9 +86,9 @@ public class ReplyManager implements XMLPrefsElement {
 
         notificationWears = new HashSet<>();
         values = new XMLPrefsList();
-        this.context = context;
+        this.context = context.getApplicationContext();
 
-        instance = this;
+        instance = new WeakReference<>(this);
 
         load(true);
 
@@ -144,8 +145,12 @@ public class ReplyManager implements XMLPrefsElement {
                 }
             };
 
-            LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(receiver, filter);
+            LocalBroadcastManager.getInstance(this.context).registerReceiver(receiver, filter);
         }
+    }
+
+    public static ReplyManager getInstance() {
+        return instance != null ? instance.get() : null;
     }
 
     private void load(boolean loadPrefs) {
@@ -457,7 +462,10 @@ public class ReplyManager implements XMLPrefsElement {
 
     public void dispose(Context context) {
         try {
-            LocalBroadcastManager.getInstance(context.getApplicationContext()).unregisterReceiver(receiver);
+            Context appContext = this.context != null ? this.context : context.getApplicationContext();
+            if (receiver != null) {
+                LocalBroadcastManager.getInstance(appContext).unregisterReceiver(receiver);
+            }
         } catch (Exception e) {}
 
         if(notificationWears != null) {
@@ -473,7 +481,12 @@ public class ReplyManager implements XMLPrefsElement {
             values = null;
         }
 
-        instance = null;
+        ReplyManager current = getInstance();
+        if(current == this && instance != null) {
+            instance.clear();
+            instance = null;
+        }
+        this.context = null;
     }
 
     @Override
@@ -550,7 +563,7 @@ public class ReplyManager implements XMLPrefsElement {
         if(!enabled) return;
 
         StringBuilder builder = new StringBuilder();
-        if(instance != null) {
+        if(getInstance() != null) {
             for(BoundApp a : boundApps) builder.append(a.packageName).append(" -> ").append(a.applicationId).append(Tuils.NEWLINE);
         }
         String s = builder.toString();
