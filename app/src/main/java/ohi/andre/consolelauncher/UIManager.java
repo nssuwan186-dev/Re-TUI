@@ -649,7 +649,6 @@ public class UIManager implements OnTouchListener {
     private int imeBottomOffset = 0;
 
     private int strokeWidth, cornerRadius;
-    private String[] bgRectColors;
     private String[] bgColors;
     private String[] outlineColors;
     private int shadowXOffset, shadowYOffset;
@@ -684,7 +683,7 @@ public class UIManager implements OnTouchListener {
         terminalView.setOnTouchListener(this);
         ((View) terminalView.getParent().getParent()).setOnTouchListener(this);
 
-        applyBgRect(mContext, terminalOutputBorder, bgRectColors[OUTPUT_BGCOLOR_INDEX], bgColors[OUTPUT_BGCOLOR_INDEX], margins[OUTPUT_MARGINS_INDEX], strokeWidth, (int) Tuils.dpToPx(mContext, AppearanceSettings.outputCornerRadius()), useDashed, XMLPrefsManager.getColor(Theme.output_color));
+        applyBgRect(mContext, terminalOutputBorder, bgColors[OUTPUT_BGCOLOR_INDEX], margins[OUTPUT_MARGINS_INDEX], strokeWidth, (int) Tuils.dpToPx(mContext, AppearanceSettings.outputCornerRadius()), useDashed, AppearanceSettings.terminalBorderColor());
         terminalView.setBackgroundColor(Color.TRANSPARENT);
         terminalView.addTextChangedListener(new TextWatcher() {
             @Override
@@ -724,7 +723,7 @@ public class UIManager implements OnTouchListener {
             imm.showSoftInput(inputView, InputMethodManager.SHOW_IMPLICIT);
         });
 
-        applyBgRect(mContext, mRootView.findViewById(R.id.input_group), bgRectColors[INPUT_BGCOLOR_INDEX], bgColors[INPUT_BGCOLOR_INDEX], margins[INPUTAREA_MARGINS_INDEX], strokeWidth, cornerRadius, useDashed, XMLPrefsManager.getColor(Theme.input_color));
+        applyBgRect(mContext, mRootView.findViewById(R.id.input_group), bgColors[INPUT_BGCOLOR_INDEX], margins[INPUTAREA_MARGINS_INDEX], strokeWidth, cornerRadius, useDashed, AppearanceSettings.terminalBorderColor());
         applyShadow(inputView, outlineColors[INPUT_BGCOLOR_INDEX], shadowXOffset, shadowYOffset, shadowRadius);
         applyShadow(prefixView, outlineColors[INPUT_BGCOLOR_INDEX], shadowXOffset, shadowYOffset, shadowRadius);
 
@@ -758,7 +757,7 @@ public class UIManager implements OnTouchListener {
             toolbarView = mRootView.findViewById(R.id.tools_view);
             hideToolbarNoInput = XMLPrefsManager.getBoolean(Toolbar.hide_toolbar_no_input);
 
-            applyBgRect(mContext, toolbarView, bgRectColors[TOOLBAR_BGCOLOR_INDEX], bgColors[TOOLBAR_BGCOLOR_INDEX], margins[TOOLBAR_MARGINS_INDEX], strokeWidth, cornerRadius, useDashed, XMLPrefsManager.getColor(Theme.toolbar_color));
+            applyBgRect(mContext, toolbarView, bgColors[TOOLBAR_BGCOLOR_INDEX], margins[TOOLBAR_MARGINS_INDEX], strokeWidth, cornerRadius, useDashed, AppearanceSettings.terminalBorderColor());
 
             if (appDrawerView != null) {
                 if (XMLPrefsManager.getBoolean(Behavior.swipe_up_apps_drawer)) {
@@ -797,7 +796,7 @@ public class UIManager implements OnTouchListener {
                         v.clearFocus();
                     }
                 });
-                applyBgRect(mContext, sv, bgRectColors[SUGGESTIONS_BGCOLOR_INDEX], bgColors[SUGGESTIONS_BGCOLOR_INDEX], margins[SUGGESTIONS_MARGINS_INDEX], strokeWidth, cornerRadius, useDashed, XMLPrefsManager.getColor(Theme.suggestions_bgrectcolor));
+                applyBgRect(mContext, sv, bgColors[SUGGESTIONS_BGCOLOR_INDEX], margins[SUGGESTIONS_MARGINS_INDEX], strokeWidth, cornerRadius, useDashed, AppearanceSettings.terminalBorderColor());
 
                 LinearLayout suggestionsView = (LinearLayout) mRootView.findViewById(R.id.suggestions_group);
                 suggestionsManager = new SuggestionsManager(suggestionsView, mainPack, mTerminalAdapter);
@@ -957,6 +956,7 @@ public class UIManager implements OnTouchListener {
 
         terminalTrayToggle.setVisibility(View.VISIBLE);
         int outputColor = AppearanceSettings.moduleNameTextColor();
+        int borderColor = AppearanceSettings.terminalBorderColor();
         terminalTrayToggle.setTextColor(outputColor);
         terminalTrayToggle.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD);
         terminalTrayToggle.setTextSize(AppearanceSettings.outputHeaderTextSize());
@@ -982,13 +982,13 @@ public class UIManager implements OnTouchListener {
                 gd = (GradientDrawable) gd.mutate();
                 gd.setCornerRadius(Tuils.dpToPx(mContext, AppearanceSettings.headerCornerRadius()));
                 if (AppearanceSettings.dashedBorders()) {
-                    gd.setStroke((int) Tuils.dpToPx(mContext, 1.5f), outputColor,
+                    gd.setStroke((int) Tuils.dpToPx(mContext, 1.5f), borderColor,
                             Tuils.dpToPx(mContext, AppearanceSettings.dashLength()),
                             Tuils.dpToPx(mContext, AppearanceSettings.dashGap()));
                 } else {
                     gd.setStroke(0, Color.TRANSPARENT);
                 }
-                gd.setColor(resolveTerminalWindowBgColor(bgColors[OUTPUT_BGCOLOR_INDEX]));
+                gd.setColor(AppearanceSettings.terminalHeaderBackground());
                 terminalTrayToggle.setBackground(gd);
             }
         } catch (Exception ignored) {}
@@ -1690,12 +1690,12 @@ public class UIManager implements OnTouchListener {
 
     private void styleModuleClose(TextView close) {
         if (close == null) return;
-        int borderColor = AppearanceSettings.moduleButtonBorderColor();
-        int bgColor = AppearanceSettings.moduleButtonBackgroundColor();
+        int borderColor = AppearanceSettings.terminalBorderColor();
+        int bgColor = AppearanceSettings.terminalHeaderBackground();
         GradientDrawable gd = new GradientDrawable();
         gd.setShape(GradientDrawable.RECTANGLE);
         gd.setCornerRadius(Tuils.dpToPx(mContext, AppearanceSettings.headerCornerRadius()));
-        gd.setColor(ColorUtils.setAlphaComponent(bgColor, 255));
+        gd.setColor(bgColor);
         if (AppearanceSettings.dashedBorders()) {
             gd.setStroke((int) Tuils.dpToPx(mContext, 1.5f), borderColor,
                     Tuils.dpToPx(mContext, AppearanceSettings.dashLength()),
@@ -2609,7 +2609,7 @@ public class UIManager implements OnTouchListener {
                                 } else {
                                     gd.setStroke(0, Color.TRANSPARENT);
                                 }
-                                gd.setColor(ColorUtils.setAlphaComponent(widgetBgColor, 255));
+                                gd.setColor(AppearanceSettings.terminalHeaderBackground());
                                 widgetLabel.setBackgroundDrawable(gd);
                             }
                         } catch (Exception ignored) {}
@@ -2860,17 +2860,6 @@ public class UIManager implements OnTouchListener {
 
         int[] statusLineAlignments = getListOfIntValues(XMLPrefsManager.get(Ui.status_lines_alignment), 10, -1);
 
-        String[] statusLinesBgRectColors = getListOfStringValues(XMLPrefsManager.get(Theme.status_lines_bgrectcolor), 10, "#ff000000");
-        String[] otherBgRectColors = {
-                XMLPrefsManager.get(Theme.input_bgrectcolor),
-                XMLPrefsManager.get(Theme.output_bgrectcolor),
-                XMLPrefsManager.get(Theme.suggestions_bgrectcolor),
-                XMLPrefsManager.get(Theme.toolbar_bgrectcolor)
-        };
-        bgRectColors = new String[statusLinesBgRectColors.length + otherBgRectColors.length];
-        System.arraycopy(statusLinesBgRectColors, 0, bgRectColors, 0, statusLinesBgRectColors.length);
-        System.arraycopy(otherBgRectColors, 0, bgRectColors, statusLinesBgRectColors.length, otherBgRectColors.length);
-
         String[] statusLineBgColors = getListOfStringValues(XMLPrefsManager.get(Theme.status_lines_bg), 10, "#00000000");
         String[] otherBgColors = {
                 XMLPrefsManager.get(Theme.input_bg),
@@ -2984,7 +2973,7 @@ public class UIManager implements OnTouchListener {
                     labelViews[count].setVerticalScrollBarEnabled(false);
                 }
 
-                applyBgRect(mContext, labelViews[count], "#00000000", bgColors[count], margins[0], strokeWidth, (int) Tuils.dpToPx(mContext, AppearanceSettings.moduleCornerRadius()), useDashed, AppearanceSettings.dashedBorderColor());
+                applyBgRect(mContext, labelViews[count], bgColors[count], margins[0], strokeWidth, (int) Tuils.dpToPx(mContext, AppearanceSettings.moduleCornerRadius()), useDashed, AppearanceSettings.terminalBorderColor());
                 applyShadow(labelViews[count], outlineColors[count], shadowXOffset, shadowYOffset, shadowRadius);
             } else {
                 lViewsParent.removeView(labelViews[count]);
@@ -3263,10 +3252,10 @@ public class UIManager implements OnTouchListener {
             return;
         }
 
-        int borderColor = AppearanceSettings.notificationWidgetBorderColor();
+        int borderColor = AppearanceSettings.terminalBorderColor();
         int textColor = AppearanceSettings.notificationWidgetTextColor();
         int bgColor = AppearanceSettings.terminalWindowBackground();
-        int labelBg = ColorUtils.setAlphaComponent(bgColor, 255);
+        int labelBg = AppearanceSettings.terminalHeaderBackground();
 
         if (termuxWindowBorder != null) {
             GradientDrawable border = new GradientDrawable();
@@ -3363,10 +3352,10 @@ public class UIManager implements OnTouchListener {
             return;
         }
 
-        int borderColor = AppearanceSettings.notificationWidgetBorderColor();
+        int borderColor = AppearanceSettings.terminalBorderColor();
         int textColor = AppearanceSettings.notificationWidgetTextColor();
         int bgColor = AppearanceSettings.terminalWindowBackground();
-        int labelBg = ColorUtils.setAlphaComponent(bgColor, 255);
+        int labelBg = AppearanceSettings.terminalHeaderBackground();
 
         if (fileWindowBorder != null) {
             GradientDrawable border = new GradientDrawable();
@@ -4228,8 +4217,8 @@ public class UIManager implements OnTouchListener {
             return;
         }
 
-        int borderColor = XMLPrefsManager.getColor(Theme.input_color);
-        int bgColor = AppearanceSettings.terminalWindowBackground();
+        int borderColor = AppearanceSettings.terminalBorderColor();
+        int bgColor = AppearanceSettings.terminalHeaderBackground();
         boolean useDashed = AppearanceSettings.dashedBorders();
 
         GradientDrawable bg = new GradientDrawable();
@@ -5032,15 +5021,16 @@ public class UIManager implements OnTouchListener {
         if (mainPack == null || mainPack.appsManager == null) return;
 
         int drawerColor = XMLPrefsManager.getColor(Theme.apps_drawer_color);
-        int borderColor = XMLPrefsManager.getColor(Theme.input_color);
+        int borderColor = AppearanceSettings.terminalBorderColor();
         int widgetBgColor = AppearanceSettings.terminalWindowBackground();
+        int headerBgColor = AppearanceSettings.terminalHeaderBackground();
 
         appsDrawerHeader.setTextColor(drawerColor);
         appsDrawerFooter.setTextColor(drawerColor);
         appsDrawerHeader.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD);
         appsDrawerFooter.setTypeface(Tuils.getTypeface(mContext));
-        appsDrawerHeader.setBackgroundColor(widgetBgColor);
-        appsDrawerFooter.setBackgroundColor(widgetBgColor);
+        appsDrawerHeader.setBackgroundColor(headerBgColor);
+        appsDrawerFooter.setBackgroundColor(headerBgColor);
 
         boolean useDashed = AppearanceSettings.dashedBorders();
         int dash = AppearanceSettings.dashLength();
@@ -5067,7 +5057,7 @@ public class UIManager implements OnTouchListener {
                 } else {
                     gd.setStroke(0, Color.TRANSPARENT);
                 }
-                gd.setColor(widgetBgColor);
+                gd.setColor(headerBgColor);
                 appsDrawerHeader.setBackgroundDrawable(gd);
                 appsDrawerFooter.setBackgroundDrawable(gd);
             }
@@ -5321,7 +5311,7 @@ public class UIManager implements OnTouchListener {
 
         selectedAppsDrawerAlpha = letter;
         int drawerColor = XMLPrefsManager.getColor(Theme.apps_drawer_color);
-        int borderColor = XMLPrefsManager.getColor(Theme.input_color);
+        int borderColor = AppearanceSettings.terminalBorderColor();
         int widgetBgColor = AppearanceSettings.terminalWindowBackground();
         for (Map.Entry<String, TextView> entry : appsDrawerAlphaViews.entrySet()) {
             styleAlphaTab(entry.getValue(), entry.getKey(), drawerColor, borderColor, widgetBgColor);
@@ -5445,17 +5435,15 @@ public class UIManager implements OnTouchListener {
 //    1 = ext ver
 //    2 = int hor
 //    3 = int ver
-    private static void applyBgRect(Context context, View v, String strokeColor, String bgColor, int[] spaces, int strokeWidth, int cornerRadius, boolean dashed, int fallbackColor) {
+    private static void applyBgRect(Context context, View v, String bgColor, int[] spaces, int strokeWidth, int cornerRadius, boolean dashed, int borderColor) {
         try {
             GradientDrawable d = new GradientDrawable();
             d.setShape(GradientDrawable.RECTANGLE);
             d.setCornerRadius(cornerRadius);
 
-            boolean isTransparent = (strokeColor.startsWith("#00") && strokeColor.length() == 9);
             if(dashed) {
                 try {
-                    int sColor = isTransparent ? fallbackColor : Color.parseColor(strokeColor);
-                    d.setStroke((int) Tuils.dpToPx(context, 1.5f), sColor,
+                    d.setStroke((int) Tuils.dpToPx(context, 1.5f), borderColor,
                             Tuils.dpToPx(context, AppearanceSettings.dashLength()),
                             Tuils.dpToPx(context, AppearanceSettings.dashGap()));
                 } catch (Exception e) {

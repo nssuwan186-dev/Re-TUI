@@ -41,24 +41,26 @@ public class files implements CommandAbstraction {
         }
 
         int terminalSurfaceColor = terminalSurfaceColor();
+        int terminalHeaderColor = AppearanceSettings.terminalHeaderBackground();
+        int terminalBorderColor = AppearanceSettings.terminalBorderColor();
 
         intent.putExtra("theme_bg", XMLPrefsManager.getColor(Theme.bg_color));
         intent.putExtra("theme_text", XMLPrefsManager.getColor(Theme.output_color));
-        intent.putExtra("theme_border", XMLPrefsManager.getColor(Theme.input_color));
+        intent.putExtra("theme_border", terminalBorderColor);
         intent.putExtra("terminal_bg", terminalSurfaceColor);
         intent.putExtra("module_bg_color", terminalSurfaceColor);
         intent.putExtra("module_text_color", AppearanceSettings.moduleNameTextColor());
-        intent.putExtra("module_border_color", AppearanceSettings.moduleButtonBorderColor());
-        intent.putExtra("module_header_bg_color", terminalSurfaceColor);
+        intent.putExtra("module_border_color", terminalBorderColor);
+        intent.putExtra("module_header_bg_color", terminalHeaderColor);
         intent.putExtra("module_header_text_color", AppearanceSettings.moduleNameTextColor());
         intent.putExtra("module_button_bg_color", AppearanceSettings.moduleButtonBackgroundColor());
         intent.putExtra("module_button_text_color", AppearanceSettings.moduleNameTextColor());
-        intent.putExtra("module_button_border_color", AppearanceSettings.moduleButtonBorderColor());
-        intent.putExtra("input_bg_color", XMLPrefsManager.getColor(Theme.input_bgrectcolor));
+        intent.putExtra("module_button_border_color", terminalBorderColor);
+        intent.putExtra("input_bg_color", XMLPrefsManager.getColor(Theme.input_bg));
         intent.putExtra("input_text_color", XMLPrefsManager.getColor(Theme.input_color));
-        intent.putExtra("output_bg_color", XMLPrefsManager.getColor(Theme.output_bgrectcolor));
+        intent.putExtra("output_bg_color", XMLPrefsManager.getColor(Theme.output_bg));
         intent.putExtra("output_text_color", XMLPrefsManager.getColor(Theme.output_color));
-        intent.putExtra("output_border_color", AppearanceSettings.moduleButtonBorderColor());
+        intent.putExtra("output_border_color", terminalBorderColor);
         intent.putExtra("top_margin", 18);
         intent.putExtra("input_font_size", XMLPrefsManager.getInt(Ui.input_output_size));
         intent.putExtra("display_margin_mm", XMLPrefsManager.get(Ui.display_margin_mm));
@@ -90,7 +92,7 @@ public class files implements CommandAbstraction {
         if (Color.alpha(terminalBg) > 0) {
             return terminalBg;
         }
-        int outputBg = XMLPrefsManager.getColor(Theme.output_bgrectcolor);
+        int outputBg = XMLPrefsManager.getColor(Theme.output_bg);
         return Color.alpha(outputBg) > 0 ? outputBg : terminalBg;
     }
 

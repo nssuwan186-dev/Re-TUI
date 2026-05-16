@@ -194,11 +194,6 @@ public final class AutoColorManager {
             case window_terminal_bg:
             case toolbar_bg:
                 return palette.surface;
-            case input_bgrectcolor:
-            case output_bgrectcolor:
-            case toolbar_bgrectcolor:
-            case suggestions_bgrectcolor:
-                return ColorUtils.setAlphaComponent(palette.surfaceStrong, 224);
             case input_bg:
             case output_bg:
             case suggestions_bg:
@@ -218,7 +213,6 @@ public final class AutoColorManager {
             case unlock_counter_color:
             case dashed_border_color:
             case module_name_text_color:
-            case module_button_border_color:
                 return palette.accent;
             case module_button_bg_color:
                 return ColorUtils.setAlphaComponent(palette.surface, 208);
@@ -242,6 +236,11 @@ public final class AutoColorManager {
             case status_lines_shadow_color:
             case input_shadow_color:
             case output_shadow_color:
+            case input_bgrectcolor:
+            case output_bgrectcolor:
+            case toolbar_bgrectcolor:
+            case suggestions_bgrectcolor:
+            case module_button_border_color:
                 return fallbackColor;
             default:
                 return fallbackColor;

@@ -359,7 +359,7 @@ public enum Theme implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "The color of the rect behind the nth status line";
+            return "Deprecated: dashed_border_color controls status line borders; use status_lines_bg for fill";
         }
 
         @Override
@@ -375,7 +375,7 @@ public enum Theme implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "The color of the rect behind the input field";
+            return "Deprecated: dashed_border_color controls the input border; use input_bg for fill";
         }
 
         @Override
@@ -391,7 +391,7 @@ public enum Theme implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "The color of the rect behind the output field";
+            return "Deprecated: dashed_border_color controls the output border; use output_bg for fill";
         }
 
         @Override
@@ -407,7 +407,7 @@ public enum Theme implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "The color of the rect behind the toolbar";
+            return "Deprecated: dashed_border_color controls the toolbar border; use toolbar_bg for fill";
         }
 
         @Override
@@ -423,7 +423,7 @@ public enum Theme implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "The color of the rect behind the suggestions area";
+            return "Deprecated: dashed_border_color controls the suggestions border; use suggestions_bg for fill";
         }
 
         @Override
@@ -562,7 +562,7 @@ public enum Theme implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "The color of dashed terminal borders";
+            return "The shared border color for terminal chrome, headers, panels, and dashed rect outlines";
         }
     },
     module_button_bg_color {
@@ -595,7 +595,7 @@ public enum Theme implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "The border color of module buttons";
+            return "Deprecated: use dashed_border_color for terminal and module borders";
         }
     },
     window_terminal_bg {

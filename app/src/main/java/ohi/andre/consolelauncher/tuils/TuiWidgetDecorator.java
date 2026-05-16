@@ -30,7 +30,7 @@ public class TuiWidgetDecorator {
 
         Context context = widgetRoot.getContext();
         int widgetBgColor = AppearanceSettings.terminalWindowBackground();
-        int labelMaskColor = ColorUtils.setAlphaComponent(widgetBgColor, 255);
+        int labelMaskColor = AppearanceSettings.terminalHeaderBackground();
         boolean useDashed = AppearanceSettings.dashedBorders();
 
         // 1. Decorate Border
@@ -39,7 +39,7 @@ public class TuiWidgetDecorator {
             borderView.setBackground(panelDrawable(
                     context,
                     widgetBgColor,
-                    borderColor,
+                    AppearanceSettings.terminalBorderColor(),
                     1.5f,
                     AppearanceSettings.moduleCornerRadius(),
                     useDashed));
@@ -58,7 +58,7 @@ public class TuiWidgetDecorator {
                     gd = (GradientDrawable) gd.mutate();
                     gd.setCornerRadius(Tuils.dpToPx(context, AppearanceSettings.headerCornerRadius()));
                     if (useDashed) {
-                        gd.setStroke((int) Tuils.dpToPx(context, 1.5f), borderColor,
+                        gd.setStroke((int) Tuils.dpToPx(context, 1.5f), AppearanceSettings.terminalBorderColor(),
                                 Tuils.dpToPx(context, AppearanceSettings.dashLength()),
                                 Tuils.dpToPx(context, AppearanceSettings.dashGap()));
                     } else {
@@ -78,7 +78,7 @@ public class TuiWidgetDecorator {
     public static GradientDrawable getRowBackground(Context context, int borderColor) {
         int widgetBgColor = AppearanceSettings.terminalWindowBackground();
         int rowBackground = ColorUtils.blendARGB(widgetBgColor, Color.BLACK, 0.22f);
-        int strokeColor = ColorUtils.setAlphaComponent(borderColor, 140);
+        int strokeColor = ColorUtils.setAlphaComponent(AppearanceSettings.terminalBorderColor(), 140);
 
         GradientDrawable bg = new GradientDrawable();
         bg.setShape(GradientDrawable.RECTANGLE);

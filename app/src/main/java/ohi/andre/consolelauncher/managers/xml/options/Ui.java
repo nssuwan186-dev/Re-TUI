@@ -922,7 +922,7 @@ public enum Ui implements XMLPrefsSave {
 
         @Override
         public String info() {
-            return "[Stroke width],[Rect corner radius]";
+            return "Legacy rect sizing for dashed borders: [stroke width],[corner radius]";
         }
     },
     shadow_params {

@@ -20,7 +20,7 @@ final class TuixtTheme {
     }
 
     static int borderColor() {
-        return LauncherSettings.getColor(Theme.input_color);
+        return AppearanceSettings.terminalBorderColor();
     }
 
     static int accentColor() {
@@ -32,7 +32,7 @@ final class TuixtTheme {
     }
 
     static int surfaceColor() {
-        return ColorUtils.setAlphaComponent(AppearanceSettings.terminalWindowBackground(), 255);
+        return AppearanceSettings.terminalHeaderBackground();
     }
 
     static int overlayColor() {

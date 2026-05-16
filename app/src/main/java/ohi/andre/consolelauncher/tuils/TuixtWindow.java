@@ -71,12 +71,14 @@ public class TuixtWindow extends FrameLayout {
     public void updateStyle() {
         Context context = getContext();
         int accentColor = XMLPrefsManager.getColor(Theme.output_color);
+        int borderColor = AppearanceSettings.terminalBorderColor();
         int bgColor = AppearanceSettings.terminalWindowBackground();
+        int headerBgColor = AppearanceSettings.terminalHeaderBackground();
 
         GradientDrawable border = new GradientDrawable();
         border.setColor(bgColor);
         if (AppearanceSettings.dashedBorders()) {
-            border.setStroke((int) UIUtils.dpToPx(context, 2), accentColor,
+            border.setStroke((int) UIUtils.dpToPx(context, 2), borderColor,
                     UIUtils.dpToPx(context, AppearanceSettings.dashLength()),
                     UIUtils.dpToPx(context, AppearanceSettings.dashGap()));
         }
@@ -84,7 +86,7 @@ public class TuixtWindow extends FrameLayout {
 
         if (label != null) {
             label.setTextColor(accentColor);
-            label.setBackgroundColor(bgColor);
+            label.setBackgroundColor(headerBgColor);
             if (title != null) {
                 label.setText("[ " + title.toUpperCase() + " ]");
             }

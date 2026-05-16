@@ -131,8 +131,9 @@ public class debug extends ParamCommand {
         appendValue(output, Theme.input_color);
         appendValue(output, Theme.output_color);
         appendValue(output, Theme.apps_drawer_color);
+        appendValue(output, Theme.window_terminal_bg);
+        appendValue(output, Theme.dashed_border_color);
         appendValue(output, Theme.module_name_text_color);
-        appendValue(output, Theme.module_button_border_color);
         appendValue(output, Suggestions.apps_bg_color);
         appendValue(output, Suggestions.alias_bg_color);
         appendValue(output, Suggestions.cmd_bg_color);

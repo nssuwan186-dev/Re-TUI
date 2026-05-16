@@ -1,5 +1,9 @@
 package ohi.andre.consolelauncher.managers.settings;
 
+import android.graphics.Color;
+
+import androidx.core.graphics.ColorUtils;
+
 import ohi.andre.consolelauncher.managers.xml.options.Theme;
 import ohi.andre.consolelauncher.managers.xml.options.Ui;
 import ohi.andre.consolelauncher.managers.xml.options.Behavior;
@@ -21,7 +25,7 @@ public final class AppearanceSettings {
     }
 
     public static int musicWidgetBorderColor() {
-        return moduleButtonBorderColor();
+        return terminalBorderColor();
     }
 
     public static int musicWidgetTextColor() {
@@ -29,7 +33,7 @@ public final class AppearanceSettings {
     }
 
     public static int notificationWidgetBorderColor() {
-        return moduleButtonBorderColor();
+        return terminalBorderColor();
     }
 
     public static int notificationWidgetTextColor() {
@@ -40,12 +44,30 @@ public final class AppearanceSettings {
         return LauncherSettings.getColor(Theme.window_terminal_bg);
     }
 
+    public static int terminalHeaderBackground() {
+        int terminalBg = terminalWindowBackground();
+        if (Color.alpha(terminalBg) > 0) {
+            return ColorUtils.setAlphaComponent(terminalBg, 255);
+        }
+
+        int baseBg = LauncherSettings.getColor(Theme.bg_color);
+        if (Color.alpha(baseBg) > 0) {
+            return ColorUtils.setAlphaComponent(baseBg, 255);
+        }
+
+        return Color.BLACK;
+    }
+
     public static boolean dashedBorders() {
         return LauncherSettings.getBoolean(Ui.enable_dashed_border);
     }
 
     public static int dashedBorderColor() {
         return LauncherSettings.getColor(Theme.dashed_border_color);
+    }
+
+    public static int terminalBorderColor() {
+        return dashedBorderColor();
     }
 
     public static int moduleButtonBackgroundColor() {
@@ -57,7 +79,7 @@ public final class AppearanceSettings {
     }
 
     public static int moduleButtonBorderColor() {
-        return LauncherSettings.getColor(Theme.module_button_border_color);
+        return terminalBorderColor();
     }
 
     public static int dashLength() {
