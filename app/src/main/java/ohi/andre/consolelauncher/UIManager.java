@@ -366,6 +366,7 @@ public class UIManager implements OnTouchListener {
     //    never access this directly, use getLabelView
     private TextView[] labelViews = new TextView[Label.values().length];
 
+    private static final float LABEL_INDEX_UNMAPPED = -1f;
     private float[] labelIndexes = new float[labelViews.length];
     private int[] labelSizes = new int[labelViews.length];
     private CharSequence[] labelTexts = new CharSequence[labelViews.length];
@@ -562,6 +563,9 @@ public class UIManager implements OnTouchListener {
         labelTexts[l.ordinal()] = s;
 
         int base = (int) labelIndexes[l.ordinal()];
+        if (base < 0 || base >= labelViews.length || labelViews[base] == null) {
+            return;
+        }
 
         List<Float> indexs = new ArrayList<>();
         for(int count = 0; count < Label.values().length; count++) {
@@ -2861,6 +2865,8 @@ public class UIManager implements OnTouchListener {
                 (TextView) rootView.findViewById(R.id.tv8),
                 (TextView) rootView.findViewById(R.id.tv9),
         };
+        Arrays.fill(labelIndexes, LABEL_INDEX_UNMAPPED);
+        Arrays.fill(labelTexts, null);
 
         boolean[] show = new boolean[Label.values().length];
         show[Label.notes.ordinal()] = XMLPrefsManager.getBoolean(Ui.show_notes);
