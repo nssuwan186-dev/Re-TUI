@@ -1,6 +1,8 @@
 package ohi.andre.consolelauncher.commands.main.raw;
 
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -28,7 +30,10 @@ public class termux implements CommandAbstraction {
     private void openConsole(ExecutePack info, String command) {
         Intent intent = new Intent(UIManager.ACTION_TERMUX_CONSOLE);
         intent.putExtra(UIManager.EXTRA_TERMUX_COMMAND, command);
-        LocalBroadcastManager.getInstance(info.context.getApplicationContext()).sendBroadcast(intent);
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.post(() -> LocalBroadcastManager
+                .getInstance(info.context.getApplicationContext())
+                .sendBroadcast(intent));
     }
 
     @Override

@@ -524,10 +524,21 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
     @Override
     public void onBackPressed() {
         if (ui != null) {
+            if (ui.consumeBackPressed()) {
+                return;
+            }
             ui.onBackPressed();
         } else if (main == null) {
             super.onBackPressed();
         }
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && ui != null && ui.consumeBackPressed()) {
+            return true;
+        }
+        return super.onKeyUp(keyCode, event);
     }
 
     @Override
