@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -60,6 +61,7 @@ import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache;
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeManager;
 import ohi.andre.consolelauncher.managers.widgets.LuaWidgetManager;
 import ohi.andre.consolelauncher.managers.widgets.LuaWidgetEngine;
+import ohi.andre.consolelauncher.managers.settings.LauncherSettings;
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager;
 import ohi.andre.consolelauncher.managers.xml.classes.XMLPrefsSave;
 import ohi.andre.consolelauncher.managers.xml.options.Apps;
@@ -1133,6 +1135,13 @@ public class SuggestionsManager {
             }
         }
 
+        if (LauncherSettings.getBoolean(Behavior.duo_mode) && CommandTuils.DUO_COMMAND.startsWith(lower)) {
+            suggestions.add(new Suggestion(null, CommandTuils.DUO_COMMAND, false, Suggestion.TYPE_PERMANENT));
+            for (String option : CommandTuils.duoOptions()) {
+                suggestions.add(new Suggestion(null, CommandTuils.DUO_COMMAND + " " + option, true, Suggestion.TYPE_PERMANENT));
+            }
+        }
+
     }
 
     private void suggestClockCommandArgs(MainPack pack, List<Suggestion> suggestions, String afterLastSpace, String beforeLastSpace) {
@@ -1227,6 +1236,17 @@ public class SuggestionsManager {
             suggestWidgetIds(suggestions, afterLastSpace, beforeLastSpace, true);
         } else if ("orientation".equals(normalized)) {
             suggestOrientationOptions(suggestions, afterLastSpace, beforeLastSpace);
+        } else if (LauncherSettings.getBoolean(Behavior.duo_mode) && CommandTuils.DUO_COMMAND.equals(normalized)) {
+            suggestDuoOptions(suggestions, afterLastSpace, beforeLastSpace);
+        }
+    }
+
+    private void suggestDuoOptions(List<Suggestion> suggestions, String lastWord, String beforeLastSpace) {
+        String filter = lastWord == null ? Tuils.EMPTYSTRING : lastWord.toLowerCase(Locale.US);
+        for (String option : CommandTuils.duoOptions()) {
+            if (filter.length() == 0 || option.startsWith(filter)) {
+                suggestions.add(new Suggestion(beforeLastSpace, option, true, Suggestion.TYPE_COMMAND));
+            }
         }
     }
 

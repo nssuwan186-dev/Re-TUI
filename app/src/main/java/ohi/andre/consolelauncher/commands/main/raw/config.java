@@ -68,6 +68,11 @@ public class config extends ParamCommand {
                     Intent intent = new Intent(UIManager.ACTION_MODULE_COMMAND);
                     intent.putExtra(UIManager.EXTRA_MODULE_COMMAND, "rebuild");
                     LocalBroadcastManager.getInstance(pack.context.getApplicationContext()).sendBroadcast(intent);
+                } else if(save == Behavior.duo_mode
+                        && !"true".equalsIgnoreCase(value)
+                        && pack.context instanceof LauncherActivity
+                        && ((LauncherActivity) pack.context).getUIManager() != null) {
+                    ((LauncherActivity) pack.context).getUIManager().setDuoLayoutMode(UIManager.DUO_LAYOUT_OFF);
                 } else if(save == Behavior.orientation && pack.context instanceof LauncherActivity) {
                     ((LauncherActivity) pack.context).applyOrientationPreference();
                 } else if(isDisplayMarginSetting(save)
@@ -294,6 +299,10 @@ public class config extends ParamCommand {
                 ((Reloadable) pack.context).addMessage(save.parent().path(), save.label() + " -> " + save.defaultValue());
                 if(save == Behavior.orientation && pack.context instanceof LauncherActivity) {
                     ((LauncherActivity) pack.context).applyOrientationPreference();
+                } else if(save == Behavior.duo_mode
+                        && pack.context instanceof LauncherActivity
+                        && ((LauncherActivity) pack.context).getUIManager() != null) {
+                    ((LauncherActivity) pack.context).getUIManager().setDuoLayoutMode(UIManager.DUO_LAYOUT_OFF);
                 } else if(isDisplayMarginSetting(save)
                         && pack.context instanceof LauncherActivity
                         && ((LauncherActivity) pack.context).getUIManager() != null) {

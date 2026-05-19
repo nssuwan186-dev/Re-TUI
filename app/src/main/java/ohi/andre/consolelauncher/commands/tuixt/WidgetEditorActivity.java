@@ -96,6 +96,7 @@ public class WidgetEditorActivity extends Activity {
         FrameLayout screen = new FrameLayout(this);
         screen.setBackgroundColor(TuixtTheme.overlayColor());
         screen.setFitsSystemWindows(true);
+        FrameLayout contentHost = TuixtLayout.addFoldAwareHost(this, screen, ViewGroup.LayoutParams.MATCH_PARENT);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -108,7 +109,7 @@ public class WidgetEditorActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT);
         panelParams.setMargins(panelLeft, panelTop, TuixtTheme.dp(this, 28), TuixtTheme.dp(this, 28));
-        screen.addView(root, panelParams);
+        contentHost.addView(root, panelParams);
 
         header = new TextView(this);
         updateHeader();
@@ -119,7 +120,7 @@ public class WidgetEditorActivity extends Activity {
         headerParams.gravity = Gravity.TOP | Gravity.START;
         headerParams.leftMargin = panelLeft + TuixtTheme.dp(this, 38);
         headerParams.topMargin = panelTop - TuixtTheme.dp(this, 11);
-        screen.addView(header, headerParams);
+        contentHost.addView(header, headerParams);
 
         documentNameEditor = new EditText(this);
         documentNameEditor.setSingleLine(true);

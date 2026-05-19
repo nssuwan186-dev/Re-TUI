@@ -369,6 +369,17 @@
         \n$ devutils -notify_reply title body
         \n$ devutils -check_notifications</string>
     <string name="help_donate">Offer a coffee to the developer (PayPal only)</string>
+    <string name="help_duo">Manually switch the Surface Duo landscape companion layout.
+        \nRequires behavior.xml duo_mode=true.
+        \n$ duo status
+        \n$ duo on
+        \n$ duo off
+        \n$ duo left
+        \n$ duo right
+        \n$ duo toggle
+        \nUse aliases such as:
+        \n$ alias -add duo-on duo on
+        \n$ alias -add duo-off duo off</string>
     <string name="help_flash">Toggle the flashlight</string>
     <string name="help_hack">Play a fake hacking overlay animation</string>
     <string name="help_help">Print the available commands, or info about a command

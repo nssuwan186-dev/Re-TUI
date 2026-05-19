@@ -195,7 +195,8 @@ public final class TuixtDialog {
         headerParams.leftMargin = TuixtTheme.dp(context, 42);
         container.addView(header, headerParams);
 
-        root.addView(container, new FrameLayout.LayoutParams(
+        FrameLayout contentHost = TuixtLayout.addFoldAwareHost(context, root, ViewGroup.LayoutParams.WRAP_CONTENT);
+        contentHost.addView(container, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER));

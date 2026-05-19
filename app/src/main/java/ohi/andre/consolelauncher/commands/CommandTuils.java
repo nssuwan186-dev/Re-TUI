@@ -20,9 +20,11 @@ import ohi.andre.consolelauncher.managers.HTMLExtractManager;
 import ohi.andre.consolelauncher.managers.RssManager;
 import ohi.andre.consolelauncher.managers.music.MusicManager2;
 import ohi.andre.consolelauncher.managers.notifications.NotificationManager;
+import ohi.andre.consolelauncher.managers.settings.LauncherSettings;
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager;
 import ohi.andre.consolelauncher.managers.xml.classes.XMLPrefsSave;
 import ohi.andre.consolelauncher.managers.xml.options.Apps;
+import ohi.andre.consolelauncher.managers.xml.options.Behavior;
 import ohi.andre.consolelauncher.managers.xml.options.Notifications;
 import ohi.andre.consolelauncher.managers.xml.options.Rss;
 import ohi.andre.consolelauncher.tuils.SimpleMutableEntry;
@@ -30,6 +32,11 @@ import ohi.andre.consolelauncher.tuils.Tuils;
 
 @SuppressLint("DefaultLocale")
 public class CommandTuils {
+
+    public static final String DUO_COMMAND = "duo";
+    public static final String DUO_USAGE = DUO_COMMAND + " on|off|left|right|toggle|status";
+    private static final List<String> DUO_OPTIONS = Collections.unmodifiableList(
+            Arrays.asList("on", "off", "left", "right", "toggle", "status"));
 
     private static final String[] HIDDEN_COMMANDS = {
             "cntcts",
@@ -49,12 +56,20 @@ public class CommandTuils {
             return false;
         }
 
+        if (DUO_COMMAND.equalsIgnoreCase(name) && !LauncherSettings.getBoolean(Behavior.duo_mode)) {
+            return true;
+        }
+
         for (String hidden : HIDDEN_COMMANDS) {
             if (hidden.equalsIgnoreCase(name)) {
                 return true;
             }
         }
         return false;
+    }
+
+    public static List<String> duoOptions() {
+        return DUO_OPTIONS;
     }
 
     private static FileManager.SpecificExtensionFileFilter extensionFileFilter = new FileManager.SpecificExtensionFileFilter();

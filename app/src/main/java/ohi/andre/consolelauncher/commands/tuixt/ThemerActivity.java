@@ -85,6 +85,7 @@ public class ThemerActivity extends AppCompatActivity {
         FrameLayout screen = new FrameLayout(this);
         screen.setBackgroundColor(TuixtTheme.overlayColor());
         screen.setFitsSystemWindows(true);
+        FrameLayout contentHost = TuixtLayout.addFoldAwareHost(this, screen, ViewGroup.LayoutParams.MATCH_PARENT);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -97,7 +98,7 @@ public class ThemerActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT);
         panelParams.setMargins(panelLeft, panelTop, TuixtTheme.dp(this, 28), TuixtTheme.dp(this, 28));
-        screen.addView(root, panelParams);
+        contentHost.addView(root, panelParams);
 
         header = new TextView(this);
         header.setText(getHeaderText(section));
@@ -106,7 +107,7 @@ public class ThemerActivity extends AppCompatActivity {
         headerParams.gravity = Gravity.TOP | Gravity.START;
         headerParams.leftMargin = panelLeft + TuixtTheme.dp(this, 38);
         headerParams.topMargin = panelTop - TuixtTheme.dp(this, 11);
-        screen.addView(header, headerParams);
+        contentHost.addView(header, headerParams);
 
         recyclerView = new RecyclerView(this);
         recyclerView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));

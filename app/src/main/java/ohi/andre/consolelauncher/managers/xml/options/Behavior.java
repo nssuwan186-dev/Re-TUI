@@ -1077,6 +1077,22 @@ public enum Behavior implements XMLPrefsSave {
             return XMLPrefsSave.INTEGER;
         }
     },
+    duo_mode {
+        @Override
+        public String defaultValue() {
+            return "false";
+        }
+
+        @Override
+        public String info() {
+            return "If true, enables the Duo command for manually switching landscape into a single portrait-style pane on the left or right screen";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.BOOLEAN;
+        }
+    },
     htmlextractor_default_format {
         @Override
         public String defaultValue() {
