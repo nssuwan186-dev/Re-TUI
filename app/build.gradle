@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "ohi.andre.consolelauncher"
-    compileSdk 36
+    namespace = "ohi.andre.consolelauncher"
+    compileSdk = 36
 
     def keystorePropertiesFile = rootProject.file("local.properties")
     def keystoreProperties = new Properties()
@@ -23,38 +23,38 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.dvil.tui_renewed"
-        minSdk 23
-        targetSdk 36
-        versionCode 334
-        versionName "v6.16.7-STABLE"
+        applicationId = "com.dvil.tui_renewed"
+        minSdk = 23
+        targetSdk = 36
+        versionCode = 334
+        versionName = "v6.16.7-STABLE"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 
     buildTypes {
         debug {
-            signingConfig signingConfigs.release
+            signingConfig = signingConfigs.release
         }
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            signingConfig = signingConfigs.release
         }
     }
 
     productFlavors {
         flavorDimensions = ["default"]
         fdroid {
-            dimension "default"
+            dimension = "default"
         }
         playstore {
-            dimension "default"
+            dimension = "default"
         }
     }
 
@@ -64,7 +64,7 @@ android {
     }
 
     lint {
-        checkReleaseBuilds false
+        checkReleaseBuilds = false
     }
 }
 

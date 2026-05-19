@@ -522,6 +522,7 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
     }
 
     @Override
+    @android.annotation.SuppressLint("GestureBackNavigation")
     public void onBackPressed() {
         if (ui != null) {
             if (ui.consumeBackPressed()) {
@@ -534,6 +535,7 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
     }
 
     @Override
+    @android.annotation.SuppressLint("GestureBackNavigation")
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && ui != null && ui.consumeBackPressed()) {
             return true;
@@ -542,6 +544,7 @@ public class LauncherActivity extends AppCompatActivity implements Reloadable {
     }
 
     @Override
+    @android.annotation.SuppressLint("GestureBackNavigation")
     public boolean onKeyLongPress(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             return true;

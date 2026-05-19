@@ -219,6 +219,7 @@ public class WidgetEditorActivity extends Activity {
     }
 
     @Override
+    @android.annotation.SuppressLint("GestureBackNavigation")
     public void onBackPressed() {
         attemptClose();
     }

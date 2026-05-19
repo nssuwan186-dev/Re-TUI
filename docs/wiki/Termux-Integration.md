@@ -6,6 +6,8 @@ This is not a full embedded Termux shell. Termux remains the real shell. Re:T-UI
 
 TBridge is the Termux capability bridge for scripts, modules, callbacks, and automation diagnostics. Re:T-UI Files owns file navigation.
 
+The old BusyBox manager has been removed; use Termux for Linux packages and maintained command-line tools.
+
 ## Commands
 
 - `termux`

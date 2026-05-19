@@ -137,6 +137,7 @@ public class NotesEditorActivity extends Activity {
     }
 
     @Override
+    @android.annotation.SuppressLint("GestureBackNavigation")
     public void onBackPressed() {
         attemptClose();
     }

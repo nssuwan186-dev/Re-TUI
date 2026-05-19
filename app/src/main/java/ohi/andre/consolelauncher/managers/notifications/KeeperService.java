@@ -1,5 +1,6 @@
 package ohi.andre.consolelauncher.managers.notifications;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -7,12 +8,14 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.RemoteInput;
+import androidx.core.content.ContextCompat;
 import android.text.SpannableString;
 import android.text.TextUtils;
 
@@ -66,6 +69,7 @@ public class KeeperService extends Service {
     }
 
     @Override
+    @android.annotation.SuppressLint("MissingPermission")
     public int onStartCommand(Intent intent, int flags, int startId) {
         if(startId == 1 || startId == 0) {
 
@@ -107,12 +111,19 @@ public class KeeperService extends Service {
 
             String path = resolvePath(intent);
 
-            NotificationManagerCompat.from(getApplicationContext()).notify(KeeperService.ONGOING_NOTIFICATION_ID,
-                    KeeperService.buildNotification(getApplicationContext(), title, subtitle, Tuils.getHint(path),
-                            clickCmd, showHome, lastCommands, upDown, priority));
+            if (canPostNotifications()) {
+                NotificationManagerCompat.from(getApplicationContext()).notify(KeeperService.ONGOING_NOTIFICATION_ID,
+                        KeeperService.buildNotification(getApplicationContext(), title, subtitle, Tuils.getHint(path),
+                                clickCmd, showHome, lastCommands, upDown, priority));
+            }
         }
 
         return super.onStartCommand(intent, flags, startId);
+    }
+
+    private boolean canPostNotifications() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
     }
 
     //    0 = most recent

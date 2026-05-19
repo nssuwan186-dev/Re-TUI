@@ -1,12 +1,16 @@
 package ohi.andre.consolelauncher.commands.main.raw;
 
+import android.Manifest;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.RemoteInput;
+import androidx.core.content.ContextCompat;
 
 import java.util.List;
 
@@ -28,6 +32,7 @@ public class devutils extends ParamCommand {
     private enum Param implements ohi.andre.consolelauncher.commands.main.Param {
         notify {
             @Override
+            @android.annotation.SuppressLint("MissingPermission")
             public String exec(ExecutePack pack) {
                 List<String> text = pack.getList();
 
@@ -47,13 +52,17 @@ public class devutils extends ParamCommand {
                     }
                 }
 
+                if (!canPostNotifications(pack.context)) {
+                    return "Notification permission is not granted.";
+                }
+
                 NotificationManagerCompat.from(pack.context).notify(200,
                         new NotificationCompat.Builder(pack.context, channelId)
-                            .setSmallIcon(R.mipmap.ic_launcher)
-                            .setContentTitle(title)
-                            .setContentText(txt)
-                            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                            .build());
+                                .setSmallIcon(R.mipmap.ic_launcher)
+                                .setContentTitle(title)
+                                .setContentText(txt)
+                                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                                .build());
 
                 return null;
             }
@@ -65,6 +74,7 @@ public class devutils extends ParamCommand {
         },
         notify_reply {
             @Override
+            @android.annotation.SuppressLint("MissingPermission")
             public String exec(ExecutePack pack) {
                 List<String> text = pack.getList();
 
@@ -104,6 +114,10 @@ public class devutils extends ParamCommand {
                         .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
                         .setAllowGeneratedReplies(true)
                         .build();
+
+                if (!canPostNotifications(pack.context)) {
+                    return "Notification permission is not granted.";
+                }
 
                 NotificationManagerCompat.from(pack.context).notify(DevReplyReceiver.NOTIFICATION_ID,
                         new NotificationCompat.Builder(pack.context, channelId)
@@ -201,5 +215,10 @@ public class devutils extends ParamCommand {
             flags |= PendingIntent.FLAG_MUTABLE;
         }
         return flags;
+    }
+
+    private static boolean canPostNotifications(Context context) {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
     }
 }

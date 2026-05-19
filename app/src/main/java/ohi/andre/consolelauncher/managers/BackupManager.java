@@ -63,7 +63,6 @@ public final class BackupManager {
             "retui_module_prompt",
             "retui_callback_auth",
             "pomodoro_state",
-            "busybox_prefs",
             "changelogPrefs"
     };
 

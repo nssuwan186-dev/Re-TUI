@@ -1,5 +1,16 @@
+buildscript {
+    configurations.classpath {
+        resolutionStrategy {
+            force 'org.bouncycastle:bcprov-jdk18on:1.84'
+            force 'org.bouncycastle:bcpkix-jdk18on:1.84'
+            force 'org.bouncycastle:bcutil-jdk18on:1.84'
+            force 'org.bitbucket.b_c:jose4j:0.9.6'
+        }
+    }
+}
+
 plugins {
-    id 'com.android.application' version '8.5.2' apply false
+    id 'com.android.application' version '9.2.0' apply false
 }
 
 task clean(type: Delete) {

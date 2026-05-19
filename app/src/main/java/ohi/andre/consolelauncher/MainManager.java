@@ -42,7 +42,6 @@ import ohi.andre.consolelauncher.managers.settings.MusicSettings;
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager;
 import ohi.andre.consolelauncher.managers.xml.options.Behavior;
 import ohi.andre.consolelauncher.managers.xml.options.Theme;
-import ohi.andre.consolelauncher.tuils.BusyBoxInstaller;
 import ohi.andre.consolelauncher.tuils.PrivateIOReceiver;
 import ohi.andre.consolelauncher.tuils.StoppableThread;
 import ohi.andre.consolelauncher.tuils.Tuils;
@@ -146,6 +145,7 @@ public class MainManager {
 
     protected MainManager(LauncherActivity c) {
         mContext = c;
+        cleanupLegacyBusyBox();
 
         keeperServiceRunning = XMLPrefsManager.getBoolean(Behavior.tui_notification);
 
@@ -573,16 +573,6 @@ public class MainManager {
 
             final String cmd = trimmed.split(" ")[0];
 
-            if (!BusyBoxInstaller.isInstalled(mContext)) {
-                String[] common = {"ping", "echo", "ls", "grep", "cat", "vi", "top", "ps", "ip"};
-                for (String c : common) {
-                    if (cmd.equalsIgnoreCase(c)) {
-                        Tuils.sendOutput(mContext, "Command not found in the embedded shell. Use termux for Linux scripts, modules, and full shell tooling.", TerminalManager.CATEGORY_OUTPUT);
-                        return true;
-                    }
-                }
-            }
-
             new StoppableThread() {
                 @Override
                 public void run() {
@@ -591,6 +581,28 @@ public class MainManager {
             }.start();
 
             return true;
+        }
+    }
+
+    private void cleanupLegacyBusyBox() {
+        File legacyBinDir = new File(mContext.getFilesDir(), "bin");
+        File legacyBusyBox = new File(legacyBinDir, "busybox.so");
+        deleteLegacyBusyBoxFile(legacyBusyBox);
+
+        String[] files = legacyBinDir.list();
+        if (files != null && files.length == 0 && !legacyBinDir.delete()) {
+            Tuils.log("Unable to remove empty legacy binary directory: " + legacyBinDir.getAbsolutePath());
+        }
+
+        mContext.getSharedPreferences("busybox_prefs", Context.MODE_PRIVATE).edit().clear().commit();
+        File prefsDir = new File(mContext.getApplicationInfo().dataDir, "shared_prefs");
+        deleteLegacyBusyBoxFile(new File(prefsDir, "busybox_prefs.xml"));
+        deleteLegacyBusyBoxFile(new File(prefsDir, "busybox_prefs.xml.bak"));
+    }
+
+    private void deleteLegacyBusyBoxFile(File file) {
+        if (file.exists() && !file.delete()) {
+            Tuils.log("Unable to remove legacy BusyBox file: " + file.getAbsolutePath());
         }
     }
 

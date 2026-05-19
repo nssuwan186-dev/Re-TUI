@@ -321,6 +321,7 @@ public class ThemerActivity extends AppCompatActivity {
     }
 
     @Override
+    @android.annotation.SuppressLint("GestureBackNavigation")
     public void onBackPressed() {
         if (!SECTION_HOME.equals(section)) {
             openSection(SECTION_HOME);

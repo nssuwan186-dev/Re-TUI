@@ -25,6 +25,7 @@ These updates ensure the launcher remains functional, secure, and performant on 
     *   **Suggestions:** Provides history-based autocomplete for `webhook [name]` arguments.
 *   **`post [url] [body]`**: Send raw HTTP POST requests directly from the terminal.
 *   **`termux` / `module`**: Termux-backed scripts and custom modules are now the recommended way to add Linux-powered workflows.
+*   **BusyBox manager removed**: Re:T-UI no longer downloads BusyBox; use `shell` for Android's built-in shell and Termux for maintained Linux tooling.
 *   **ASCII Art System**: A new header system that displays custom ASCII art on the dashboard. Controlled via `show_ascii`, `ascii_index`, and `ascii_size` in `Ui.xml`.
 
 ### ✨ Enhanced Features
@@ -46,15 +47,15 @@ For a full Linux environment, use Termux as the execution layer:
 4.  Run `tbridge -doctor` in Re:T-UI to verify the bridge.
 5.  Use `termux`, `module`, and `files` for scripts, modules, and file workflows.
 
-This keeps the launcher lean for Play Store builds while preserving power-user Linux workflows through an app that is designed to own them.
+This keeps the launcher lean for Play Store builds while preserving power-user Linux workflows through an app that is designed to own them. The old BusyBox manager has been scrapped in favor of this Termux-first model.
 
 ---
 
 ## 🛠 Modern Build System
 *   **Target SDK:** Updated to **API 36**.
-*   **Min SDK:** API 21 (Android 5.0).
+*   **Min SDK:** API 23 (Android 6.0).
 *   **AndroidX Migration:** Fully migrated from legacy Support Libraries to **AndroidX**.
-*   **Gradle & AGP:** Updated to Gradle 8.2 and Android Gradle Plugin 8.2.0.
+*   **Gradle & AGP:** Updated to Gradle 9.4.1 and Android Gradle Plugin 9.2.0.
 *   **Java Compatibility:** Built with **Java 17** support.
 
 ---
