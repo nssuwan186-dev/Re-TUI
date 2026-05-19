@@ -479,9 +479,7 @@ public class MainManager {
             Tuils.sendOutput(mainPack, text, TerminalManager.CATEGORY_NO_COLOR);
         }
 
-        mainPack.context.startActivity(intent);
-
-        return true;
+        return appsManager.launch(mainPack.context, i);
     }
 //
 

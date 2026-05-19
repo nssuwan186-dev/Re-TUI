@@ -143,7 +143,7 @@ public class apps extends ParamCommand {
                 String marker;
                 if(o instanceof AppsManager.LaunchInfo) {
                     AppsManager.LaunchInfo i = (AppsManager.LaunchInfo) o;
-                    marker = i.componentName.getPackageName() + "-" + i.componentName.getClassName();
+                    marker = i.write();
                 } else {
                     marker = (String) o;
                 }
@@ -186,9 +186,7 @@ public class apps extends ParamCommand {
 
             @Override
             public String exec(ExecutePack pack) {
-                Intent intent = ((MainPack) pack).appsManager.getIntent(pack.getLaunchInfo());
-                pack.context.startActivity(intent);
-
+                ((MainPack) pack).appsManager.launch(pack.context, pack.getLaunchInfo());
                 return null;
             }
         },

@@ -5829,10 +5829,7 @@ public class UIManager implements OnTouchListener {
                 }
 
                 AppsManager.LaunchInfo app = ((AppEntry) entry).app;
-                Intent intent = mainPack.appsManager.getIntent(app);
-                if (intent != null) {
-                    mContext.startActivity(intent);
-                }
+                mainPack.appsManager.launch(mContext, app);
                 hideAppsDrawer();
             });
             appsList.setOnScrollListener(new AbsListView.OnScrollListener() {
