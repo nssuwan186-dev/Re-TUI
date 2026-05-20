@@ -90,6 +90,7 @@ import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.AbsListView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -103,11 +104,13 @@ import java.util.regex.Pattern;
 
 import ohi.andre.consolelauncher.commands.main.specific.RedirectCommand;
 import ohi.andre.consolelauncher.commands.main.raw.tbridge;
+import ohi.andre.consolelauncher.commands.tuixt.ThemerActivity;
 import ohi.andre.consolelauncher.managers.HTMLExtractManager;
 import ohi.andre.consolelauncher.managers.NotesManager;
 import ohi.andre.consolelauncher.managers.RssManager;
 import ohi.andre.consolelauncher.managers.TerminalManager;
 import ohi.andre.consolelauncher.managers.TimeManager;
+import ohi.andre.consolelauncher.managers.ToolbarShortcutManager;
 import ohi.andre.consolelauncher.managers.TuiLocationManager;
 import ohi.andre.consolelauncher.managers.file.FileBackendManager;
 import ohi.andre.consolelauncher.managers.modules.ModulePromptManager;
@@ -796,6 +799,9 @@ public class UIManager implements OnTouchListener {
         }
 
         mTerminalAdapter = new TerminalManager(terminalView, inputView, prefixView, submitView, backView, nextView, deleteView, pasteView, mContext, mainPack, mExecuter);
+        if (showToolbar && toolbarView instanceof LinearLayout) {
+            addToolbarShortcutButtons((LinearLayout) toolbarView);
+        }
 
         for (String s : pendingInputs) {
             mTerminalAdapter.setInput(s);
@@ -841,6 +847,85 @@ public class UIManager implements OnTouchListener {
 
         
         scheduleTypefaceRefreshes();
+    }
+
+    private void addToolbarShortcutButtons(LinearLayout toolbarLayout) {
+        if (toolbarLayout == null) {
+            return;
+        }
+
+        int added = 0;
+        for (int slotIndex = 1; slotIndex <= ToolbarShortcutManager.MAX_SLOTS; slotIndex++) {
+            ToolbarShortcutManager.Slot slot = ToolbarShortcutManager.slot(slotIndex);
+            if (!slot.enabled) {
+                continue;
+            }
+
+            ImageButton button = new ImageButton(mContext);
+            int padding = mContext.getResources().getDimensionPixelSize(R.dimen.tools_padding);
+            button.setPadding(padding, padding, padding, padding);
+            button.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            button.setBackgroundColor(0);
+            button.setImageResource(slot.iconRes);
+            button.setColorFilter(XMLPrefsManager.getColor(Theme.toolbar_color), android.graphics.PorterDuff.Mode.SRC_IN);
+            button.setContentDescription("Toolbar shortcut " + slot.index + ": " + slot.command);
+            button.setOnClickListener(v -> executeToolbarShortcut(slot.command));
+            button.setOnLongClickListener(v -> {
+                openToolbarShortcutSettings();
+                return true;
+            });
+
+            toolbarLayout.addView(button, new LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    1));
+            added++;
+        }
+
+        if (added > 0) {
+            toolbarLayout.setWeightSum(countVisibleWeightedChildren(toolbarLayout));
+        }
+    }
+
+    private int countVisibleWeightedChildren(LinearLayout toolbarLayout) {
+        int count = 0;
+        for (int i = 0; i < toolbarLayout.getChildCount(); i++) {
+            View child = toolbarLayout.getChildAt(i);
+            if (child.getVisibility() == View.GONE) {
+                continue;
+            }
+            ViewGroup.LayoutParams rawParams = child.getLayoutParams();
+            if (rawParams instanceof LinearLayout.LayoutParams
+                    && ((LinearLayout.LayoutParams) rawParams).weight > 0) {
+                count++;
+            }
+        }
+        return Math.max(1, count);
+    }
+
+    private void executeToolbarShortcut(String command) {
+        String normalized = command == null ? Tuils.EMPTYSTRING : command.trim();
+        if (normalized.length() == 0) {
+            Toast.makeText(mContext, "Toolbar shortcut is empty.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (mTerminalAdapter != null && mTerminalAdapter.executeInput(normalized)) {
+            return;
+        }
+
+        if (mExecuter != null) {
+            mExecuter.execute(normalized, null);
+        }
+    }
+
+    private void openToolbarShortcutSettings() {
+        Intent intent = new Intent(mContext, ThemerActivity.class);
+        intent.putExtra(ThemerActivity.EXTRA_SECTION, ThemerActivity.SECTION_PERSONALIZATION);
+        if (!(mContext instanceof Activity)) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        }
+        mContext.startActivity(intent);
     }
 
     private void setupResponsiveLandscapeLayout(ViewGroup rootView) {

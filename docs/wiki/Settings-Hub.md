@@ -47,6 +47,17 @@ This section includes:
 - `notifications.xml`
 - `cmd.xml`
 
+## Personalization
+
+This section includes:
+
+- `alias.txt`
+- Toolbar Buttons
+- `ascii.txt`
+- `rss.xml`
+
+Toolbar Buttons exposes two optional command buttons for the launcher toolbar. Each slot is empty and disabled by default. A slot can run the same text a user would type at the prompt, such as an app name, alias, or full command.
+
 ## Integrations
 
 This currently includes:

@@ -243,6 +243,23 @@ Create or update a script to output:
   - failure handling
   - external triggers
 
+## Toolbar Command Buttons
+
+- Open `settings`.
+- Go to Personalization.
+- Open Toolbar Buttons.
+- Configure slot 1 with an icon and a simple app name such as `whatsapp` or another installed app.
+- Confirm the slot is off until enabled.
+- Enable the slot and return to the launcher.
+- Tap the toolbar button.
+- Confirm it behaves the same as typing that app name into the prompt.
+- Change the command to an alias or full command such as `notifications -open`.
+- Confirm the toolbar button submits that text through normal command execution.
+- Long-press the toolbar button.
+- Confirm it opens the Personalization settings surface.
+- Clear both slots.
+- Confirm no custom toolbar buttons remain visible by default.
+
 ## Intent Router MVP
 
 - Run `help intent`.

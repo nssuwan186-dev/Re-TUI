@@ -352,6 +352,15 @@ public class TerminalManager {
         return true;
     }
 
+    public boolean executeInput(String input) {
+        if (input == null || input.trim().length() == 0 || mInputView == null) {
+            return false;
+        }
+
+        setInput(input);
+        return onNewInput();
+    }
+
     public void setOutput(CharSequence output, int type) {
         if (output == null || output.length() == 0) return;
 

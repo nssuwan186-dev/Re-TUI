@@ -40,6 +40,7 @@ import java.util.Locale;
 import ohi.andre.consolelauncher.LauncherActivity;
 import ohi.andre.consolelauncher.managers.BackupManager;
 import ohi.andre.consolelauncher.managers.PresetManager;
+import ohi.andre.consolelauncher.managers.ToolbarShortcutManager;
 import ohi.andre.consolelauncher.managers.settings.MusicSettings;
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings;
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager;
@@ -156,6 +157,8 @@ public class ThemerActivity extends AppCompatActivity {
                         showFontsDialog();
                     } else if (fileName.equals("Presets")) {
                         showPresetsDialog();
+                    } else if (fileName.equals("Toolbar Buttons")) {
+                        showToolbarButtonsDialog();
                     } else if (fileName.equals("View Crash Log")) {
                         File crashFile = new File(Tuils.getFolder(), "crash.txt");
                         if (!crashFile.exists() || crashFile.length() == 0) {
@@ -293,6 +296,7 @@ public class ThemerActivity extends AppCompatActivity {
         } else if (SECTION_PERSONALIZATION.equals(section)) {
             return Arrays.asList(
                     "alias.txt",
+                    "Toolbar Buttons",
                     "ascii.txt",
                     "rss.xml"
             );
@@ -334,6 +338,124 @@ public class ThemerActivity extends AppCompatActivity {
         Intent intent = new Intent(ThemerActivity.this, TuixtActivity.class);
         intent.putExtra(TuixtActivity.PATH, new File(Tuils.getFolder(), fileName).getAbsolutePath());
         startActivityForResult(intent, LauncherActivity.TUIXT_REQUEST);
+    }
+
+    private void showToolbarButtonsDialog() {
+        List<String> options = new ArrayList<>();
+        for (int slot = 1; slot <= ToolbarShortcutManager.MAX_SLOTS; slot++) {
+            options.add(toolbarSlotSummary(slot));
+        }
+
+        TuixtDialog.showOptions(this, "Toolbar Buttons", options, which -> showToolbarButtonSlotDialog(which + 1));
+    }
+
+    private String toolbarSlotSummary(int slot) {
+        ToolbarShortcutManager.Slot current = ToolbarShortcutManager.slot(slot);
+        if (!current.enabled) {
+            return "Slot " + slot + ": off";
+        }
+        return "Slot " + slot + ": " + current.iconLabel + " -> " + current.command;
+    }
+
+    private void showToolbarButtonSlotDialog(int slot) {
+        ToolbarShortcutManager.Slot current = ToolbarShortcutManager.slot(slot);
+        List<String> options = new ArrayList<>();
+        options.add(current.enabled ? "Disable slot" : "Enable slot");
+        options.add("Set command: " + displayValue(current.command, "empty"));
+        options.add("Set icon: " + current.iconLabel);
+        options.add("Clear slot");
+
+        TuixtDialog.showOptions(this, "Toolbar Slot " + slot, options, which -> {
+            if (which == 0) {
+                if (!current.enabled && current.command.length() == 0) {
+                    showToolbarButtonCommandDialog(slot, true);
+                } else {
+                    saveToolbarSlot(slot, !current.enabled, current.command, current.icon);
+                    recyclerView.postDelayed(this::showToolbarButtonsDialog, 250);
+                }
+            } else if (which == 1) {
+                showToolbarButtonCommandDialog(slot, current.enabled);
+            } else if (which == 2) {
+                showToolbarButtonIconDialog(slot);
+            } else {
+                ToolbarShortcutManager.clearSlot(this, slot);
+                reloadLauncherForToolbarButtons("Toolbar slot cleared.");
+                recyclerView.postDelayed(this::showToolbarButtonsDialog, 250);
+            }
+        });
+    }
+
+    private void showToolbarButtonCommandDialog(int slot, boolean enableAfterSave) {
+        ToolbarShortcutManager.Slot current = ToolbarShortcutManager.slot(slot);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+
+        TextView help = new TextView(this);
+        help.setText("Enter the same text you would type at the prompt. Examples: whatsapp, notifications -open, ytm, module -show rss.");
+        help.setTextColor(TuixtTheme.textColor());
+        help.setTypeface(Tuils.getTypeface(this));
+        help.setTextSize(13);
+        help.setPadding(0, 0, 0, TuixtTheme.dp(this, 10));
+        content.addView(help, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        EditText input = commandInput("Command or app name");
+        input.setText(current.command);
+        input.setSelectAllOnFocus(true);
+        content.addView(input, inputParams());
+
+        TuixtDialog.showContent(this, "Toolbar Command", content, "Save", "Cancel", () -> {
+            String command = input.getText().toString().trim();
+            if (command.length() == 0) {
+                Toast.makeText(this, "Command is required.", Toast.LENGTH_SHORT).show();
+                recyclerView.postDelayed(() -> showToolbarButtonCommandDialog(slot, enableAfterSave), 250);
+                return;
+            }
+
+            saveToolbarSlot(slot, enableAfterSave || current.enabled, command, current.icon);
+            recyclerView.postDelayed(() -> showToolbarButtonSlotDialog(slot), 250);
+        });
+    }
+
+    private void showToolbarButtonIconDialog(int slot) {
+        ToolbarShortcutManager.Slot current = ToolbarShortcutManager.slot(slot);
+        List<ToolbarShortcutManager.IconChoice> icons = ToolbarShortcutManager.icons();
+        List<String> labels = new ArrayList<>();
+        for (ToolbarShortcutManager.IconChoice icon : icons) {
+            labels.add(icon.label);
+        }
+
+        TuixtDialog.showOptions(this, "Toolbar Icon", labels, which -> {
+            ToolbarShortcutManager.IconChoice icon = icons.get(which);
+            saveToolbarSlot(slot, current.enabled, current.command, icon.key);
+            recyclerView.postDelayed(() -> showToolbarButtonSlotDialog(slot), 250);
+        });
+    }
+
+    private void saveToolbarSlot(int slot, boolean enabled, String command, String icon) {
+        ToolbarShortcutManager.saveSlot(this, slot, enabled, command, icon);
+        reloadLauncherForToolbarButtons(enabled ? "Toolbar button saved." : "Toolbar button disabled.");
+    }
+
+    private void reloadLauncherForToolbarButtons(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        if (LauncherActivity.instance != null) {
+            LauncherActivity.instance.reload();
+        }
+    }
+
+    private EditText commandInput(String hint) {
+        EditText input = new EditText(this);
+        input.setHint(hint);
+        input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        TuixtTheme.styleInput(this, input);
+        return input;
+    }
+
+    private String displayValue(String value, String fallback) {
+        return value == null || value.trim().length() == 0 ? fallback : value.trim();
     }
 
     private void showFontsDialog() {

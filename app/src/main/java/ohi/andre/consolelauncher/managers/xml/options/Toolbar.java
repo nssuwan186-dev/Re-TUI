@@ -41,6 +41,102 @@ public enum Toolbar implements XMLPrefsSave {
         public String type() {
             return XMLPrefsSave.BOOLEAN;
         }
+    },
+    shortcut_button_1_enabled {
+        @Override
+        public String defaultValue() {
+            return "false";
+        }
+
+        @Override
+        public String info() {
+            return "If true, the first custom toolbar button is shown";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.BOOLEAN;
+        }
+    },
+    shortcut_button_1_command {
+        @Override
+        public String defaultValue() {
+            return "";
+        }
+
+        @Override
+        public String info() {
+            return "Command, alias, or app name executed by the first custom toolbar button";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.TEXT;
+        }
+    },
+    shortcut_button_1_icon {
+        @Override
+        public String defaultValue() {
+            return "star";
+        }
+
+        @Override
+        public String info() {
+            return "Icon key for the first custom toolbar button";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.TEXT;
+        }
+    },
+    shortcut_button_2_enabled {
+        @Override
+        public String defaultValue() {
+            return "false";
+        }
+
+        @Override
+        public String info() {
+            return "If true, the second custom toolbar button is shown";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.BOOLEAN;
+        }
+    },
+    shortcut_button_2_command {
+        @Override
+        public String defaultValue() {
+            return "";
+        }
+
+        @Override
+        public String info() {
+            return "Command, alias, or app name executed by the second custom toolbar button";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.TEXT;
+        }
+    },
+    shortcut_button_2_icon {
+        @Override
+        public String defaultValue() {
+            return "star";
+        }
+
+        @Override
+        public String info() {
+            return "Icon key for the second custom toolbar button";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.TEXT;
+        }
     };
 
     @Override
