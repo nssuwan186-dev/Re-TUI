@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import ohi.andre.consolelauncher.managers.RssManager;
 import ohi.andre.consolelauncher.managers.widgets.LuaWidgetManager;
 
 public final class ModuleManager {
@@ -21,6 +22,9 @@ public final class ModuleManager {
     public static final String CALENDAR = "calendar";
     public static final String EVENTS = "events";
     public static final String REMINDER = "reminder";
+    public static final String NOTES = "notes";
+    public static final String RSS = "rss";
+    public static final String WEATHER = "weather";
     public static final String SOURCE_LAUNCHER_PREFIX = "launcher:";
     public static final String SOURCE_TERMUX_PREFIX = "termux:";
     public static final String SOURCE_LUA_PREFIX = "lua:";
@@ -33,7 +37,8 @@ public final class ModuleManager {
     private static final String KEY_SCRIPT_PATH_PREFIX = "script_path_";
     private static final String KEY_SCRIPT_TITLE_PREFIX = "script_title_";
     private static final String KEY_SCRIPT_SUGGESTIONS_PREFIX = "script_suggestions_";
-    private static final List<String> BUILT_INS = Arrays.asList(MUSIC, NOTIFICATIONS, TIMER, CALENDAR, REMINDER);
+    private static final List<String> DEFAULT_DOCK = Arrays.asList(MUSIC, NOTIFICATIONS, TIMER, CALENDAR, REMINDER);
+    private static final List<String> BUILT_INS = Arrays.asList(MUSIC, NOTIFICATIONS, TIMER, CALENDAR, REMINDER, NOTES, RSS, WEATHER);
 
     private ModuleManager() {}
 
@@ -44,7 +49,7 @@ public final class ModuleManager {
     public static List<String> getDock(Context context) {
         String raw = prefs(context).getString(KEY_DOCK, null);
         if (raw == null) {
-            return new ArrayList<>(BUILT_INS);
+            return new ArrayList<>(DEFAULT_DOCK);
         }
         if (raw.trim().length() == 0) return new ArrayList<>();
         return parseList(raw);
@@ -296,6 +301,15 @@ public final class ModuleManager {
         if ("reminders".equals(id)) {
             return REMINDER;
         }
+        if ("note".equals(id) || "todo".equals(id) || "todos".equals(id) || "task".equals(id) || "tasks".equals(id)) {
+            return NOTES;
+        }
+        if ("feed".equals(id) || "feeds".equals(id)) {
+            return RSS;
+        }
+        if ("weath".equals(id) || "wttr".equals(id)) {
+            return WEATHER;
+        }
         return id;
     }
 
@@ -306,6 +320,9 @@ public final class ModuleManager {
         }
         if (EVENTS.equals(id)) {
             return "EVENTS";
+        }
+        if (RSS.equals(id)) {
+            return "RSS";
         }
         return id.toUpperCase(Locale.US);
     }
@@ -372,6 +389,28 @@ public final class ModuleManager {
                 suggestions.add(ModuleSuggestion.command("-rm", "module -prompt reminder remove"));
                 suggestions.add(ModuleSuggestion.command("-ls", "module -show reminder"));
             }
+        } else if (NOTES.equals(id)) {
+            suggestions.add(ModuleSuggestion.command("edit", "notes"));
+            suggestions.add(ModuleSuggestion.command("list", "notes -ls"));
+            suggestions.add(ModuleSuggestion.command("todo", "notes -add TODO: "));
+            suggestions.add(ModuleSuggestion.command("copy", "notes -cp 1"));
+            suggestions.add(ModuleSuggestion.command("clear", "notes -clear"));
+        } else if (RSS.equals(id)) {
+            int firstFeed = RssManager.firstConfiguredFeedId(context);
+            suggestions.add(ModuleSuggestion.command("list", "rss -ls"));
+            if (firstFeed != -1) {
+                suggestions.add(ModuleSuggestion.command("latest", "rss -l " + firstFeed));
+                suggestions.add(ModuleSuggestion.command("refresh", "rss -frc " + firstFeed));
+                suggestions.add(ModuleSuggestion.command("info", "rss -info " + firstFeed));
+            }
+            suggestions.add(ModuleSuggestion.command("reddit", "rss -add 1 900 https://www.reddit.com/r/android/.rss"));
+            suggestions.add(ModuleSuggestion.command("file", "rss -file"));
+        } else if (WEATHER.equals(id)) {
+            suggestions.add(ModuleSuggestion.command("update", "tuiweather -update"));
+            suggestions.add(ModuleSuggestion.command("enable", "tuiweather -enable"));
+            suggestions.add(ModuleSuggestion.command("disable", "tuiweather -disable"));
+            suggestions.add(ModuleSuggestion.command("setup", "tuiweather -tutorial"));
+            suggestions.add(ModuleSuggestion.command("key", "tuiweather -set_key "));
         } else {
             suggestions.addAll(getScriptSuggestions(context, id));
         }

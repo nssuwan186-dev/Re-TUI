@@ -105,6 +105,7 @@ import ohi.andre.consolelauncher.commands.main.specific.RedirectCommand;
 import ohi.andre.consolelauncher.commands.main.raw.tbridge;
 import ohi.andre.consolelauncher.managers.HTMLExtractManager;
 import ohi.andre.consolelauncher.managers.NotesManager;
+import ohi.andre.consolelauncher.managers.RssManager;
 import ohi.andre.consolelauncher.managers.TerminalManager;
 import ohi.andre.consolelauncher.managers.TimeManager;
 import ohi.andre.consolelauncher.managers.TuiLocationManager;
@@ -566,6 +567,8 @@ public class UIManager implements OnTouchListener {
     private int weatherColor;
     boolean showWeatherUpdate;
     private ohi.andre.consolelauncher.managers.status.WeatherManager weatherManager;
+    private CharSequence lastWeatherText;
+    private long lastWeatherUpdateMillis;
 
 //    you need to use labelIndexes[i]
     private void updateText(Label l, CharSequence s) {
@@ -1763,6 +1766,12 @@ public class UIManager implements OnTouchListener {
             showTextModule(ModuleManager.CALENDAR, buildCalendarModuleText());
         } else if (ModuleManager.REMINDER.equals(id)) {
             showTextModule(ModuleManager.REMINDER, buildReminderModuleText());
+        } else if (ModuleManager.NOTES.equals(id)) {
+            showTextModule(ModuleManager.NOTES, buildNotesModuleText());
+        } else if (ModuleManager.RSS.equals(id)) {
+            showTextModule(ModuleManager.RSS, buildRssModuleText());
+        } else if (ModuleManager.WEATHER.equals(id)) {
+            showTextModule(ModuleManager.WEATHER, buildWeatherModuleText());
         } else {
             String source = ModuleManager.getModuleSource(mContext, id);
             if (ModuleManager.isLuaSource(source)) {
@@ -2150,6 +2159,77 @@ public class UIManager implements OnTouchListener {
 
     private String buildReminderModuleText() {
         return ReminderManager.formatList(mContext) + "\nCommands: -add, -edit, -rm";
+    }
+
+    private String buildNotesModuleText() {
+        List<NotesManager.NoteRecord> records = NotesManager.loadRecords(mContext);
+        if (records.size() == 0) {
+            return "No notes."
+                    + "\nAdd: notes -add TODO: follow up"
+                    + "\nOpen editor: notes";
+        }
+
+        StringBuilder out = new StringBuilder();
+        out.append(records.size()).append(records.size() == 1 ? " note" : " notes").append('\n');
+        int limit = Math.min(records.size(), 6);
+        for (int count = 0; count < limit; count++) {
+            NotesManager.NoteRecord record = records.get(count);
+            if (record == null || TextUtils.isEmpty(record.text)) continue;
+            out.append(count + 1).append(". ");
+            if (record.lock) out.append("[locked] ");
+            out.append(shortenModuleLine(record.text, 96)).append('\n');
+        }
+        int remaining = records.size() - limit;
+        if (remaining > 0) {
+            out.append("... ").append(remaining).append(" more\n");
+        }
+        out.append("Commands: notes, notes -add, notes -ls");
+        return out.toString().trim();
+    }
+
+    private String buildRssModuleText() {
+        RssManager manager = mainPack != null ? mainPack.rssManager : null;
+        if (manager == null) {
+            return "RSS manager unavailable.";
+        }
+        return manager.buildModuleText();
+    }
+
+    private String buildWeatherModuleText() {
+        if (!XMLPrefsManager.getBoolean(Ui.show_weather)) {
+            return "Weather is disabled."
+                    + "\nEnable: tuiweather -enable"
+                    + "\nSetup: tuiweather -tutorial";
+        }
+
+        CharSequence weather = lastWeatherText;
+        if (TextUtils.isEmpty(weather)) {
+            weather = labelTexts[Label.weather.ordinal()];
+        }
+        if (TextUtils.isEmpty(weather)) {
+            return "No weather yet."
+                    + "\nUpdate: tuiweather -update"
+                    + "\nSetup: tuiweather -tutorial";
+        }
+
+        StringBuilder out = new StringBuilder(weather.toString().trim());
+        if (lastWeatherUpdateMillis > 0) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(lastWeatherUpdateMillis);
+            out.append("\nUpdated: ")
+                    .append(String.format(Locale.US, "%02d.%02d",
+                            calendar.get(Calendar.HOUR_OF_DAY),
+                            calendar.get(Calendar.MINUTE)));
+        }
+        out.append("\nCommands: tuiweather -update, tuiweather -tutorial");
+        return out.toString();
+    }
+
+    private String shortenModuleLine(String value, int max) {
+        if (value == null) return "";
+        String cleaned = value.replaceAll("\\s+", " ").trim();
+        if (cleaned.length() <= max) return cleaned;
+        return cleaned.substring(0, Math.max(0, max - 3)).trim() + "...";
     }
 
     private String buildCalendarModuleText() {
@@ -2779,6 +2859,8 @@ public class UIManager implements OnTouchListener {
                     if(s == null) s = intent.getStringExtra(XMLPrefsManager.VALUE_ATTRIBUTE);
                     if(s == null) return;
 
+                    lastWeatherText = s;
+                    lastWeatherUpdateMillis = System.currentTimeMillis();
                     s = Tuils.span(context, s, weatherColor, labelSizes[Label.weather.ordinal()]);
 
                     updateText(Label.weather, s);
@@ -2787,6 +2869,9 @@ public class UIManager implements OnTouchListener {
                         String message = context.getString(R.string.weather_updated) + Tuils.SPACE + c.get(Calendar.HOUR_OF_DAY) + "." + c.get(Calendar.MINUTE) + Tuils.SPACE + "(" + lastLatitude + ", " + lastLongitude + ")";
                         Tuils.sendOutput(context, message, TerminalManager.CATEGORY_OUTPUT);
                     }
+                    if (ModuleManager.WEATHER.equals(activeModule)) {
+                        showHomeModule(ModuleManager.WEATHER);
+                    }
                 } else if(action.equals(ohi.andre.consolelauncher.managers.status.WeatherManager.ACTION_WEATHER_GOT_LOCATION)) {
                     if(intent.getBooleanExtra(TuiLocationManager.FAIL, false)) {
                         if (weatherManager != null) {
@@ -2794,9 +2879,15 @@ public class UIManager implements OnTouchListener {
                             weatherManager = null;
                         }
 
-                        CharSequence s = Tuils.span(context, context.getString(R.string.location_error), weatherColor, labelSizes[Label.weather.ordinal()]);
+                        CharSequence raw = context.getString(R.string.location_error);
+                        lastWeatherText = raw;
+                        lastWeatherUpdateMillis = System.currentTimeMillis();
+                        CharSequence s = Tuils.span(context, raw, weatherColor, labelSizes[Label.weather.ordinal()]);
 
                         updateText(Label.weather, s);
+                        if (ModuleManager.WEATHER.equals(activeModule)) {
+                            showHomeModule(ModuleManager.WEATHER);
+                        }
                     } else {
                         lastLatitude = intent.getDoubleExtra(TuiLocationManager.LATITUDE, 0);
                         lastLongitude = intent.getDoubleExtra(TuiLocationManager.LONGITUDE, 0);

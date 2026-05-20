@@ -15,6 +15,7 @@ This wiki is organized like the original upstream docs, but rebuilt around the c
 ## Reference and Guides
 
 - [Command Reference](./Command-Reference.md)
+- [Apps Command](./Apps.md)
 - [Aliases](./Aliases.md)
 - [Automation and Chaining](./Automation-and-Chaining.md)
 - [Migration Guide](./Migration-Guide.md)
@@ -31,6 +32,7 @@ This wiki is organized like the original upstream docs, but rebuilt around the c
 - [Presets and Wallpaper Auto Color](./Presets-and-Wallpaper-Auto-Color.md)
 - [Notifications](./Notifications.md)
 - [Music Visualizer](./Music-Visualizer.md)
+- [Apps Command](./Apps.md)
 - [App Drawer](./App-Drawer.md)
 - [Modules](./Modules.md)
 - [Re:T-UI Files](./ReTUI-Files.md)

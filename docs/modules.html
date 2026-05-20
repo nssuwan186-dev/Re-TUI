@@ -393,6 +393,9 @@
       <a href="#timer">Timer</a>
       <a href="#calendar">Calendar</a>
       <a href="#reminder">Reminder</a>
+      <a href="#notes">Notes</a>
+      <a href="#rss">RSS</a>
+      <a href="#weather">Weather</a>
       <a href="#custom">Custom</a>
       <a href="#module-maker">Build</a>
       <a href="#troubleshooting">Troubleshooting</a>
@@ -496,7 +499,7 @@ $ module -close</pre>
     <section class="guide" id="built-ins">
       <div class="kicker">Built-in modules</div>
       <h2>Start with the native panels before adding scripts.</h2>
-      <p>These modules are built into the launcher: <code>music</code>, <code>notifications</code>, <code>timer</code>, <code>calendar</code>, and <code>reminder</code>. They are available even if they are hidden from the dock.</p>
+      <p>These modules are built into the launcher: <code>music</code>, <code>notifications</code>, <code>timer</code>, <code>calendar</code>, <code>reminder</code>, <code>notes</code>, <code>rss</code>, and <code>weather</code>. They are available even if they are hidden from the dock. New installs keep the core default dock small; add extra modules when you want them.</p>
       <div class="grid">
         <div class="tile">
           <h3>Music</h3>
@@ -517,6 +520,18 @@ $ module -close</pre>
         <div class="tile">
           <h3>Reminder</h3>
           <p>Local reminders with guided add, edit, and remove prompt sessions.</p>
+        </div>
+        <div class="tile">
+          <h3>Notes</h3>
+          <p>A compact panel for existing notes. Use <code>TODO:</code> notes as lightweight tasks without a second task store.</p>
+        </div>
+        <div class="tile">
+          <h3>RSS</h3>
+          <p>A feed glance panel backed by the existing <code>rss</code> command, including Reddit RSS feeds.</p>
+        </div>
+        <div class="tile">
+          <h3>Weather</h3>
+          <p>A dockable weather status panel over the existing <code>tuiweather</code> setup and update flow.</p>
         </div>
         <div class="tile">
           <h3>Custom scripts</h3>
@@ -629,6 +644,68 @@ $ submit Play Store update
 $ 08/05/2026
 > What time?
 $ 10:30AM</pre>
+    </section>
+
+    <section class="guide" id="notes">
+      <div class="module-header">
+        <div>
+          <div class="kicker">Notes module</div>
+          <h2>Use notes as a small persistent task surface.</h2>
+        </div>
+        <span>module id: notes</span>
+      </div>
+      <p>The notes module reads the same notes file as the editor and status label. It does not create a separate todo database; task-like items are just notes with a convention such as <code>TODO:</code>.</p>
+      <div class="command-list">
+        <div><strong>Open:</strong> <code>module -show notes</code></div>
+        <div><strong>Dock:</strong> <code>module -dock add notes</code> or <code>module -hide notes</code></div>
+        <div><strong>Add task:</strong> <code>notes -add TODO: follow up with tester</code></div>
+        <div><strong>Manage:</strong> <code>notes -ls</code>, <code>notes -rm 1</code>, <code>notes -cp 1</code>, <code>notes -clear</code></div>
+      </div>
+      <pre>$ module -dock add notes
+$ notes -add TODO: review theme preset
+$ module -show notes</pre>
+    </section>
+
+    <section class="guide" id="rss">
+      <div class="module-header">
+        <div>
+          <div class="kicker">RSS module</div>
+          <h2>Keep feeds glanceable without turning the terminal into a feed reader.</h2>
+        </div>
+        <span>module id: rss</span>
+      </div>
+      <p>The RSS module shows cached feed items and offers suggestion chips for listing, refreshing, and opening the first configured feed. Network behavior stays with the existing <code>rss</code> command and its per-feed update interval.</p>
+      <div class="command-list">
+        <div><strong>Open:</strong> <code>module -show rss</code></div>
+        <div><strong>Dock:</strong> <code>module -dock add rss</code> or <code>module -hide rss</code></div>
+        <div><strong>Add Reddit:</strong> <code>rss -add 1 900 https://www.reddit.com/r/android/.rss</code></div>
+        <div><strong>Refresh/read:</strong> <code>rss -frc 1</code>, <code>rss -l 1</code>, <code>rss -ls</code></div>
+      </div>
+      <pre>$ rss -add 1 900 https://www.reddit.com/r/android/.rss
+$ rss -frc 1
+$ module -dock add rss
+$ module -show rss</pre>
+    </section>
+
+    <section class="guide" id="weather">
+      <div class="module-header">
+        <div>
+          <div class="kicker">Weather module</div>
+          <h2>Dock the existing weather status instead of adding another service.</h2>
+        </div>
+        <span>module id: weather</span>
+      </div>
+      <p>The weather module uses the same <code>tuiweather</code> setup and update behavior as the status label. If weather is disabled or not configured, the panel tells you which command to run instead of silently polling.</p>
+      <div class="command-list">
+        <div><strong>Open:</strong> <code>module -show weather</code></div>
+        <div><strong>Dock:</strong> <code>module -dock add weather</code> or <code>module -hide weather</code></div>
+        <div><strong>Setup:</strong> <code>tuiweather -enable</code>, <code>tuiweather -tutorial</code>, <code>tuiweather -set_key key</code></div>
+        <div><strong>Refresh:</strong> <code>tuiweather -update</code></div>
+      </div>
+      <pre>$ tuiweather -enable
+$ module -dock add weather
+$ module -show weather
+$ tuiweather -update</pre>
     </section>
 
     <section class="guide" id="custom">

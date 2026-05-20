@@ -174,18 +174,23 @@ Manage app visibility, groups, and drawer state.
 
 Common commands:
 
-- `apps -ls`
-- `apps -lsh`
+- `apps -ls` opens the app drawer, or lists visible apps when the drawer UI is unavailable
+- `apps -lsh` lists hidden apps
 - `apps -l <app>`
 - `apps -hide <app>`
 - `apps -show <app>`
 - `apps -st <app>`
 - `apps -ps <app>`
+- `apps -frc <app>`
+- `apps -default_app <index> <app | most_used | null>`
 - `apps -mkgp <group>`
 - `apps -rmgp <group>`
 - `apps -addtogp <group> <app>`
 - `apps -rmfromgp <group> <app>`
 - `apps -lsgp`
+- `apps -gp_bg_color <group> <color>`
+- `apps -gp_fore_color <group> <color>`
+- `apps -tutorial`
 
 Why this matters:
 
