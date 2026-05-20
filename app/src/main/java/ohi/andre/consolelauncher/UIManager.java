@@ -58,6 +58,7 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.ViewConfiguration;
+import android.view.ViewParent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -659,6 +660,10 @@ public class UIManager implements OnTouchListener {
     private ViewPager2 viewPager;
     private ViewGroup homeWidgetsContainer;
     private View mainContainer;
+    private ViewGroup headerContainer;
+    private ViewGroup headerOriginalParent;
+    private ViewGroup.LayoutParams headerOriginalParams;
+    private int headerOriginalIndex = -1;
     private View landscapeSplitContainer;
     private ViewGroup landscapeLeftPane;
     private ViewGroup landscapeRightPane;
@@ -667,6 +672,7 @@ public class UIManager implements OnTouchListener {
     private FrameLayout.LayoutParams portraitTrayParams;
     private boolean landscapeLayoutActive = false;
     private boolean duoLayoutActive = false;
+    private boolean splitDuoStatusActive = false;
     public static final String DUO_LAYOUT_OFF = "off";
     public static final String DUO_LAYOUT_LEFT = "left";
     public static final String DUO_LAYOUT_RIGHT = "right";
@@ -930,10 +936,18 @@ public class UIManager implements OnTouchListener {
 
     private void setupResponsiveLandscapeLayout(ViewGroup rootView) {
         mainContainer = rootView.findViewById(R.id.main_container);
+        headerContainer = rootView.findViewById(R.id.header_container);
         landscapeSplitContainer = rootView.findViewById(R.id.landscape_split_container);
         landscapeLeftPane = rootView.findViewById(R.id.landscape_left_pane);
         landscapeRightPane = rootView.findViewById(R.id.landscape_right_pane);
         landscapeFoldGutter = rootView.findViewById(R.id.landscape_fold_gutter);
+
+        if (headerContainer != null && headerOriginalParent == null
+                && headerContainer.getParent() instanceof ViewGroup) {
+            headerOriginalParent = (ViewGroup) headerContainer.getParent();
+            headerOriginalIndex = headerOriginalParent.indexOfChild(headerContainer);
+            headerOriginalParams = copyLayoutParams(headerContainer.getLayoutParams());
+        }
 
         if (mainContainer != null && portraitMainParams == null
                 && mainContainer.getLayoutParams() instanceof FrameLayout.LayoutParams) {
@@ -953,8 +967,9 @@ public class UIManager implements OnTouchListener {
         boolean shouldUseDuoLayout = shouldUseLandscape && shouldUseDuoLayout();
         String requestedDuoLayoutMode = shouldUseDuoLayout ? getDuoLayoutMode() : DUO_LAYOUT_OFF;
         boolean duoSideChanged = shouldUseDuoLayout && !requestedDuoLayoutMode.equals(activeDuoLayoutMode);
-        if (shouldUseLandscape == landscapeLayoutActive && shouldUseDuoLayout == duoLayoutActive && !duoSideChanged) {
-            applyLandscapeStatusChrome(shouldUseLandscape && !shouldUseDuoLayout);
+        boolean splitDuoChanged = shouldUseDuoLayout && shouldUseSplitDuoLauncher() != splitDuoStatusActive;
+        if (shouldUseLandscape == landscapeLayoutActive && shouldUseDuoLayout == duoLayoutActive && !duoSideChanged && !splitDuoChanged) {
+            applyLandscapeStatusChrome(shouldUseLandscape);
             applyDisplayMarginsForConfiguration(configuration);
             applyTerminalTrayState(false);
             return;
@@ -968,7 +983,7 @@ public class UIManager implements OnTouchListener {
             restorePortraitLayout();
         }
         applyLandscapeFoldGutter(configuration);
-        applyLandscapeStatusChrome(shouldUseLandscape && !shouldUseDuoLayout);
+        applyLandscapeStatusChrome(shouldUseLandscape);
         applyDisplayMarginsForConfiguration(configuration);
         applyTerminalTrayState(false);
     }
@@ -976,6 +991,10 @@ public class UIManager implements OnTouchListener {
     private boolean shouldUseDuoLayout() {
         return LauncherSettings.getBoolean(Behavior.duo_mode)
                 && !DUO_LAYOUT_OFF.equals(getDuoLayoutMode());
+    }
+
+    private boolean shouldUseSplitDuoLauncher() {
+        return LauncherSettings.getBoolean(Ui.split_duo_launcher);
     }
 
     public String getDuoLayoutMode() {
@@ -1063,6 +1082,7 @@ public class UIManager implements OnTouchListener {
 
     private void activateLandscapeLayout() {
         ViewGroup root = (ViewGroup) mRootView;
+        restoreSplitDuoStatusHeader();
         detachFromParent(mainContainer);
         detachFromParent(terminalTrayContainer);
         clearLandscapePanes();
@@ -1087,6 +1107,7 @@ public class UIManager implements OnTouchListener {
 
     private void activateDuoLayout() {
         ViewGroup root = (ViewGroup) mRootView;
+        restoreSplitDuoStatusHeader();
         detachFromParent(mainContainer);
         detachFromParent(terminalTrayContainer);
         clearLandscapePanes();
@@ -1108,6 +1129,9 @@ public class UIManager implements OnTouchListener {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM);
         targetPane.addView(terminalTrayContainer, trayParams);
+        if (shouldUseSplitDuoLauncher()) {
+            attachSplitDuoStatusHeader(activeMode);
+        }
         attachDuoSwitchButton(activeMode);
 
         if (root.indexOfChild(landscapeSplitContainer) < 0) {
@@ -1117,6 +1141,7 @@ public class UIManager implements OnTouchListener {
 
     private void restorePortraitLayout() {
         ViewGroup root = (ViewGroup) mRootView;
+        restoreSplitDuoStatusHeader();
         detachFromParent(mainContainer);
         detachFromParent(terminalTrayContainer);
         clearLandscapePanes();
@@ -1146,13 +1171,76 @@ public class UIManager implements OnTouchListener {
         }
     }
 
+    private void attachSplitDuoStatusHeader(String activeMode) {
+        ViewGroup emptyPane = getDuoEmptyPane(activeMode);
+        if (emptyPane == null || headerContainer == null) {
+            splitDuoStatusActive = false;
+            return;
+        }
+
+        detachFromParent(headerContainer);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.START);
+        emptyPane.addView(headerContainer, params);
+        splitDuoStatusActive = true;
+    }
+
+    private void restoreSplitDuoStatusHeader() {
+        if (headerContainer == null || headerOriginalParent == null) {
+            splitDuoStatusActive = false;
+            return;
+        }
+
+        ViewParent parent = headerContainer.getParent();
+        if (parent == headerOriginalParent) {
+            splitDuoStatusActive = false;
+            return;
+        }
+
+        detachFromParent(headerContainer);
+        int index = headerOriginalIndex >= 0
+                ? Math.min(headerOriginalIndex, headerOriginalParent.getChildCount())
+                : headerOriginalParent.getChildCount();
+        ViewGroup.LayoutParams params = headerOriginalParams != null
+                ? copyLayoutParams(headerOriginalParams)
+                : new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
+        headerOriginalParent.addView(headerContainer, index, params);
+        splitDuoStatusActive = false;
+    }
+
+    private ViewGroup getDuoEmptyPane(String activeMode) {
+        return DUO_LAYOUT_RIGHT.equals(activeMode) ? landscapeLeftPane : landscapeRightPane;
+    }
+
+    private ViewGroup.LayoutParams copyLayoutParams(ViewGroup.LayoutParams params) {
+        if (params instanceof LinearLayout.LayoutParams) {
+            return new LinearLayout.LayoutParams((LinearLayout.LayoutParams) params);
+        }
+        if (params instanceof FrameLayout.LayoutParams) {
+            return new FrameLayout.LayoutParams((FrameLayout.LayoutParams) params);
+        }
+        if (params instanceof ViewGroup.MarginLayoutParams) {
+            return new ViewGroup.MarginLayoutParams((ViewGroup.MarginLayoutParams) params);
+        }
+        if (params != null) {
+            return new ViewGroup.LayoutParams(params);
+        }
+        return new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+
     private void attachDuoSwitchButton(String activeMode) {
         if (mContext == null) {
             return;
         }
 
         boolean moveToLeft = DUO_LAYOUT_RIGHT.equals(activeMode);
-        ViewGroup emptyPane = moveToLeft ? landscapeLeftPane : landscapeRightPane;
+        ViewGroup emptyPane = getDuoEmptyPane(activeMode);
         if (emptyPane == null) {
             return;
         }
@@ -1287,6 +1375,10 @@ public class UIManager implements OnTouchListener {
         applyDisplayMarginsForConfiguration(mContext != null ? mContext.getResources().getConfiguration() : null);
     }
 
+    public void refreshResponsiveLandscapeLayout() {
+        applyResponsiveLandscapeLayout(mContext != null ? mContext.getResources().getConfiguration() : null);
+    }
+
     private void applyDisplayMarginsForConfiguration(Configuration configuration) {
         if (mRootView == null || mContext == null) {
             return;
@@ -1305,6 +1397,9 @@ public class UIManager implements OnTouchListener {
         mRootView.setPadding(0, 0, 0, 0);
         DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
         applySectionDisplayMargins(mainContainer, topMargins, metrics, 0);
+        if (splitDuoStatusActive) {
+            applySectionDisplayMargins(headerContainer, topMargins, metrics, 0);
+        }
         applySectionDisplayMargins(terminalTrayContainer, bottomMargins, metrics, imeBottomOffset);
     }
 

@@ -669,6 +669,22 @@ public enum Ui implements XMLPrefsSave {
             return "Landscape-only center gutter in millimeters for fold hinges or screen creases";
         }
     },
+    split_duo_launcher {
+        @Override
+        public String defaultValue() {
+            return "false";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.BOOLEAN;
+        }
+
+        @Override
+        public String info() {
+            return "If true, Duo keeps the status lines and side switch button on the empty screen while output, input, toolbar, and suggestions stay on the active screen";
+        }
+    },
     ignore_bar_color {
         @Override
         public String defaultValue() {

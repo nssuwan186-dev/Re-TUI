@@ -75,6 +75,10 @@ public class config extends ParamCommand {
                     ((LauncherActivity) pack.context).getUIManager().setDuoLayoutMode(UIManager.DUO_LAYOUT_OFF);
                 } else if(save == Behavior.orientation && pack.context instanceof LauncherActivity) {
                     ((LauncherActivity) pack.context).applyOrientationPreference();
+                } else if(save == Ui.split_duo_launcher
+                        && pack.context instanceof LauncherActivity
+                        && ((LauncherActivity) pack.context).getUIManager() != null) {
+                    ((LauncherActivity) pack.context).getUIManager().refreshResponsiveLandscapeLayout();
                 } else if(isDisplayMarginSetting(save)
                         && pack.context instanceof LauncherActivity
                         && ((LauncherActivity) pack.context).getUIManager() != null) {
@@ -303,6 +307,10 @@ public class config extends ParamCommand {
                         && pack.context instanceof LauncherActivity
                         && ((LauncherActivity) pack.context).getUIManager() != null) {
                     ((LauncherActivity) pack.context).getUIManager().setDuoLayoutMode(UIManager.DUO_LAYOUT_OFF);
+                } else if(save == Ui.split_duo_launcher
+                        && pack.context instanceof LauncherActivity
+                        && ((LauncherActivity) pack.context).getUIManager() != null) {
+                    ((LauncherActivity) pack.context).getUIManager().refreshResponsiveLandscapeLayout();
                 } else if(isDisplayMarginSetting(save)
                         && pack.context instanceof LauncherActivity
                         && ((LauncherActivity) pack.context).getUIManager() != null) {
