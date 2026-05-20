@@ -462,6 +462,7 @@
     </string>
     <string name="help_shortcut">-ls [appName] -> show the shortcuts of this app
         \n-use [shortcutID OR shortcut index] [optional: appName] -> use the specified shortcut
+        \n-use @alias -> use a pinned shortcut accepted by Re:T-UI
         \n-cp [index] [appName] -> copy to clipboard the nth shortcut of the selected app (first: 0)</string>
     <string name="help_status">Get info about battery charge, wifi status and mobile data</string>
     <string name="help_theme">-apply [themeName] -> apply a shared upstream theme by ID

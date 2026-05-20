@@ -15,6 +15,7 @@ import ohi.andre.consolelauncher.commands.main.MainPack;
 import ohi.andre.consolelauncher.commands.main.specific.APICommand;
 import ohi.andre.consolelauncher.commands.main.specific.ParamCommand;
 import ohi.andre.consolelauncher.managers.AppsManager;
+import ohi.andre.consolelauncher.managers.PinnedShortcutManager;
 import ohi.andre.consolelauncher.tuils.Tuils;
 
 /**
@@ -35,6 +36,9 @@ public class shortcut extends ParamCommand implements APICommand {
             @Override
             public String exec(ExecutePack pack) {
                 String id = pack.getString();
+                String mapped = startMappedShortcut(id, pack.context);
+                if(mapped == null || mapped.length() > 0) return mapped;
+
                 AppsManager.LaunchInfo li = pack.getLaunchInfo();
 
                 ShortcutInfo shortcut = null;
@@ -71,6 +75,9 @@ public class shortcut extends ParamCommand implements APICommand {
                 pack.get();
                 String id = pack.getString();
 
+                String mapped = startMappedShortcut(id, pack.context);
+                if(mapped == null || mapped.length() > 0) return mapped;
+
                 ShortcutInfo info = null;
 
                 Out:
@@ -96,6 +103,11 @@ public class shortcut extends ParamCommand implements APICommand {
                 apps.startShortcut(info, null, null);
 
                 return null;
+            }
+
+            private String startMappedShortcut(String id, Context context) {
+                if(id == null || !id.startsWith(PinnedShortcutManager.HANDLE_PREFIX)) return Tuils.EMPTYSTRING;
+                return PinnedShortcutManager.start(context, id);
             }
         },
         ls {
@@ -126,6 +138,8 @@ public class shortcut extends ParamCommand implements APICommand {
                     builder.append(l.publicLabel).append(Tuils.NEWLINE);
                     append(builder, l.shortcuts, Tuils.DOUBLE_SPACE);
                 }
+
+                appendPinnedAliases(pack.context, builder);
 
                 String s = builder.toString().trim();
                 if(s.length() == 0) return "[]";
@@ -171,7 +185,28 @@ public class shortcut extends ParamCommand implements APICommand {
 
         private static void append(StringBuilder builder, List<ShortcutInfo> shortcuts, final String prefix) {
             for(ShortcutInfo i : shortcuts) {
-                builder.append(prefix).append("- ").append(i.getShortLabel()).append(" (ID: ").append(i.getId()).append(")").append(Tuils.NEWLINE);
+                builder.append(prefix).append("- ").append(i.getShortLabel()).append(" (ID: ").append(i.getId()).append(")");
+                if(i.isPinned()) builder.append(" [pinned]");
+                builder.append(Tuils.NEWLINE);
+            }
+        }
+
+        private static void appendPinnedAliases(Context context, StringBuilder builder) {
+            List<PinnedShortcutManager.Record> records = PinnedShortcutManager.list(context);
+            if(records.size() == 0) return;
+
+            if(builder.length() > 0) builder.append(Tuils.NEWLINE);
+            builder.append("Pinned aliases").append(Tuils.NEWLINE);
+            for(PinnedShortcutManager.Record record : records) {
+                builder.append(Tuils.DOUBLE_SPACE)
+                        .append("- @")
+                        .append(record.handle)
+                        .append(" -> ")
+                        .append(record.label)
+                        .append(" (")
+                        .append(record.packageName)
+                        .append(")")
+                        .append(Tuils.NEWLINE);
             }
         }
     }

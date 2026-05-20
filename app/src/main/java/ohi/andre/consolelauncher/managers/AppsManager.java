@@ -449,7 +449,9 @@ public class AppsManager implements XMLPrefsElement {
 
         try {
             LauncherApps.ShortcutQuery query = new LauncherApps.ShortcutQuery();
-            query.setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST | LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC);
+            query.setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST
+                    | LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
+                    | LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED);
             query.setPackage(li.componentName.getPackageName());
             li.setShortcuts(launcherApps.getShortcuts(query, li.userHandle));
         } catch (SecurityException e) {
