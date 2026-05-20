@@ -238,6 +238,9 @@
         \n$ module -show timer
         \n$ module -show calendar
         \n$ module -show reminder
+        \n$ module -show notes
+        \n$ module -show rss
+        \n$ module -show weather
         \n$ module -prompt reminder add
         \n$ module -prompt reminder edit
         \n$ module -prompt reminder remove
@@ -250,7 +253,7 @@
         \n$ module -dock add server
         \n$ module -dock remove music
         \n$ module -close
-        \n\nModules are backed by native panels, Termux scripts, launcher providers, or prototype Lua widgets. Re:T-UI can safely resolve %RETUI_* placeholders before Termux dispatch so scripts can consume launcher-provided values. Scripts emit ::title, ::body, and ::suggest metadata. Native prompt sessions let supported modules ask for user input step by step.
+        \n\nModules are backed by native panels, Termux scripts, launcher providers, or prototype Lua widgets. Built-in modules include music, notifications, timer, calendar, reminder, notes, rss, and weather. Re:T-UI can safely resolve %RETUI_* placeholders before Termux dispatch so scripts can consume launcher-provided values. Scripts emit ::title, ::body, and ::suggest metadata. Native prompt sessions let supported modules ask for user input step by step.
         \n\nAn empty dock stays empty. To hide the dock row entirely, turn off show_module_dock in Behavior settings or run config -set show_module_dock false.</string>
     <string name="help_widget">Create, edit, and test prototype Lua widgets inside Re:T-UI.
         \n\nUsage:
@@ -315,7 +318,7 @@
         \n-ls -> list your aliases
         \n-file -> open alias.txt
     </string>
-    <string name="help_apps">-ls -> list your apps
+    <string name="help_apps">-ls -> open the app drawer, or list visible apps when the drawer is unavailable
         \n-lsh -> list your hidden apps
         \n-show [appName] -> re-show an hidden app
         \n-hide [appName] -> hide an app
@@ -328,10 +331,12 @@
         \n-reset [appName] -> reset the \"launched_times\" value of the given app to 0
         \n-mkgp [groupName] -> create a new group with the given name
         \n-rmgp [groupName] -> delete the group with the given name
-        \n-gpcolor [groupName] [color] -> set the color for the given group
+        \n-gp_bg_color [groupName] [color] -> set the background color for the given group
+        \n-gp_fore_color [groupName] [color] -> set the text color for the given group
         \n-addtogp [groupName] [appName] -> add the given app to the given group
         \n-rmfromgp [groupName] [appName] -> remove the given app from the given group
         \n-lsgp [OPTIONAL: groupName] -> list your groups, or list the content of the given group
+        \n-tutorial -> open the Apps command guide
     </string>
     <string name="help_bluetooth">Toggle Bluetooth on older Android versions, or open Bluetooth settings on modern Android versions where direct toggles are restricted.</string>
     <string name="help_brightness">Set the brightness of your device
@@ -435,7 +440,17 @@
         \n-select [song] -> play the selected song
         \n-info -> get info about the current song
         \n-seekto [seconds] -> seek to the selected part of the current song</string>
-    <string name="help_notes">Open the notes editor.</string>
+    <string name="help_notes">Open or update notes.
+        \n\nUsage:
+        \n$ notes
+        \n$ notes -add TODO: follow up
+        \n$ notes -ls
+        \n$ notes -rm [index or text prefix]
+        \n$ notes -lock [index or text prefix] [true|false]
+        \n$ notes -cp [index or text prefix]
+        \n$ notes -clear
+        \n$ notes -file
+        \n\nThe notes module treats TODO: notes as lightweight tasks without adding a separate task store.</string>
     <string name="help_rate">Leave a feedback on the Play Store page</string>
     <string name="help_refresh">Refresh apps, alias, music, contacts</string>
     <string name="help_regex">-add [ID] [regex] -> add a new regex with the given ID
@@ -543,7 +558,10 @@
         \n-enable -> enable weather
         \n-disable -> disable weather
         \n-tutorial -> open the weather tutorial webpage
-        \n-set_key [key] -> set a custom weather key</string>
+        \n-set_key [key] -> set a custom weather key
+        \n\nModule:
+        \n$ module -show weather
+        \n$ module -dock add weather</string>
     <string name="help_beep">Emit a \"beep\".
         \n\nUsage:
         \n$ beep</string>
@@ -607,7 +625,12 @@
         \n-exclude_if_matches [ID] [regex] -> if the given regex matches on an RSS feed item, it won\'t be shown ([regex] can be both a string or the ID of a regex saved inside regex.xml)
         \n-add_format [ID] [format] -> create a new format that you will be able to use for more than one RSS feed
         \n-rm_format [ID] [format] -> remove an existing format
-        \n-file -> open the file rss.xml</string>
+        \n-file -> open the file rss.xml
+        \n\nReddit/module example:
+        \n$ rss -add 1 900 https://www.reddit.com/r/android/.rss
+        \n$ rss -frc 1
+        \n$ module -dock add rss
+        \n$ module -show rss</string>
 
     <!-- linux -->
     <string name="help_cd">Change Re:T-UI\'s current file path.

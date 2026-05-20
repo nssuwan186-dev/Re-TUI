@@ -39,6 +39,8 @@ Use the `apps` command for management:
 - `apps -ps <app>` for the Play Store page
 - `apps -addtogp <group> <app>` for deliberate grouping
 
+For the full command list, see [Apps Command](./Apps.md).
+
 ## Alphabet Navigation
 
 The right side tabs are used for fast alphabetical jumps.

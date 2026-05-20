@@ -22,6 +22,8 @@ import ohi.andre.consolelauncher.tuils.Tuils;
 
 public class apps extends ParamCommand {
 
+    private static final String APPS_DOC_URL = "https://dvilspawn.github.io/Re-TUI/apps.html";
+
     private enum Param implements ohi.andre.consolelauncher.commands.main.Param {
 
         ls {
@@ -426,13 +428,16 @@ public class apps extends ParamCommand {
 
             @Override
             public String exec(ExecutePack pack) {
-                pack.context.startActivity(Tuils.webPage("https://github.com/DvilSpawn/Re-TUI/wiki/Apps"));
+                pack.context.startActivity(Tuils.webPage(APPS_DOC_URL));
                 return null;
             }
         };
 
         static Param get(String p) {
             p = p.toLowerCase();
+            if("-gpcolor".equals(p)) {
+                return gp_bg_color;
+            }
             Param[] ps = values();
             for (Param p1 : ps)
                 if (p.endsWith(p1.label()))

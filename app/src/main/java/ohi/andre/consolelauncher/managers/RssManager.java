@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.os.Handler;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.text.TextUtils;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +32,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import ohi.andre.consolelauncher.MainManager;
 import ohi.andre.consolelauncher.R;
+import ohi.andre.consolelauncher.UIManager;
+import ohi.andre.consolelauncher.managers.modules.ModuleManager;
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager;
 import ohi.andre.consolelauncher.managers.xml.classes.XMLPrefsElement;
 import ohi.andre.consolelauncher.managers.xml.classes.XMLPrefsList;
@@ -413,8 +417,10 @@ public class RssManager implements XMLPrefsElement {
     }
 
     public String list() {
+        if(feeds == null) return "[]";
         StringBuilder builder = new StringBuilder();
         for(Rss r : feeds) {
+            if(r == null) continue;
             builder.append(Rss.ID_LABEL).append(":").append(Tuils.SPACE).append(r.id).append(Tuils.NEWLINE).append(r.url).append(Tuils.NEWLINE);
         }
 
@@ -423,8 +429,86 @@ public class RssManager implements XMLPrefsElement {
         return output;
     }
 
+    public String buildModuleText() {
+        ArrayList<Rss> snapshot = new ArrayList<>();
+        if(feeds != null) {
+            for(Rss feed : feeds) {
+                if(feed != null) snapshot.add(feed);
+            }
+        }
+
+        if(snapshot.size() == 0) {
+            return "No RSS feeds."
+                    + "\nAdd: rss -add 1 900 https://www.reddit.com/r/android/.rss"
+                    + "\nThen: rss -frc 1";
+        }
+
+        StringBuilder out = new StringBuilder();
+        int shown = 0;
+        for(Rss feed : snapshot) {
+            if(shown >= 3) break;
+
+            if(out.length() > 0) out.append('\n');
+            out.append('[').append(feed.id).append("] ").append(feedLabel(feed)).append('\n');
+            if(feed.lastCheckedClient > 0) {
+                out.append("checked ").append(formatModuleTime(feed.lastCheckedClient));
+                if(feed.wifiOnly) out.append(" (wifi only)");
+                out.append('\n');
+            }
+
+            List<String> items = latestItemTitles(feed, 3);
+            if(items.size() == 0) {
+                out.append("  no cached items; run rss -frc ").append(feed.id).append('\n');
+            } else {
+                for(String item : items) {
+                    out.append("  - ").append(item).append('\n');
+                }
+            }
+            shown++;
+        }
+
+        int remaining = snapshot.size() - shown;
+        if(remaining > 0) {
+            out.append("... ").append(remaining).append(" more feed");
+            if(remaining != 1) out.append('s');
+            out.append('\n');
+        }
+        out.append("Commands: rss -l [id], rss -frc [id], rss -add");
+        return out.toString().trim();
+    }
+
+    public static int firstConfiguredFeedId(Context context) {
+        File file = new File(Tuils.getFolder(), PATH);
+        if(!file.exists()) {
+            return -1;
+        }
+
+        try {
+            Object[] o = XMLPrefsManager.buildDocument(file, NAME);
+            if(o == null) return -1;
+
+            Element root = (Element) o[1];
+            NodeList nodes = root.getElementsByTagName(RSS_LABEL);
+            for(int count = 0; count < nodes.getLength(); count++) {
+                Node node = nodes.item(count);
+                if(node.getNodeType() != Node.ELEMENT_NODE) continue;
+
+                String id = ((Element) node).getAttribute(ID_ATTRIBUTE);
+                if(TextUtils.isEmpty(id)) continue;
+                try {
+                    return Integer.parseInt(id);
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception e) {
+            Tuils.log(e);
+        }
+        return -1;
+    }
+
     public String l(int id) {
+        if(feeds == null) return context.getString(R.string.rss_not_found);
         for(Rss feed : feeds) {
+            if(feed == null) continue;
             if(feed.id == id) {
                 try {
                     parse(feed, false);
@@ -697,6 +781,7 @@ public class RssManager implements XMLPrefsElement {
 
                     feed.lastCheckedClient = System.currentTimeMillis();
                     feed.updateFile(rssIndexFile);
+                    notifyRssModuleUpdated();
 
                 } catch (Exception e) {
                     Tuils.log(e);
@@ -908,6 +993,112 @@ public class RssManager implements XMLPrefsElement {
         else action = OPEN_URL + url;
 
         Tuils.sendOutput(context, s, TerminalManager.CATEGORY_NO_COLOR, click ? action : null);
+    }
+
+    private void notifyRssModuleUpdated() {
+        Intent intent = new Intent(UIManager.ACTION_MODULE_COMMAND);
+        intent.putExtra(UIManager.EXTRA_MODULE_COMMAND, "update");
+        intent.putExtra(UIManager.EXTRA_MODULE_NAME, ModuleManager.RSS);
+        LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(intent);
+    }
+
+    private String feedLabel(Rss feed) {
+        try {
+            Uri uri = Uri.parse(feed.url);
+            String host = uri.getHost();
+            if(!TextUtils.isEmpty(host)) {
+                if(host.toLowerCase(Locale.US).startsWith("www.")) {
+                    host = host.substring(4);
+                }
+                return host;
+            }
+        } catch (Exception ignored) {}
+        return feed.url;
+    }
+
+    private String formatModuleTime(long time) {
+        try {
+            return TimeManager.instance.replace(timeFormat, time, Integer.MAX_VALUE).toString();
+        } catch (Exception e) {
+            return String.valueOf(time);
+        }
+    }
+
+    private List<String> latestItemTitles(Rss feed, int max) {
+        ArrayList<String> out = new ArrayList<>();
+        File rssFile = new File(root, RSS_LABEL + feed.id + ".xml");
+        if(!rssFile.exists()) return out;
+
+        try {
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+            Document doc = dBuilder.parse(rssFile);
+            doc.getDocumentElement().normalize();
+
+            NodeList nodes = moduleEntryNodes(doc, feed);
+            for(int count = 0; count < nodes.getLength() && out.size() < max; count++) {
+                Node node = nodes.item(count);
+                if(node == null || node.getNodeType() != Node.ELEMENT_NODE) continue;
+
+                String title = firstText((Element) node, "title");
+                if(TextUtils.isEmpty(title)) title = firstText((Element) node, "summary");
+                title = cleanModuleText(title);
+                if(TextUtils.isEmpty(title)) continue;
+
+                String date = firstText((Element) node, feed.dateTag != null ? feed.dateTag : PUBDATE_CHILD, PUBDATE_CHILD, "updated", "published");
+                date = cleanModuleText(date);
+                if(!TextUtils.isEmpty(date)) {
+                    out.add(shorten(title, 72) + " (" + shorten(date, 24) + ")");
+                } else {
+                    out.add(shorten(title, 96));
+                }
+            }
+        } catch (Exception e) {
+            Tuils.log(e);
+        }
+        return out;
+    }
+
+    private NodeList moduleEntryNodes(Document doc, Rss feed) {
+        String entryTag = feed.entryTag != null ? feed.entryTag : ENTRY_CHILD;
+        NodeList nodes = doc.getElementsByTagName(entryTag);
+        if(nodes.getLength() > 0) return nodes;
+
+        nodes = doc.getElementsByTagName(ENTRY_CHILD);
+        if(nodes.getLength() > 0) return nodes;
+        return doc.getElementsByTagName("entry");
+    }
+
+    private String firstText(Element item, String... tags) {
+        for(String tag : tags) {
+            if(TextUtils.isEmpty(tag)) continue;
+            NodeList nodes = item.getElementsByTagName(tag);
+            if(nodes.getLength() == 0) continue;
+
+            Node node = nodes.item(0);
+            if(node == null) continue;
+            String value = node.getTextContent();
+            if(!TextUtils.isEmpty(value)) return value;
+        }
+        return Tuils.EMPTYSTRING;
+    }
+
+    private String cleanModuleText(String value) {
+        if(value == null) return Tuils.EMPTYSTRING;
+        value = HtmlEscape.unescapeHtml(value);
+        if(hideTagPatterns != null) {
+            for(Pattern p : hideTagPatterns) {
+                if(p != null) value = p.matcher(value).replaceAll(Tuils.EMPTYSTRING);
+            }
+        }
+        value = removeTags.matcher(value).replaceAll(Tuils.EMPTYSTRING);
+        return value.replaceAll("\\s+", Tuils.SPACE).trim();
+    }
+
+    private String shorten(String value, int max) {
+        if(value == null || value.length() <= max) return value;
+        if(max <= THREE_DOTS.length()) return value.substring(0, max);
+        return value.substring(0, max - THREE_DOTS.length()).trim() + THREE_DOTS;
     }
 
     public static class Rss {

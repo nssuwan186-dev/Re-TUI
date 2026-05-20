@@ -131,7 +131,27 @@ Use this as the phone test pass for the workstation rollout. Test on a clean ins
 - Confirm empty input shows music actions such as `prev`, `play`, `next`, `info`, `stop`.
 
 - Show the notifications module.
-- Confirm empty input shows notification actions such as `access`, `on`, `off`, `filters`.
+- Confirm empty input shows notification actions such as `prev`, `next`, `reply`, `open`, `access`, `rules`, `filters`.
+
+- Show the notes module.
+- Confirm empty input shows actions such as `edit`, `list`, `todo`, `copy`, `clear`.
+- Run `notes -add TODO: module smoke test`.
+- Run `module -show notes`.
+- Confirm the module shows the new TODO note without creating a separate task store.
+- Run `notes -ls`, then remove the test note with `notes -rm <index>`.
+
+- Show the RSS module with no feeds configured.
+- Confirm the module shows setup guidance and does not attempt a network call by itself.
+- Add a Reddit feed only when live network testing is acceptable:
+  - `rss -add 1 900 https://www.reddit.com/r/android/.rss`
+  - `rss -frc 1`
+  - `module -show rss`
+- Confirm the module shows cached item titles and empty-input suggestions include `list`, `latest`, `refresh`, `info`, `reddit`, `file`.
+
+- Show the weather module.
+- If weather is disabled, confirm the panel asks for `tuiweather -enable` or `tuiweather -tutorial`.
+- If weather is enabled and configured, run `tuiweather -update` and confirm the module refreshes with the latest cached status.
+- Confirm empty-input suggestions include `update`, `enable`, `disable`, `setup`, `key`.
 
 - Close the active module.
 - Confirm normal blank-input suggestions return.
