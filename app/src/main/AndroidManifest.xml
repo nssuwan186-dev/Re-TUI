@@ -172,7 +172,7 @@
             android:excludeFromRecents="true"
             android:label="Re:T-UI Settings Hub"
             android:theme="@style/Custom.Popup"
-            android:exported="true">
+            android:exported="false">
             <meta-data
                 android:name="androidx.core.app.PARENT_ACTIVITY"
                 android:value=".LauncherActivity" />

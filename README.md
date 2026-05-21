@@ -2,10 +2,6 @@
 
 Personal fork and continuation of the original T-UI launcher, updated for modern Android versions and ongoing device testing.
 
-# AI DISCLAIMER:
-
-> CODEX AND GOOGLE GEMINI Used for code health and troubleshooting
-
 ---
 
 ## 🚀 Recent Changes & Modernization
@@ -70,7 +66,7 @@ This keeps the launcher lean for Play Store builds while preserving power-user L
 Re:T-UI now has a clear channel split:
 
 *   **Play Store:** Official stable release for normal users and the primary way to support development.
-*   **Firebase App Distribution:** Official beta/testing channel for preview builds and rapid validation. Join the testing group here: **[Firebase Testing Group](https://appdistribution.firebase.dev/i/c9e19a871392ea7a)**.
+*   **Firebase App Distribution:** Official beta/testing channel for invited testers, preview builds, and rapid validation.
 *   **GitHub:** Source code, docs, issue tracking, and self-built/community workflows.
 
 Support expectations follow that split:
@@ -85,18 +81,18 @@ For more detail, see **[docs/wiki/Support-and-Release-Channels.md](./docs/wiki/S
 
 ---
 
-## 🛡 Security Hardening (OWASP MASVS Compliance)
+## 🛡 Security Hardening (MASVS-Aligned)
 
-This project has been audited and hardened following the **OWASP Mobile Application Security Verification Standard (MASVS)**.
+This project uses the **OWASP Mobile Application Security Verification Standard (MASVS)** as a practical hardening checklist where it applies to a terminal-style launcher. This is an engineering posture, not a formal certification.
 
 ### 📦 MASVS-STORAGE: Data Storage and Privacy
 *   **Storage Work In Progress:** Re:T-UI is being modernized for safer storage handling across recent Android versions, with active work around launcher config compatibility and recovery.
-*   **Backup Protection:** `android:allowBackup` is set to `false`, with backup/data-extraction rules excluding app data from cloud backup and device transfer (MASVS-STORAGE-1).
+*   **Backup Protection:** `android:allowBackup` is set to `false`, with backup/data-extraction rules excluding app data from cloud backup and device transfer.
 *   **Secure File Sharing:** Uses `FileProvider` for secure, permission-based file sharing instead of vulnerable `file://` URIs.
 
 ### 🌐 MASVS-NETWORK: Network Communication
 *   **Enforced TLS:** `android:usesCleartextTraffic` is disabled globally. All network communications are forced over **HTTPS** (TLS 1.2+).
-*   **Hardened Service Endpoints:** Internal services (Weather API, Connectivity checks) have been upgraded to secure HTTPS endpoints (MASVS-NETWORK-1).
+*   **Hardened Service Endpoints:** Internal services (Weather API, Connectivity checks) use secure HTTPS endpoints.
 
 ### ⚙️ MASVS-PLATFORM: Platform Interaction
 *   **Signature-Level Protection:** Implemented a custom permission `${applicationId}.permission.RECEIVE_CMD` (for the current package, `com.dvil.tui_renewed.permission.RECEIVE_CMD`) with `protectionLevel="signature"`. This ensures only apps signed with the same developer key can programmatically send commands to the launcher.
@@ -104,7 +100,7 @@ This project has been audited and hardened following the **OWASP Mobile Applicat
 *   **Receiver Security:** Broadcast Receivers use explicit export settings. Internal app events use in-process broadcasts; platform dynamic receivers are registered as `RECEIVER_NOT_EXPORTED`; externally callable command/callback surfaces are signature-permission protected or token-gated.
 
 ### 🛠 MASVS-CODE: Code Quality & Build Settings
-*   **Minification & Obfuscation:** Release builds have R8/Proguard enabled (`minifyEnabled true`) to shrink resources and obfuscate code, making reverse engineering more difficult (MASVS-RESILIENCE-1).
+*   **Minification & Obfuscation:** Release builds have R8/Proguard enabled (`minifyEnabled true`) to shrink resources and obfuscate code.
 *   **Foreground Service Security:** Updated to comply with Android 14's strict foreground service types (`specialUse`, `mediaPlayback`).
 
 ---

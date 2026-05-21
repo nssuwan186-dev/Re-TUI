@@ -12,12 +12,18 @@ The website uses Cloudflare Pages Functions for preset uploads and browsing.
 
 ## Initial Setup
 
+Copy the public template and fill in your own Cloudflare resource identifiers:
+
 ```sh
-wrangler d1 execute retui-presets --remote --file cloudflare/d1/0001_preset_marketplace.sql
-wrangler r2 bucket create retui-preset-assets --location apac
-wrangler r2 object put retui-preset-assets/presets/northern-violet/screenshot --file docs/preset-assets/northern-violet/screenshot.png --content-type image/png --remote
-wrangler r2 object put retui-preset-assets/presets/northern-violet/preset --file docs/preset-assets/northern-violet/northern-violet.retui-backup.zip --content-type application/zip --content-disposition 'attachment; filename="northern-violet.retui-backup.zip"' --remote
-wrangler d1 execute retui-presets --remote --file cloudflare/d1/seed_northern_violet.sql
+cp wrangler.example.toml wrangler.toml
+```
+
+```sh
+wrangler d1 execute <d1-database-name> --remote --file cloudflare/d1/0001_preset_marketplace.sql
+wrangler r2 bucket create <r2-bucket-name> --location <region>
+wrangler r2 object put <r2-bucket-name>/presets/northern-violet/screenshot --file docs/preset-assets/northern-violet/screenshot.png --content-type image/png --remote
+wrangler r2 object put <r2-bucket-name>/presets/northern-violet/preset --file docs/preset-assets/northern-violet/northern-violet.retui-backup.zip --content-type application/zip --content-disposition 'attachment; filename="northern-violet.retui-backup.zip"' --remote
+wrangler d1 execute <d1-database-name> --remote --file cloudflare/d1/seed_northern_violet.sql
 ```
 
 ## Moderation Secret

@@ -21,7 +21,7 @@ This is the version normal users should buy and install.
 
 ### Firebase App Distribution
 
-Firebase is the beta and testing channel.
+Firebase is the invite-based beta and testing channel.
 
 This is the right place for:
 
@@ -32,9 +32,7 @@ This is the right place for:
 
 Firebase builds are official, but they are not the same promise as the Play Store build.
 
-Join the testing group here:
-
-[Firebase Testing Group](https://appdistribution.firebase.dev/i/c9e19a871392ea7a)
+The testing invite is shared with active testers when a preview build needs validation.
 
 ### GitHub
 

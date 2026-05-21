@@ -9,15 +9,23 @@ android {
     if (keystorePropertiesFile.exists()) {
         keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
     }
+    def releaseStoreFile = keystoreProperties["storeFile"]
+    def releaseStorePassword = keystoreProperties["storePassword"]
+    def releaseKeyAlias = keystoreProperties["keyAlias"]
+    def releaseKeyPassword = keystoreProperties["keyPassword"]
+    def hasReleaseSigning = releaseStoreFile
+            && releaseStorePassword
+            && releaseKeyAlias
+            && releaseKeyPassword
+            && rootProject.file(releaseStoreFile).exists()
 
     signingConfigs {
         release {
-            def ksFile = rootProject.file(keystoreProperties["storeFile"] ?: "release.jks")
-            if (ksFile.exists()) {
-                storeFile ksFile
-                storePassword = keystoreProperties["storePassword"] ?: "password"
-                keyAlias = keystoreProperties["keyAlias"] ?: "tui-alias"
-                keyPassword = keystoreProperties["keyPassword"] ?: "password"
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -38,13 +46,17 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.release
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.release
+            }
         }
         release {
             minifyEnabled = true
             shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig = signingConfigs.release
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.release
+            }
         }
     }
 

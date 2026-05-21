@@ -4,9 +4,9 @@ pages_build_output_dir = "docs"
 
 [[d1_databases]]
 binding = "RETUI_PRESETS"
-database_name = "retui-presets"
-database_id = "97f12e5d-6066-44b4-b463-33d94263c3e3"
+database_name = "<d1-database-name>"
+database_id = "<d1-database-id>"
 
 [[r2_buckets]]
 binding = "RETUI_PRESET_ASSETS"
-bucket_name = "retui-preset-assets"
+bucket_name = "<r2-bucket-name>"

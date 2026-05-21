@@ -1,5 +1,6 @@
 package ohi.andre.consolelauncher.managers;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.LauncherApps;
@@ -66,6 +67,7 @@ public final class PinnedShortcutManager {
     }
 
     public static void save(Context context, String handle, ShortcutInfo info, CharSequence label) throws Exception {
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return;
         if(context == null || info == null) return;
         String normalized = normalizeHandle(handle);
         if(normalized.length() == 0) return;
@@ -122,10 +124,15 @@ public final class PinnedShortcutManager {
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.N_MR1)
     private static ShortcutInfo resolve(Context context, LauncherApps apps, Record record) {
         List<UserHandle> profiles;
         try {
-            profiles = apps.getProfiles();
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                profiles = apps.getProfiles();
+            } else {
+                profiles = Collections.singletonList(Process.myUserHandle());
+            }
         } catch (Exception e) {
             profiles = Collections.singletonList(Process.myUserHandle());
         }
@@ -144,6 +151,7 @@ public final class PinnedShortcutManager {
         return null;
     }
 
+    @TargetApi(Build.VERSION_CODES.N_MR1)
     private static ShortcutInfo findShortcut(LauncherApps apps, Record record, UserHandle profile) {
         try {
             LauncherApps.ShortcutQuery query = new LauncherApps.ShortcutQuery();
@@ -184,6 +192,7 @@ public final class PinnedShortcutManager {
         return profile.equals(Process.myUserHandle()) ? 0L : Integer.toUnsignedLong(profile.hashCode());
     }
 
+    @TargetApi(Build.VERSION_CODES.N_MR1)
     private static String safeLabel(ShortcutInfo info) {
         CharSequence shortLabel = info.getShortLabel();
         if(shortLabel != null && shortLabel.length() > 0) return shortLabel.toString();
