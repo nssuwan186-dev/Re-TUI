@@ -2079,7 +2079,7 @@ public class UIManager implements OnTouchListener {
         if (body != null) {
             body.setText(text);
             body.setTextColor(AppearanceSettings.notificationWidgetTextColor());
-            applyModuleBodyTypeface(body, text);
+            applyModuleBodyTypeface(body);
             constrainEventModuleScroll(module, scroll, body);
         }
         if (close != null) {
@@ -2133,28 +2133,11 @@ public class UIManager implements OnTouchListener {
         });
     }
 
-    private void applyModuleBodyTypeface(TextView body, CharSequence text) {
+    private void applyModuleBodyTypeface(TextView body) {
         if (body == null) {
             return;
         }
-        if (containsProgressBlockGlyphs(text)) {
-            body.setTypeface(Typeface.MONOSPACE);
-        } else {
-            body.setTypeface(Tuils.getTypeface(mContext));
-        }
-    }
-
-    private static boolean containsProgressBlockGlyphs(CharSequence text) {
-        if (text == null) {
-            return false;
-        }
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c == '\u2591' || c == '\u2592' || c == '\u2593' || c == '\u2588') {
-                return true;
-            }
-        }
-        return false;
+        body.setTypeface(Typeface.MONOSPACE);
     }
 
     private int calculateCalendarTextHeight(TextView body) {
@@ -6786,7 +6769,7 @@ public class UIManager implements OnTouchListener {
             TextView textView = (TextView) view;
             Typeface current = textView.getTypeface();
             int style = current != null ? current.getStyle() : Typeface.NORMAL;
-            if (textView.getId() == R.id.module_text_body && containsProgressBlockGlyphs(textView.getText())) {
+            if (textView.getId() == R.id.module_text_body) {
                 textView.setTypeface(Typeface.MONOSPACE, style);
             } else {
                 textView.setTypeface(typeface, style);

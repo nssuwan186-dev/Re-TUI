@@ -445,12 +445,19 @@ public final class ModuleManager {
         }
 
         StringBuilder body = new StringBuilder();
-        for (String rawLine : text.split("\\r?\\n", -1)) {
+        String[] lines = text.split("\\r?\\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String rawLine = lines[i];
+            if (i == lines.length - 1 && rawLine.length() == 0) {
+                continue;
+            }
             String line = rawLine.trim();
             if (line.startsWith("::title ")) {
                 payload.title = line.substring("::title ".length()).trim();
+            } else if (rawLine.startsWith("::body ")) {
+                appendBodyLine(body, rawLine.substring("::body ".length()));
             } else if (line.startsWith("::body ")) {
-                appendBodyLine(body, line.substring("::body ".length()).trim());
+                appendBodyLine(body, line.substring("::body ".length()));
             } else if (line.startsWith("::suggest ")) {
                 ModuleSuggestion suggestion = parseSuggestion(line.substring("::suggest ".length()).trim());
                 if (suggestion != null) {
@@ -460,7 +467,7 @@ public final class ModuleManager {
                 appendBodyLine(body, rawLine);
             }
         }
-        payload.body = body.toString().trim();
+        payload.body = body.toString();
         return payload;
     }
 
