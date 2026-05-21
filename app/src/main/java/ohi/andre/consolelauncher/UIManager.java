@@ -6745,6 +6745,9 @@ public class UIManager implements OnTouchListener {
             mTerminalAdapter.scrollToEnd();
             mTerminalAdapter.focusInputEnd();
         }
+        if (mRootView != null) {
+            mRootView.postDelayed(this::scheduleTypefaceRefreshes, 48);
+        }
     }
 
     public void scheduleTypefaceRefreshes() {
