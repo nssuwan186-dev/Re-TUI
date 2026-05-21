@@ -93,7 +93,7 @@ Available tokens:
 - `%RETUI_NETWORK_JSON` -> JSON file path with connected, Wi-Fi, and mobile network type values
 - `%RETUI_BRIGHTNESS_JSON` -> JSON file path with brightness percent and auto-brightness state
 - `%RETUI_THEME_JSON` -> JSON file path with core theme colors
-- `%RETUI_UI_JSON` -> JSON file path with module/output/header radius and header text sizes
+- `%RETUI_UI_JSON` -> JSON file path with module/output/header radius plus module/output text sizes
 - `%RETUI_STORAGE_JSON` -> JSON file path with shared-storage total/free/used byte counts
 - `%RETUI_NOW` -> current Unix time in milliseconds
 

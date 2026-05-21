@@ -1277,6 +1277,22 @@ public enum Ui implements XMLPrefsSave {
             return "Text size for module header labels and close boxes (sp)";
         }
     },
+    module_body_text_size {
+        @Override
+        public String defaultValue() {
+            return "14";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.INTEGER;
+        }
+
+        @Override
+        public String info() {
+            return "Text size for built-in module body text and controls (sp)";
+        }
+    },
     output_header_text_size {
         @Override
         public String defaultValue() {

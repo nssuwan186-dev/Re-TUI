@@ -2079,6 +2079,7 @@ public class UIManager implements OnTouchListener {
         if (body != null) {
             body.setText(text);
             body.setTextColor(AppearanceSettings.notificationWidgetTextColor());
+            body.setTextSize(AppearanceSettings.moduleBodyTextSize());
             applyModuleBodyTypeface(body);
             constrainEventModuleScroll(module, scroll, body);
         }
@@ -3677,11 +3678,11 @@ public class UIManager implements OnTouchListener {
         TextView titleView = musicWidget.findViewById(R.id.music_song_title);
         TextView singerView = musicWidget.findViewById(R.id.music_singer);
         if (titleView != null) {
-            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13f);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, AppearanceSettings.moduleBodyTextSize());
             titleView.setIncludeFontPadding(false);
         }
         if (singerView != null) {
-            singerView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f);
+            singerView.setTextSize(TypedValue.COMPLEX_UNIT_SP, AppearanceSettings.moduleBodyTextSize());
             singerView.setIncludeFontPadding(false);
         }
 
@@ -3700,7 +3701,7 @@ public class UIManager implements OnTouchListener {
                 TextView btn = (TextView) b;
                 btn.setTextColor(widgetColor);
                 btn.setTypeface(Tuils.getTypeface(mContext));
-                btn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f);
+                btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, AppearanceSettings.moduleBodyTextSize());
                 btn.setIncludeFontPadding(false);
                 btn.setSingleLine(true);
                 btn.setEllipsize(TextUtils.TruncateAt.END);
@@ -5708,7 +5709,7 @@ public class UIManager implements OnTouchListener {
         lp.bottomMargin = notificationCompactForKeyboard ? 0 : (int) Tuils.dpToPx(mContext, 6);
         row.setLayoutParams(lp);
         row.setTypeface(Tuils.getTypeface(mContext));
-        row.setTextSize(12);
+        row.setTextSize(AppearanceSettings.moduleBodyTextSize());
         row.setSingleLine(true);
         row.setEllipsize(TextUtils.TruncateAt.END);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -5725,7 +5726,7 @@ public class UIManager implements OnTouchListener {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         row.setLayoutParams(lp);
         row.setTypeface(Tuils.getTypeface(mContext));
-        row.setTextSize(12);
+        row.setTextSize(AppearanceSettings.moduleBodyTextSize());
         row.setTextColor(widgetTextColor);
         row.setText(buildNotificationDetail(notification));
         row.setSingleLine(false);
@@ -5850,6 +5851,7 @@ public class UIManager implements OnTouchListener {
         TextView text = (TextView) button;
         text.setTextColor(AppearanceSettings.moduleNameTextColor());
         text.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD);
+        text.setTextSize(AppearanceSettings.moduleBodyTextSize());
         text.setBackground(ohi.andre.consolelauncher.tuils.TuiWidgetDecorator.getRowBackground(
                 mContext,
                 AppearanceSettings.notificationWidgetBorderColor()));

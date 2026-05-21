@@ -71,6 +71,7 @@ public class files implements CommandAbstraction {
         intent.putExtra("header_corner_radius", AppearanceSettings.headerCornerRadius());
         intent.putExtra("output_corner_radius", AppearanceSettings.outputCornerRadius());
         intent.putExtra("module_header_text_size", AppearanceSettings.moduleHeaderTextSize());
+        intent.putExtra("module_body_text_size", AppearanceSettings.moduleBodyTextSize());
         intent.putExtra("output_header_text_size", AppearanceSettings.outputHeaderTextSize());
 
         Tuils.getTypeface(info.context);

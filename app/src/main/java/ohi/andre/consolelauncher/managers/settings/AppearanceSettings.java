@@ -134,6 +134,10 @@ public final class AppearanceSettings {
         return clampTextSize(LauncherSettings.getInt(Ui.module_header_text_size));
     }
 
+    public static int moduleBodyTextSize() {
+        return clampTextSize(LauncherSettings.getInt(Ui.module_body_text_size));
+    }
+
     public static int outputHeaderTextSize() {
         return clampTextSize(LauncherSettings.getInt(Ui.output_header_text_size));
     }

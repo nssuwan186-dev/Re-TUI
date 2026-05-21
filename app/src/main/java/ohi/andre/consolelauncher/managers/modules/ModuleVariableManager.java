@@ -134,6 +134,7 @@ public final class ModuleVariableManager {
                 + "\"header_corner_radius\":" + AppearanceSettings.headerCornerRadius() + ","
                 + "\"output_corner_radius\":" + AppearanceSettings.outputCornerRadius() + ","
                 + "\"module_header_text_size\":" + AppearanceSettings.moduleHeaderTextSize() + ","
+                + "\"module_body_text_size\":" + AppearanceSettings.moduleBodyTextSize() + ","
                 + "\"output_header_text_size\":" + AppearanceSettings.outputHeaderTextSize()
                 + "}\n";
     }
