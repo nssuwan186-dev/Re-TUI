@@ -477,6 +477,22 @@ public enum Ui implements XMLPrefsSave {
             return "Show the ASCII art from ascii.txt. WARNING: wide art may overflow or wrap on small screens.";
         }
     },
+    show_ascii_landscape {
+        @Override
+        public String defaultValue() {
+            return "true";
+        }
+
+        @Override
+        public String type() {
+            return XMLPrefsSave.BOOLEAN;
+        }
+
+        @Override
+        public String info() {
+            return "Show the ASCII art while the landscape layout is active";
+        }
+    },
     ascii_index {
         @Override
         public String defaultValue() {

@@ -1073,11 +1073,9 @@ public class UIManager implements OnTouchListener {
         if (asciiView == null) {
             return;
         }
-        if (landscape) {
-            asciiView.setVisibility(View.GONE);
-        } else if (!TextUtils.isEmpty(asciiView.getText())) {
-            asciiView.setVisibility(View.VISIBLE);
-        }
+        boolean showAscii = !TextUtils.isEmpty(asciiView.getText())
+                && (!landscape || LauncherSettings.getBoolean(Ui.show_ascii_landscape));
+        asciiView.setVisibility(showAscii ? View.VISIBLE : View.GONE);
     }
 
     private void activateLandscapeLayout() {

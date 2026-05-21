@@ -26,7 +26,7 @@ These updates ensure the launcher remains functional, secure, and performant on 
 *   **`post [url] [body]`**: Send raw HTTP POST requests directly from the terminal.
 *   **`termux` / `module`**: Termux-backed scripts and custom modules are now the recommended way to add Linux-powered workflows.
 *   **BusyBox manager removed**: Re:T-UI no longer downloads BusyBox; use `shell` for Android's built-in shell and Termux for maintained Linux tooling.
-*   **ASCII Art System**: A new header system that displays custom ASCII art on the dashboard. Controlled via `show_ascii`, `ascii_index`, and `ascii_size` in `Ui.xml`.
+*   **ASCII Art System**: A new header system that displays custom ASCII art on the dashboard. Controlled via `show_ascii`, `show_ascii_landscape`, `ascii_index`, and `ascii_size` in `Ui.xml`.
 
 ### ✨ Enhanced Features
 *   **Termux Execution Layer:** Keep Linux tooling, scripts, and custom modules in Termux while Re:T-UI stays focused on launcher UI and command routing.

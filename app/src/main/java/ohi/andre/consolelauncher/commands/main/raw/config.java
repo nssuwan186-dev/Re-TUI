@@ -75,7 +75,7 @@ public class config extends ParamCommand {
                     ((LauncherActivity) pack.context).getUIManager().setDuoLayoutMode(UIManager.DUO_LAYOUT_OFF);
                 } else if(save == Behavior.orientation && pack.context instanceof LauncherActivity) {
                     ((LauncherActivity) pack.context).applyOrientationPreference();
-                } else if(save == Ui.split_duo_launcher
+                } else if(isResponsiveLandscapeSetting(save)
                         && pack.context instanceof LauncherActivity
                         && ((LauncherActivity) pack.context).getUIManager() != null) {
                     ((LauncherActivity) pack.context).getUIManager().refreshResponsiveLandscapeLayout();
@@ -307,7 +307,7 @@ public class config extends ParamCommand {
                         && pack.context instanceof LauncherActivity
                         && ((LauncherActivity) pack.context).getUIManager() != null) {
                     ((LauncherActivity) pack.context).getUIManager().setDuoLayoutMode(UIManager.DUO_LAYOUT_OFF);
-                } else if(save == Ui.split_duo_launcher
+                } else if(isResponsiveLandscapeSetting(save)
                         && pack.context instanceof LauncherActivity
                         && ((LauncherActivity) pack.context).getUIManager() != null) {
                     ((LauncherActivity) pack.context).getUIManager().refreshResponsiveLandscapeLayout();
@@ -419,6 +419,11 @@ public class config extends ParamCommand {
         return save == Ui.display_margin_top_section
                 || save == Ui.display_margin_bottom_section
                 || save == Ui.display_margin_landscape_mm;
+    }
+
+    private static boolean isResponsiveLandscapeSetting(XMLPrefsSave save) {
+        return save == Ui.split_duo_launcher
+                || save == Ui.show_ascii_landscape;
     }
 
     @Override
