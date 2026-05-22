@@ -3679,11 +3679,11 @@ public class UIManager implements OnTouchListener {
         TextView singerView = musicWidget.findViewById(R.id.music_singer);
         if (titleView != null) {
             titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, AppearanceSettings.moduleBodyTextSize());
-            titleView.setIncludeFontPadding(false);
+            titleView.setIncludeFontPadding(true);
         }
         if (singerView != null) {
             singerView.setTextSize(TypedValue.COMPLEX_UNIT_SP, AppearanceSettings.moduleBodyTextSize());
-            singerView.setIncludeFontPadding(false);
+            singerView.setIncludeFontPadding(true);
         }
 
         // Style control buttons
@@ -3702,7 +3702,7 @@ public class UIManager implements OnTouchListener {
                 btn.setTextColor(widgetColor);
                 btn.setTypeface(Tuils.getTypeface(mContext));
                 btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, AppearanceSettings.moduleBodyTextSize());
-                btn.setIncludeFontPadding(false);
+                btn.setIncludeFontPadding(true);
                 btn.setSingleLine(true);
                 btn.setEllipsize(TextUtils.TruncateAt.END);
                 
@@ -5662,6 +5662,7 @@ public class UIManager implements OnTouchListener {
             TextView row = buildNotificationRow("No notifications.", widgetTextColor, widgetBorderColor);
             rows.addView(row);
             updateNotificationPagerButtons(notificationWidget);
+            constrainNotificationContentScroll(scrollView);
             if (scrollView != null) {
                 scrollView.post(() -> scrollView.scrollTo(0, 0));
             }
@@ -5682,6 +5683,7 @@ public class UIManager implements OnTouchListener {
             }
         }
         updateNotificationPagerButtons(notificationWidget);
+        constrainNotificationContentScroll(scrollView);
 
         if (scrollView != null) {
             scrollView.post(() -> scrollView.fullScroll(View.FOCUS_UP));
@@ -5732,8 +5734,7 @@ public class UIManager implements OnTouchListener {
         row.setSingleLine(false);
         row.setEllipsize(null);
         row.setGravity(Gravity.TOP);
-        row.setMinLines(notificationCompactForKeyboard ? 1 : 4);
-        row.setMaxLines(notificationCompactForKeyboard ? 2 : 6);
+        row.setMinLines(notificationCompactForKeyboard ? 1 : 3);
         row.setPadding((int) Tuils.dpToPx(mContext, 6),
                 (int) Tuils.dpToPx(mContext, notificationCompactForKeyboard ? 5 : 10),
                 (int) Tuils.dpToPx(mContext, 6),
@@ -5819,14 +5820,21 @@ public class UIManager implements OnTouchListener {
         View border = notificationWidget.findViewById(R.id.notification_widget_border);
         if (border != null) {
             ViewGroup.LayoutParams lp = border.getLayoutParams();
-            lp.height = calculateNotificationWidgetHeight();
-            border.setLayoutParams(lp);
+            if (lp != null && lp.height != ViewGroup.LayoutParams.WRAP_CONTENT) {
+                lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                border.setLayoutParams(lp);
+            }
+            border.setMinimumHeight(calculateNotificationWidgetMinHeight());
         }
 
         ScrollView scrollView = notificationWidget.findViewById(R.id.notification_scroll);
         if (scrollView != null) {
-            int topPadding = (int) Tuils.dpToPx(mContext, notificationCompactForKeyboard ? 12 : 14);
-            scrollView.setPadding(scrollView.getPaddingLeft(), topPadding, scrollView.getPaddingRight(), scrollView.getPaddingBottom());
+            ViewGroup.LayoutParams lp = scrollView.getLayoutParams();
+            if (lp != null && lp.height != ViewGroup.LayoutParams.WRAP_CONTENT) {
+                lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                scrollView.setLayoutParams(lp);
+            }
+            scrollView.setFillViewport(false);
         }
 
         notificationWidget.setPadding(
@@ -5837,13 +5845,48 @@ public class UIManager implements OnTouchListener {
         );
     }
 
-    private int calculateNotificationWidgetHeight() {
+    private int calculateNotificationWidgetMinHeight() {
+        return (int) Tuils.dpToPx(mContext, notificationCompactForKeyboard ? 104 : 112);
+    }
+
+    private int calculateNotificationContentMaxHeight() {
         int rootHeight = mRootView != null ? mRootView.getHeight() : 0;
+        int fallbackMax = (int) Tuils.dpToPx(mContext, notificationCompactForKeyboard ? 92 : 180);
+        int floor = (int) Tuils.dpToPx(mContext, notificationCompactForKeyboard ? 58 : 96);
         if (rootHeight <= 0) {
-            return (int) Tuils.dpToPx(mContext, notificationCompactForKeyboard ? 58 : 132);
+            return fallbackMax;
         }
-        float modulePercent = notificationCompactForKeyboard ? 0.08f : 0.18f;
-        return Math.round(rootHeight * modulePercent);
+        float modulePercent = notificationCompactForKeyboard ? 0.16f : 0.28f;
+        int adaptiveMax = Math.round(rootHeight * modulePercent);
+        return Math.min(fallbackMax, Math.max(floor, adaptiveMax));
+    }
+
+    private void constrainNotificationContentScroll(ScrollView scrollView) {
+        if (scrollView == null) {
+            return;
+        }
+
+        scrollView.post(() -> {
+            View content = scrollView.getChildAt(0);
+            if (content == null) {
+                return;
+            }
+
+            int contentHeight = content.getHeight() + scrollView.getPaddingTop() + scrollView.getPaddingBottom();
+            if (contentHeight <= 0) {
+                return;
+            }
+
+            int maxHeight = calculateNotificationContentMaxHeight();
+            int targetHeight = contentHeight > maxHeight ? maxHeight : ViewGroup.LayoutParams.WRAP_CONTENT;
+            ViewGroup.LayoutParams lp = scrollView.getLayoutParams();
+            if (lp != null && lp.height != targetHeight) {
+                lp.height = targetHeight;
+                scrollView.setLayoutParams(lp);
+            }
+            scrollView.setFillViewport(targetHeight != ViewGroup.LayoutParams.WRAP_CONTENT);
+            scrollView.setVerticalScrollBarEnabled(contentHeight > maxHeight);
+        });
     }
 
     private void styleNotificationPagerButton(View button) {
