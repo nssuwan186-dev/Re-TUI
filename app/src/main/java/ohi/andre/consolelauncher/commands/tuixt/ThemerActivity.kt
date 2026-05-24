@@ -199,6 +199,12 @@ class ThemerActivity : AppCompatActivity() {
                         showShareableConfigurationSourcePicker()
                     } else if (fileName == "Restore") {
                         launchRestorePicker()
+                    } else if (fileName == "Rate the App") {
+                        openPlayStoreListing()
+                    } else if (fileName == "Send Feedback") {
+                        openFeedbackEmail()
+                    } else if (fileName == "Learn More") {
+                        openLearnMore()
                     } else {
                         openConfigFile(fileName)
                     }
@@ -226,6 +232,36 @@ class ThemerActivity : AppCompatActivity() {
         if (hasFocus) {
             applyFullscreen(this)
         }
+    }
+
+    private fun openPlayStoreListing() {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PLAY_STORE_MARKET_URL)))
+        } catch (e: ActivityNotFoundException) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PLAY_STORE_WEB_URL)))
+        }
+    }
+
+    private fun openFeedbackEmail() {
+        val gmailIntent = Intent(Intent.ACTION_SENDTO, Uri.parse(FEEDBACK_MAILTO_URI))
+        gmailIntent.setPackage(GMAIL_PACKAGE)
+        gmailIntent.putExtra(Intent.EXTRA_EMAIL, arrayOf(FEEDBACK_EMAIL))
+
+        try {
+            startActivity(gmailIntent)
+        } catch (e: ActivityNotFoundException) {
+            val emailIntent = Intent(Intent.ACTION_SENDTO, Uri.parse(FEEDBACK_MAILTO_URI))
+            emailIntent.putExtra(Intent.EXTRA_EMAIL, arrayOf(FEEDBACK_EMAIL))
+            try {
+                startActivity(emailIntent)
+            } catch (fallbackError: ActivityNotFoundException) {
+                Toast.makeText(this, "No email app found.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun openLearnMore() {
+        startActivity(Tuils.webPage(LEARN_MORE_URL))
     }
 
     private fun showPresetsDialog() {
@@ -342,6 +378,9 @@ class ThemerActivity : AppCompatActivity() {
                 "Backup",
                 "Create Shareable Configuration",
                 "Restore",
+                "Rate the App",
+                "Send Feedback",
+                "Learn More",
                 "View Crash Log"
             )
         }
@@ -1287,5 +1326,13 @@ class ThemerActivity : AppCompatActivity() {
         private const val BACKUP_RESTORE_REQUEST = 202
         private const val SHAREABLE_CONFIG_EXPORT_REQUEST = 203
         private const val FONT_IMPORT_REQUEST = 204
+        private const val PLAY_STORE_PACKAGE_ID = "com.dvil.tui_renewed"
+        private const val PLAY_STORE_MARKET_URL = "market://details?id=$PLAY_STORE_PACKAGE_ID"
+        private const val PLAY_STORE_WEB_URL =
+            "https://play.google.com/store/apps/details?id=$PLAY_STORE_PACKAGE_ID"
+        private const val FEEDBACK_EMAIL = "dvilspawn@gmail.com"
+        private const val FEEDBACK_MAILTO_URI = "mailto:$FEEDBACK_EMAIL"
+        private const val GMAIL_PACKAGE = "com.google.android.gm"
+        private const val LEARN_MORE_URL = "https://re-tui.pages.dev"
     }
 }

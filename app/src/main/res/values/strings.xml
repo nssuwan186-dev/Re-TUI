@@ -261,6 +261,7 @@
         \n$ widget -add counter
         \n$ widget -new counter
         \n$ widget -edit counter
+        \n$ widget -config counter
         \n$ widget -rename counter better_counter
         \n$ widget -show counter
         \n$ widget -refresh counter
@@ -275,7 +276,7 @@
         \n$ widget -expand counter
         \n$ widget -collapse counter
         \n$ widget -rm counter
-        \n\nWidgets are saved locally under Re:T-UI\'s widgets folder and can register as lua:[id] modules in the shared dock. Use widget -add [name] to open the editor, paste shared Lua, then save/run. Scripts that use network, clipboard, vibration, local widget files, or active ticking must declare -- permissions and be approved with widget -approve [id]; this does not add Android manifest permissions. Broken scripts expose check/copy-error/disable controls. The document name is the module title; changing it in the editor can rename the widget id/folder. Lua widgets support ui, prefs, files, json, date, fmt, strings, colors, debug, async http, expandable state, direct command chips, parameterized action chips, choice-dialog chips, active-widget ticking, Lua suggestion scripts, system helpers, export, on_load/on_resume/on_alarm/on_tick/on_click/on_action/on_dialog_action/on_suggest, and backup/restore.</string>
+        \n\nWidgets are saved locally under Re:T-UI\'s widgets folder and can register as lua:[id] modules in the shared dock. Use widget -add [name] to open the editor, paste shared Lua, then save/run. Scripts that use network, clipboard, vibration, local widget files, active ticking, or notifications must declare -- permissions and be approved with widget -approve [id]; this does not add Android manifest permissions. Broken scripts expose check/copy-error/disable controls. The document name is the module title; changing it in the editor can rename the widget id/folder. Lua widgets support ui, prefs, files, json, date, fmt, strings, colors, debug, async http, config forms, expandable state, direct command chips, parameterized action chips, choice-dialog chips, notification reminders, active-widget ticking, Lua suggestion scripts, system helpers, export, on_load/on_resume/on_alarm/on_tick/on_click/on_action/on_dialog_action/on_config/on_config_submit/on_suggest, and backup/restore.</string>
     <!-- status -->
     <string name="battery_label">Battery:</string>
     <string name="mobile_data_label">Mobile data:</string>
@@ -418,20 +419,20 @@
         \n-ls [type] -> shows the expressions of the given type
         \n-tutorial -> show the tutorial on GitHub
         \n-file -> open the file htmlextract.xml</string>
-    <string name="help_landscape">Force Re:T-UI into landscape mode and enable the split landscape overlay.
+    <string name="help_landscape">Save the Re:T-UI landscape preference and enable adaptive landscape behavior when the window is landscape.
         \n\nUsage:
         \n$ landscape
         \n\nShortcut for orientation landscape.</string>
-    <string name="help_portrait">Force Re:T-UI into portrait mode.
+    <string name="help_portrait">Save the Re:T-UI portrait preference while Android controls the current window orientation.
         \n\nUsage:
         \n$ portrait
         \n\nShortcut for orientation portrait.</string>
-    <string name="help_orientation">Set Re:T-UI screen orientation.
+    <string name="help_orientation">Set Re:T-UI orientation preference.
         \n\nUsage:
         \n$ orientation portrait
         \n$ orientation landscape
         \n$ orientation auto
-        \n\nLandscape enables the split landscape overlay. Auto restores Android auto-rotate.</string>
+        \n\nAndroid controls the current window orientation. Re:T-UI adapts its layout when the device or window rotates.</string>
     <string name="help_music">-next -> play the next song
         \n-previous -> play the previous song
         \n-play -> play/pause the player

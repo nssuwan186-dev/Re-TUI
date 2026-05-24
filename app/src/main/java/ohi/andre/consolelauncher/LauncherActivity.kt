@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
@@ -22,11 +21,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import ohi.andre.consolelauncher.commands.tuixt.TuixtActivity
@@ -37,8 +38,6 @@ import ohi.andre.consolelauncher.managers.modules.ModuleManager
 import ohi.andre.consolelauncher.managers.notifications.KeeperService
 import ohi.andre.consolelauncher.managers.notifications.NotificationManager
 import ohi.andre.consolelauncher.managers.notifications.NotificationService
-import ohi.andre.consolelauncher.managers.settings.LauncherSettings.getBoolean
-import ohi.andre.consolelauncher.managers.settings.LauncherSettings.getColor
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings.invalidate
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings.refreshFromLoadedPrefs
 import ohi.andre.consolelauncher.managers.settings.NotificationSettings.printToOutput
@@ -64,7 +63,6 @@ import android.graphics.PorterDuff
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
-import android.view.Window
 import android.widget.EditText
 import android.widget.TextView
 import androidx.annotation.NonNull
@@ -184,6 +182,7 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
                     "Please grant storage permissions to Re:T-UI",
                     Toast.LENGTH_LONG
                 ).show()
+                enableEdgeToEdge()
                 super.onCreate(savedInstanceState)
                 return
             }
@@ -200,6 +199,7 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
         }
 
         requestNoTitleIfFullscreen(this)
+        enableEdgeToEdge()
 
         super.onCreate(savedInstanceState)
 
@@ -288,17 +288,6 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
         )
 
         backButtonEnabled = XMLPrefsManager.getBoolean(Behavior.back_button_enabled)
-
-        fixOrientation()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !XMLPrefsManager.getBoolean(Ui.ignore_bar_color)) {
-            val window = getWindow()
-
-            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-            window.setStatusBarColor(XMLPrefsManager.getColor(Theme.statusbar_color))
-            window.setNavigationBarColor(XMLPrefsManager.getColor(Theme.navigationbar_color))
-        }
 
         val showNotification = XMLPrefsManager.getBoolean(Behavior.tui_notification)
         val keeperIntent = Intent(this, KeeperService::class.java)
@@ -394,17 +383,12 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
 
         val mainView = findViewById<View?>(R.id.mainview) as ViewGroup
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !XMLPrefsManager.getBoolean(Ui.ignore_bar_color) && !XMLPrefsManager.getBoolean(
-                Ui.statusbar_light_icons
-            )
-        ) {
-            mainView.setSystemUiVisibility(mainView.getSystemUiVisibility() or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)
-        }
+        applySystemBarIconAppearance()
 
         this@LauncherActivity.uiManager =
             UIManager(this, mainView, main!!.mainPack, canApplyTheme, main!!.executer())
         uiManager!!.scheduleTypefaceRefreshes()
-        installImePaddingHandler(mainView)
+        installWindowInsetsHandler(mainView)
 
         main!!.setRedirectionListener(uiManager!!.buildRedirectionListener())
         uiManager!!.pack = main!!.mainPack
@@ -438,77 +422,53 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
     private val isPlayStoreBuild: Boolean
         get() = "playstore".equals(BuildConfig.FLAVOR, ignoreCase = true)
 
-    private fun installImePaddingHandler(mainView: View) {
+    private fun applySystemBarIconAppearance() {
+        val lightIcons = XMLPrefsManager.getBoolean(Ui.statusbar_light_icons)
+        WindowCompat.getInsetsController(window, window.decorView).run {
+            isAppearanceLightStatusBars = !lightIcons
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                isAppearanceLightNavigationBars = !lightIcons
+            }
+        }
+    }
+
+    private fun installWindowInsetsHandler(mainView: View) {
         val originalLeft = mainView.getPaddingLeft()
         val originalTop = mainView.getPaddingTop()
         val originalRight = mainView.getPaddingRight()
         val originalBottom = mainView.getPaddingBottom()
-        val originalNavigationBarColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-            getWindow().getNavigationBarColor()
-        else
-            Color.BLACK
 
         ViewCompat.setOnApplyWindowInsetsListener(
             mainView,
             OnApplyWindowInsetsListener { view: View?, insets: WindowInsetsCompat? ->
+                val safeInsets = insets!!.getInsets(
+                    WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+                )
                 val imeVisible = insets!!.isVisible(WindowInsetsCompat.Type.ime())
                 val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                val systemBottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+                val systemBottom = safeInsets.bottom
                 val keyboardOffset = max(0, imeBottom - systemBottom)
-                applyImeBackgroundColor(imeVisible, originalNavigationBarColor)
 
                 if (this@LauncherActivity.uiManager != null) {
-                    uiManager!!.applyImeBottomOffset(keyboardOffset, imeVisible)
+                    uiManager!!.applyWindowInsets(
+                        safeInsets.left,
+                        safeInsets.top,
+                        safeInsets.right,
+                        safeInsets.bottom,
+                        keyboardOffset,
+                        imeVisible
+                    )
                 } else {
                     view!!.setPadding(
-                        originalLeft,
-                        originalTop,
-                        originalRight,
-                        originalBottom + keyboardOffset
+                        originalLeft + safeInsets.left,
+                        originalTop + safeInsets.top,
+                        originalRight + safeInsets.right,
+                        originalBottom + safeInsets.bottom + keyboardOffset
                     )
                 }
                 insets
             })
         ViewCompat.requestApplyInsets(mainView)
-    }
-
-    private fun applyImeBackgroundColor(imeVisible: Boolean, originalNavigationBarColor: Int) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP
-            || !getBoolean(Ui.system_wallpaper)
-        ) {
-            return
-        }
-
-        val window = getWindow()
-        if (window == null) {
-            return
-        }
-
-        window.setNavigationBarColor(
-            if (imeVisible)
-                resolveImeBackgroundColor()
-            else
-                originalNavigationBarColor
-        )
-    }
-
-    private fun resolveImeBackgroundColor(): Int {
-        val overlayColor = getColor(Theme.overlay_color)
-        if (Color.alpha(overlayColor) > 0) {
-            return overlayColor
-        }
-
-        val terminalColor = getColor(Theme.window_terminal_bg)
-        if (Color.alpha(terminalColor) > 0) {
-            return terminalColor
-        }
-
-        val backgroundColor = getColor(Theme.bg_color)
-        if (Color.alpha(backgroundColor) > 0) {
-            return backgroundColor
-        }
-
-        return Color.BLACK
     }
 
     override fun onResume() {
@@ -520,19 +480,10 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
         }
     }
 
-    private fun fixOrientation() {
-        val orientation = XMLPrefsManager.getInt(Behavior.orientation)
-        if (orientation == 1) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-        } else if (orientation == 0) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-        } else {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
-        }
-    }
-
     fun applyOrientationPreference() {
-        fixOrientation()
+        if (this@LauncherActivity.uiManager != null) {
+            uiManager!!.refreshResponsiveLandscapeLayout()
+        }
     }
 
     override fun onStart() {
@@ -668,7 +619,7 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
-        permissions: Array<String?>,
+        permissions: Array<String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -682,9 +633,9 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent != null && intent.hasExtra(Reloadable.MESSAGE)) {
+        if (intent.hasExtra(Reloadable.MESSAGE)) {
             reload()
         }
     }

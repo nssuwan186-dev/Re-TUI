@@ -1,7 +1,5 @@
 package ohi.andre.consolelauncher.commands.main.raw
 
-import android.app.Activity
-import android.content.pm.ActivityInfo
 import java.util.Locale
 import ohi.andre.consolelauncher.LauncherActivity
 import ohi.andre.consolelauncher.R
@@ -45,30 +43,28 @@ class orientation : CommandAbstraction {
             }
 
             if (mode == MODE_LANDSCAPE || mode == VALUE_LANDSCAPE) {
-                setOrientation(pack, VALUE_LANDSCAPE, ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-                return "Landscape mode enabled. Use orientation portrait or orientation auto to change it."
+                setOrientation(pack, VALUE_LANDSCAPE)
+                return "Landscape preference saved. Android controls the window orientation; rotate the device or resize the window to use landscape."
             }
 
             if (mode == MODE_PORTRAIT || mode == VALUE_PORTRAIT) {
-                setOrientation(pack, VALUE_PORTRAIT, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-                return "Portrait mode enabled. Use orientation landscape or orientation auto to change it."
+                setOrientation(pack, VALUE_PORTRAIT)
+                return "Portrait preference saved. Android controls the window orientation; rotate the device or resize the window to use portrait."
             }
 
             if (mode == MODE_AUTO || mode == VALUE_AUTO || mode == "autorotate" || mode == "auto-rotate") {
-                setOrientation(pack, VALUE_AUTO, ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
-                return "Auto-rotate enabled. Use orientation portrait or orientation landscape to pin it."
+                setOrientation(pack, VALUE_AUTO)
+                return "Auto orientation preference saved. Re:T-UI will adapt to the current device or window orientation."
             }
 
             return "Unknown orientation: $input\nUsage: orientation portrait|landscape|auto"
         }
 
-        private fun setOrientation(pack: ExecutePack, value: String, fallbackOrientation: Int) {
+        private fun setOrientation(pack: ExecutePack, value: String) {
             LauncherSettings.set(pack.context, Behavior.orientation, value)
 
             if (pack.context is LauncherActivity) {
                 (pack.context as LauncherActivity).applyOrientationPreference()
-            } else if (pack.context is Activity) {
-                (pack.context as Activity).requestedOrientation = fallbackOrientation
             }
         }
 

@@ -11,6 +11,7 @@ import ohi.andre.consolelauncher.R
 import ohi.andre.consolelauncher.UIManager
 import ohi.andre.consolelauncher.commands.CommandAbstraction
 import ohi.andre.consolelauncher.commands.ExecutePack
+import ohi.andre.consolelauncher.commands.tuixt.WidgetConfigActivity
 import ohi.andre.consolelauncher.commands.tuixt.WidgetEditorActivity
 import ohi.andre.consolelauncher.managers.modules.ModuleManager
 import ohi.andre.consolelauncher.managers.widgets.LuaWidgetEngine
@@ -57,6 +58,21 @@ class widget : CommandAbstraction {
             }
             openEditor(pack, id)
             return "Opening widget editor: " + formatWidget(id)
+        }
+
+        if ("-config" == option || "-prefs" == option) {
+            if (args.size < 2) return pack.context.getString(R.string.help_widget)
+            val id = LuaWidgetManager.normalizeId(args.get(1))
+            if (TextUtils.isEmpty(id)) return "Invalid widget id."
+            if (!LuaWidgetManager.exists(id)) return "Unknown widget: " + id
+            if (!LuaWidgetManager.hasConfig(id)) return "No config surface: " + formatWidget(id)
+            if (!LuaWidgetManager.isEnabled(id)) return "Widget disabled: " + formatWidget(id) + "\nUse widget -enable " + id + "."
+            val trust = LuaWidgetManager.trustStatus(id)
+            if (!trust.trusted) {
+                return trustSummary("Widget config blocked", id, trust)
+            }
+            openConfig(pack, id)
+            return "Opening widget config: " + formatWidget(id)
         }
 
         if ("-show" == option) {
@@ -315,7 +331,7 @@ class widget : CommandAbstraction {
     private fun listWidgets(pack: ExecutePack): String {
         val ids = LuaWidgetManager.listIds()
         return ("Lua widgets: " + (if (ids.isEmpty()) "none" else formatWidgets(ids))
-                + "\nUse widget -add [name], widget -new [name], widget -edit [id], widget -rename [old] [new], widget -show [id], widget -refresh [id], widget -check [id], widget -info [id], widget -approve [id], widget -copy-error [id], widget -disable|-enable [id], widget -export [id], widget -expand|-collapse|-toggle [id], widget -rm [id].")
+                + "\nUse widget -add [name], widget -new [name], widget -edit [id], widget -config [id], widget -rename [old] [new], widget -show [id], widget -refresh [id], widget -check [id], widget -info [id], widget -approve [id], widget -copy-error [id], widget -disable|-enable [id], widget -export [id], widget -expand|-collapse|-toggle [id], widget -rm [id].")
     }
 
     private fun formatWidgets(ids: MutableList<String?>): String {
@@ -363,6 +379,12 @@ class widget : CommandAbstraction {
     private fun openEditor(pack: ExecutePack, id: String?) {
         val intent = Intent(pack.context, WidgetEditorActivity::class.java)
         intent.putExtra(WidgetEditorActivity.EXTRA_WIDGET_ID, id)
+        (pack.context as Activity).startActivity(intent)
+    }
+
+    private fun openConfig(pack: ExecutePack, id: String?) {
+        val intent = Intent(pack.context, WidgetConfigActivity::class.java)
+        intent.putExtra(WidgetConfigActivity.EXTRA_WIDGET_ID, id)
         (pack.context as Activity).startActivity(intent)
     }
 

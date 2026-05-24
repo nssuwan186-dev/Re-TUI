@@ -454,6 +454,7 @@
       <div class="cta-row">
         <a href="#first-widget">Create a widget</a>
         <a class="secondary" href="#config">Config forms</a>
+        <a class="secondary" href="#habit-example">Habit experiment</a>
         <a class="secondary" href="index.html#lua-scripting">Back to screenshots</a>
       </div>
     </section>
@@ -653,6 +654,25 @@ end</pre>
       </div>
     </section>
 
+    <section class="guide split" id="habit-example">
+      <div>
+        <div class="kicker">Experiment module</div>
+        <h2>Habit tracking stays removable.</h2>
+        <p>The habit tracker is a Lua widget example, not a built-in module. It uses the generic config form, notification reminder API, and glyph progress renderer, then opens through <code>widget -show habit_tracker</code> like any other user script.</p>
+        <div class="command-list">
+          <div><strong>Source:</strong> <code>docs/examples/habit_tracker.lua</code>.</div>
+          <div><strong>Install:</strong> run <code>widget -add habit_tracker</code>, paste the script, save, approve notifications, then <code>widget -show habit_tracker</code>.</div>
+          <div><strong>Edit habits:</strong> use the active module <code>edit</code> chip or <code>widget -config habit_tracker</code>.</div>
+        </div>
+      </div>
+      <div>
+        <h3>Habit line format</h3>
+        <pre>Meditate | daily | 08:30
+Walk | daily | 18:00
+Read docs | once | 2026-05-24 21:00</pre>
+      </div>
+    </section>
+
     <section class="guide split" id="persistence">
       <div>
         <div class="kicker">Persistence</div>
@@ -742,6 +762,10 @@ end</pre>
           <p><code>date</code>, <code>fmt</code> including bounded Unicode <code>progress_bar(value, max, width)</code>, <code>clock</code> for timer, stopwatch, and Pomodoro state, <code>strings</code>, <code>colors</code>, <code>debug</code>, <code>system</code>, and <code>aio</code> cover common launcher-safe work.</p>
         </div>
         <div class="tile">
+          <h3>Reminders</h3>
+          <p><code>reminders:daily(id, title, "HH:MM")</code>, <code>reminders:once(id, title, "yyyy-mm-dd HH:MM")</code>, <code>reminders:cancel(id)</code>, and <code>reminders:cancel_prefix(prefix)</code> schedule local notifications and require declared permission.</p>
+        </div>
+        <div class="tile">
           <h3>Network</h3>
           <p><code>http:get</code>, <code>http:post</code>, <code>http:put</code>, and <code>http:delete</code> return through network callbacks and require declared permission.</p>
         </div>
@@ -792,10 +816,15 @@ end</pre>
               <td>Run <code>on_tick(n)</code> while the widget is the active open module.</td>
               <td>Intervals are clamped; use this for visible live state only.</td>
             </tr>
+            <tr>
+              <td><code>notifications</code></td>
+              <td>Schedule local notifications through the Lua <code>reminders</code> helper.</td>
+              <td>Use stable ids so widgets can replace or cancel their own reminders.</td>
+            </tr>
           </tbody>
         </table>
       </div>
-      <pre>-- permissions = "network,clipboard,local-files,active-tick,vibrate"
+      <pre>-- permissions = "network,clipboard,local-files,active-tick,vibrate,notifications"
 -- retui = "1"</pre>
       <div class="note">
         <p><strong>Reality check:</strong> widgets should stay small. If a script needs background daemons, Linux CLIs, Android shell access, or heavy parsing, build a Termux-backed module and let the widget surface remain light.</p>

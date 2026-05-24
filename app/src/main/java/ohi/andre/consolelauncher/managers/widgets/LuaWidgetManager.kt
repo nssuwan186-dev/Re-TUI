@@ -65,7 +65,8 @@ object LuaWidgetManager {
             "clipboard",
             "vibrate",
             "local-files",
-            "active-tick"
+            "active-tick",
+            "notifications"
         )
     }
 
@@ -198,6 +199,15 @@ object LuaWidgetManager {
 
     fun isDockable(id: kotlin.String?): Boolean {
         return isDockableScript(readScript(normalizeId(id)))
+    }
+
+    fun hasConfig(id: kotlin.String?): Boolean {
+        return hasConfigScript(readScript(normalizeId(id)))
+    }
+
+    fun hasConfigScript(script: kotlin.String?): Boolean {
+        val code = if (script == null) "" else script.lowercase(Locale.getDefault())
+        return code.contains("function on_config") || code.contains("on_config = function")
     }
 
     fun isEnabled(id: kotlin.String?): Boolean {
@@ -474,6 +484,10 @@ object LuaWidgetManager {
                 "widget " + (if (result.expanded) "-collapse " else "-expand ") + normalizeId(id)
             )
         }
+        if (hasConfig(id)) {
+            appendSuggest(out, "edit", "widget -config " + normalizeId(id))
+        }
+        appendSuggest(out, "edit script", "widget -edit " + normalizeId(id))
         if (!hasRefreshButton) {
             appendSuggest(out, "refresh", "module -refresh " + normalizeId(id))
         }
@@ -737,6 +751,10 @@ object LuaWidgetManager {
             capabilities, code.contains("require \"clock\"")
                     || code.contains("require 'clock'")
                     || code.contains("clock:"), "clock"
+        )
+        addCapability(
+            capabilities, code.contains("reminders:")
+                    || code.contains("notify:"), "notifications"
         )
         addCapability(capabilities, code.contains("suggest:"), "suggestions")
         return capabilities

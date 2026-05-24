@@ -1985,6 +1985,8 @@ class SuggestionsManager(
         } else if ("widget" == normalized) {
             suggestWidgetOptions(suggestions, afterLastSpace, beforeLastSpace)
         } else if ("widget -edit" == normalized
+            || "widget -config" == normalized
+            || "widget -prefs" == normalized
             || "widget -check" == normalized
             || "widget -info" == normalized
             || "widget -approve" == normalized

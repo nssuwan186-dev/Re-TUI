@@ -667,6 +667,10 @@ class UIManager(
     private var splitDuoStatusActive = false
     private var duoLayoutMode: String? = DUO_LAYOUT_OFF
     private var activeDuoLayoutMode: String? = DUO_LAYOUT_OFF
+    private var systemInsetLeft = 0
+    private var systemInsetTop = 0
+    private var systemInsetRight = 0
+    private var systemInsetBottom = 0
     private var imeBottomOffset = 0
 
     private val genericBorderCornerRadius: Int
@@ -1416,7 +1420,29 @@ class UIManager(
     }
 
     fun applyImeBottomOffset(keyboardOffset: Int, imeVisible: Boolean) {
+        applyWindowInsets(
+            systemInsetLeft,
+            systemInsetTop,
+            systemInsetRight,
+            systemInsetBottom,
+            keyboardOffset,
+            imeVisible
+        )
+    }
+
+    fun applyWindowInsets(
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+        keyboardOffset: Int,
+        imeVisible: Boolean
+    ) {
         runOnMainThread {
+            systemInsetLeft = max(0, left)
+            systemInsetTop = max(0, top)
+            systemInsetRight = max(0, right)
+            systemInsetBottom = max(0, bottom)
             imeBottomOffset = max(0, keyboardOffset)
             applyDisplayMarginsForConfiguration(currentConfiguration)
             applyTermuxImeBottomPadding()
@@ -1491,7 +1517,7 @@ class UIManager(
             bottomMargins = topMargins
         }
 
-        mRootView.setPadding(0, 0, 0, 0)
+        mRootView.setPadding(systemInsetLeft, systemInsetTop, systemInsetRight, systemInsetBottom)
         val metrics = mContext!!.getResources().getDisplayMetrics()
         applySectionDisplayMargins(mainContainer, topMargins, metrics, 0)
         if (splitDuoStatusActive) {
@@ -2778,6 +2804,8 @@ class UIManager(
             setLuaWidgetExpanded(module, false)
         } else if ("lua_toggle" == command) {
             toggleLuaWidgetExpanded(module)
+        } else if ("lua_reload_widget" == command) {
+            reloadLuaWidget(module)
         }
     }
 
@@ -2875,6 +2903,23 @@ class UIManager(
         runLuaWidgetOperation(
             module,
             LuaWidgetOperation { obj: LuaWidgetEngine? -> obj!!.toggleExpanded() })
+    }
+
+    private fun reloadLuaWidget(widgetId: String?) {
+        val id = LuaWidgetManager.normalizeId(widgetId)
+        if (TextUtils.isEmpty(id)) {
+            return
+        }
+        luaWidgetEngines.remove(id)
+        val modules = modulesForLuaWidget(id)
+        if (modules.isEmpty()) {
+            return
+        }
+        for (module in modules) {
+            renderLuaWidgetModule(module, module == activeModule, false)
+        }
+        updateModuleDockSelection()
+        refreshSuggestionsForActiveModule()
     }
 
     private fun runLuaWidgetOperation(module: String?, operation: LuaWidgetOperation) {

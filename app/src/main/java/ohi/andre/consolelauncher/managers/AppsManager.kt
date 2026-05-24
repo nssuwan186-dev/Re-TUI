@@ -1350,6 +1350,7 @@ class AppsManager(context: Context) : XMLPrefsElement {
         companion object {
             private const val COMPONENT_SEPARATOR = "-"
 
+            @JvmField
             val CREATOR: Parcelable.Creator<LaunchInfo?> =
                 object : Parcelable.Creator<LaunchInfo?> {
                     override fun createFromParcel(`in`: Parcel): LaunchInfo {

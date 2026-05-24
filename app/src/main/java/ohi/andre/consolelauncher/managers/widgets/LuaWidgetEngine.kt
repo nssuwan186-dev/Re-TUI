@@ -190,6 +190,46 @@ class LuaWidgetEngine(
         }
     }
 
+    fun config(): RenderResult {
+        synchronized(this) {
+            try {
+                ensureLoaded()
+                val result = newResult()
+                if (!callIfPresent("on_config")) {
+                    result.body = "No on_config handler in " + id + "."
+                }
+                persistPrefs()
+                lastResult = result
+            } catch (e: Throwable) {
+                lastResult = errorResult(e)
+            }
+            return lastResult.copy()
+        }
+    }
+
+    fun submitConfig(action: String?, values: JSONObject?): RenderResult {
+        synchronized(this) {
+            try {
+                ensureLoaded()
+                val result = newResult()
+                val payload = if (values == null) JSONObject() else values
+                if (!callIfPresent(
+                        "on_config_submit",
+                        LuaValue.valueOf(if (action == null) "" else action),
+                        Companion.jsonToLua(payload)
+                    )
+                ) {
+                    result.body = "No on_config_submit handler in " + id + "."
+                }
+                persistPrefs()
+                lastResult = result
+            } catch (e: Throwable) {
+                lastResult = errorResult(e)
+            }
+            return lastResult.copy()
+        }
+    }
+
     fun setExpanded(expanded: Boolean): RenderResult {
         synchronized(this) {
             try {
@@ -285,6 +325,8 @@ class LuaWidgetEngine(
         globals.set("json", buildJsonTable())
         globals.set("http", buildHttpTable())
         globals.set("system", buildSystemTable())
+        globals.set("reminders", buildRemindersTable())
+        globals.set("notify", globals.get("reminders"))
         globals.set("aio", buildAioTable())
         globals.set("debug", buildDebugTable())
         globals.set("date", buildDateTable())
@@ -588,6 +630,46 @@ class LuaWidgetEngine(
             val label: String = stringAt(args, 2, module)
             if (!TextUtils.isEmpty(module)) {
                 lastResult.commands.add(RenderAction(label, "module -show " + module))
+            }
+        }))
+        ui.set("show_config", UiFunction(UiAction { args: Varargs ->
+            val value: LuaValue = tableArg(args)
+            if (!value.istable()) {
+                lastResult.configJson = ""
+                lastResult.body = appendLine(lastResult.body, "Invalid config schema.")
+                return@UiAction
+            }
+            try {
+                val jsonValue: Any? = luaToJson(value)
+                if (jsonValue is JSONObject) {
+                    lastResult.configJson = jsonValue.toString()
+                } else {
+                    lastResult.configJson = ""
+                    lastResult.body = appendLine(lastResult.body, "Invalid config schema.")
+                }
+            } catch (e: Exception) {
+                lastResult.configJson = ""
+                lastResult.body = appendLine(lastResult.body, "Invalid config schema: " + e.message)
+            }
+        }))
+        ui.set("config", UiFunction(UiAction { args: Varargs ->
+            val value: LuaValue = tableArg(args)
+            if (!value.istable()) {
+                lastResult.configJson = ""
+                lastResult.body = appendLine(lastResult.body, "Invalid config schema.")
+                return@UiAction
+            }
+            try {
+                val jsonValue: Any? = luaToJson(value)
+                if (jsonValue is JSONObject) {
+                    lastResult.configJson = jsonValue.toString()
+                } else {
+                    lastResult.configJson = ""
+                    lastResult.body = appendLine(lastResult.body, "Invalid config schema.")
+                }
+            } catch (e: Exception) {
+                lastResult.configJson = ""
+                lastResult.body = appendLine(lastResult.body, "Invalid config schema: " + e.message)
             }
         }))
         ui.set("show_progress_bar", UiFunction(UiAction { args: Varargs ->
@@ -911,6 +993,70 @@ class LuaWidgetEngine(
             })
         )
         return system
+    }
+
+    private fun buildRemindersTable(): LuaTable {
+        val reminders: LuaTable = LuaTable()
+        reminders.set("daily", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("notifications")
+            val reminderId: String = stringAt(args, 1, "")
+            val title: String = stringAt(args, 2, "")
+            val time: String = stringAt(args, 3, "")
+            val atMillis = LuaWidgetReminderManager.nextDailyMillis(time)
+            if (context == null || TextUtils.isEmpty(reminderId) || atMillis <= 0L) {
+                return@ValueAction LuaValue.FALSE
+            }
+            LuaWidgetReminderManager.schedule(context, id, reminderId, title, atMillis, "daily")
+            LuaValue.TRUE
+        }))
+        reminders.set("once", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("notifications")
+            val reminderId: String = stringAt(args, 1, "")
+            val title: String = stringAt(args, 2, "")
+            val dateTime: String = stringAt(args, 3, "")
+            val atMillis = LuaWidgetReminderManager.parseLocalDateTimeMillis(dateTime)
+            if (context == null || TextUtils.isEmpty(reminderId) || atMillis <= 0L) {
+                return@ValueAction LuaValue.FALSE
+            }
+            LuaWidgetReminderManager.schedule(context, id, reminderId, title, atMillis, "once")
+            LuaValue.TRUE
+        }))
+        reminders.set("schedule", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("notifications")
+            val reminderId: String = stringAt(args, 1, "")
+            val title: String = stringAt(args, 2, "")
+            val atSeconds = numberAt(args, 3, 0.0)
+            val repeat: String = stringAt(args, 4, "once")
+            val atMillis = if (atSeconds > 100000000000.0) atSeconds.toLong() else (atSeconds * 1000.0).toLong()
+            if (context == null || TextUtils.isEmpty(reminderId) || atMillis <= 0L) {
+                return@ValueAction LuaValue.FALSE
+            }
+            LuaWidgetReminderManager.schedule(context, id, reminderId, title, atMillis, repeat)
+            LuaValue.TRUE
+        }))
+        reminders.set("cancel", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("notifications")
+            if (context == null) {
+                return@ValueAction LuaValue.FALSE
+            }
+            LuaWidgetReminderManager.cancel(context, id, stringAt(args, 1, ""))
+            LuaValue.TRUE
+        }))
+        reminders.set("cancel_prefix", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("notifications")
+            if (context == null) {
+                return@ValueAction LuaValue.FALSE
+            }
+            LuaWidgetReminderManager.cancelPrefix(context, id, stringAt(args, 1, ""))
+            LuaValue.TRUE
+        }))
+        reminders.set("list", ValueFunction(ValueAction { args: Varargs ->
+            if (context == null) {
+                return@ValueAction LuaTable()
+            }
+            Companion.jsonToLua(LuaWidgetReminderManager.list(context, id))
+        }))
+        return reminders
     }
 
     private fun buildAioTable(): LuaTable {
@@ -1775,6 +1921,7 @@ class LuaWidgetEngine(
         var expandable: Boolean = false
         var expanded: Boolean = true
         var tickIntervalMs: Long = -1L
+        var configJson: String? = ""
         var buttons: MutableList<String?> = ArrayList<String?>()
         var commands: MutableList<RenderAction?> = ArrayList<RenderAction?>()
         var valueActions: MutableList<RenderValueAction?> = ArrayList<RenderValueAction?>()
@@ -1794,6 +1941,7 @@ class LuaWidgetEngine(
             copy.expandable = expandable
             copy.expanded = expanded
             copy.tickIntervalMs = tickIntervalMs
+            copy.configJson = configJson
             copy.buttons = ArrayList<String?>(buttons)
             copy.commands = ArrayList<RenderAction?>(commands)
             copy.valueActions = ArrayList<RenderValueAction?>(valueActions)
@@ -1862,6 +2010,7 @@ class LuaWidgetEngine(
                 || "colors" == name || "debug" == name || "files" == name
                 || "http" == name || "system" == name || "ui" == name
                 || "suggest" == name || "aio" == name || "clock" == name
+                || "reminders" == name || "notify" == name
             ) {
                 return globals?.get(name) ?: LuaValue.NIL
             }

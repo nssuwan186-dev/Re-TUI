@@ -117,7 +117,7 @@ class NetworkManager(
         if (wifiOn) {
             val connectionInfo = wifiManager.getConnectionInfo()
             if (connectionInfo != null) {
-                wifiName = connectionInfo.getSSID()
+                wifiName = cleanWifiName(connectionInfo.getSSID())
             }
         }
 
@@ -172,10 +172,7 @@ class NetworkManager(
         copy = w3.matcher(copy).replaceAll(if (wifiOn) _true else _false)
         copy = w4.matcher(copy).replaceAll(if (wifiOn) TRUE else FALSE)
         copy = wn.matcher(copy).replaceAll(
-            if (wifiName != null) wifiName.replace(
-                "\"".toRegex(),
-                Tuils.EMPTYSTRING
-            ) else "null"
+            Matcher.quoteReplacement(wifiName ?: if (wifiOn) "connected" else "null")
         )
         copy = d0.matcher(copy).replaceAll(if (mobileOn) one else zero)
         copy = d1.matcher(copy).replaceAll(if (mobileOn) on else off)
@@ -195,6 +192,19 @@ class NetworkManager(
         if (listener != null) {
             listener.onUpdate(UIManager.Label.network, Tuils.span(context, copy, color, size))
         }
+    }
+
+    private fun cleanWifiName(rawSsid: String?): String? {
+        val ssid = rawSsid
+            ?.replace("\"", Tuils.EMPTYSTRING)
+            ?.trim()
+            ?: return null
+
+        if (ssid.isEmpty() || ssid.equals(WifiManager.UNKNOWN_SSID, ignoreCase = true)) {
+            return null
+        }
+
+        return ssid
     }
 
     private fun apply(depth: Int, s: String, on: BooleanArray, vararg ps: Pattern?): String {

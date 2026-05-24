@@ -204,6 +204,18 @@
         </activity>
 
         <activity
+            android:name=".commands.tuixt.WidgetConfigActivity"
+            android:excludeFromRecents="true"
+            android:label="Re:T-UI Widget Config"
+            android:theme="@style/Custom.Popup"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
+            android:exported="false">
+            <meta-data
+                android:name="androidx.core.app.PARENT_ACTIVITY"
+                android:value=".LauncherActivity" />
+        </activity>
+
+        <activity
             android:name=".commands.tuixt.NotesEditorActivity"
             android:excludeFromRecents="true"
             android:label="Re:T-UI Notes"
@@ -251,6 +263,10 @@
 
         <receiver
             android:name=".managers.modules.ReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".managers.widgets.LuaWidgetReminderReceiver"
             android:exported="false" />
 
         <receiver

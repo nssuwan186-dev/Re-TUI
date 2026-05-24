@@ -1200,6 +1200,7 @@ class NotificationService : NotificationListenerService() {
         }
 
         companion object {
+            @JvmField
             val CREATOR: Parcelable.Creator<Notification?> =
                 object : Parcelable.Creator<Notification?> {
                     override fun createFromParcel(`in`: Parcel): Notification {
