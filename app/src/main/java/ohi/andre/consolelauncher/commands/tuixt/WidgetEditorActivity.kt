@@ -362,7 +362,7 @@ class WidgetEditorActivity : Activity() {
     }
 
     private fun capabilityWarning(meta: MutableMap<String?, String?>, code: String?): String {
-        val declared: String = meta.get("permissions")!!
+        val declared: String = meta["permissions"] ?: ""
         val missing = LuaWidgetManager.missingPermissionDeclarations(code)
         val unsupported = LuaWidgetManager.unsupportedPermissions(code)
         if (!unsupported.isEmpty()) {
