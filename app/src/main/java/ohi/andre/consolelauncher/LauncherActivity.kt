@@ -38,6 +38,7 @@ import ohi.andre.consolelauncher.managers.modules.ModuleManager
 import ohi.andre.consolelauncher.managers.notifications.KeeperService
 import ohi.andre.consolelauncher.managers.notifications.NotificationManager
 import ohi.andre.consolelauncher.managers.notifications.NotificationService
+import ohi.andre.consolelauncher.managers.onboarding.GuideManager
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings.invalidate
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings.refreshFromLoadedPrefs
 import ohi.andre.consolelauncher.managers.settings.NotificationSettings.printToOutput
@@ -88,6 +89,7 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
     private var publicIOReceiver: PublicIOReceiver? = null
 
     private var openKeyboardOnStart = false
+    private val pendingReloadMessages = StringBuilder()
     private var canApplyTheme = false
     private var backButtonEnabled = false
 
@@ -395,6 +397,7 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
 
         `in`.`in`(Tuils.EMPTYSTRING)
         uiManager!!.activateTerminalInput(openKeyboardOnStart)
+        restoreGuideSessionAfterReload()
 
         System.gc()
     }
@@ -562,17 +565,38 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
         Tuils.cancelFont()
         val intent = Intent(this, LauncherActivity::class.java)
         val message = getIntent().getCharSequenceExtra(Reloadable.MESSAGE)
-        if (message != null) {
-            intent.putExtra(Reloadable.MESSAGE, message)
+        val pending = pendingReloadMessages.toString()
+        val reloadMessage = when {
+            message != null && pending.isNotEmpty() -> message.toString() + Tuils.NEWLINE + pending
+            message != null -> message.toString()
+            pending.isNotEmpty() -> pending
+            else -> null
+        }
+        if (reloadMessage != null) {
+            intent.putExtra(Reloadable.MESSAGE, reloadMessage)
         }
         finish()
         startActivity(intent)
     }
 
     override fun addMessage(title: String?, message: String?) {
-        if (this@LauncherActivity.uiManager != null) {
-            uiManager!!.setOutput(title + ": " + message, TerminalManager.CATEGORY_OUTPUT)
+        val formatted = title + ": " + message
+        if (pendingReloadMessages.isNotEmpty()) {
+            pendingReloadMessages.append(Tuils.NEWLINE)
         }
+        pendingReloadMessages.append(formatted)
+        if (this@LauncherActivity.uiManager != null) {
+            uiManager!!.setOutput(formatted, TerminalManager.CATEGORY_OUTPUT)
+        }
+    }
+
+    private fun restoreGuideSessionAfterReload() {
+        if (!GuideManager.isActive(this) || this@LauncherActivity.uiManager == null) {
+            return
+        }
+        uiManager!!.setOutput(GuideManager.status(this), TerminalManager.CATEGORY_OUTPUT)
+        LocalBroadcastManager.getInstance(applicationContext)
+            .sendBroadcast(Intent(UIManager.ACTION_UPDATE_SUGGESTIONS))
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
