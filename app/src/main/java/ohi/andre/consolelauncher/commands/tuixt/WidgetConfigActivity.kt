@@ -369,7 +369,7 @@ class WidgetConfigActivity : Activity() {
         TuixtDialog.showConfirm(
             this,
             "Discard Changes?",
-            "Unsaved widget settings will be lost.",
+            "Unsaved Lua module settings will be lost.",
             "Discard",
             "Keep Editing",
             ConfirmAction { this.finish() })

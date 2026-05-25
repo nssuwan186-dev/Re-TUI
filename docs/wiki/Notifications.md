@@ -3,7 +3,7 @@
 Re:T-UI supports two different notification surfaces:
 
 - the output terminal
-- the notification terminal widget
+- the notifications module
 
 ## Access
 
@@ -25,11 +25,11 @@ To enable Android notification access:
 
 ## Notification Terminal
 
-Re:T-UI now includes a dedicated notification terminal widget on the home screen.
+Re:T-UI now includes a dedicated notifications module on the home screen.
 
 It is designed to:
 
-- stay below the music widget
+- stay below the music module
 - remain visually consistent with the terminal theme
 - show one selected notification at a time
 - open the selected notification

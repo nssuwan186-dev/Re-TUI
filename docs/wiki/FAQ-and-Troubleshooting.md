@@ -48,7 +48,7 @@ Then save and retest.
 
 There are two separate notification surfaces:
 
-- notification terminal widget
+- notifications module
 - output terminal history
 
 Use `notifications.xml` and runtime checks to separate them clearly.

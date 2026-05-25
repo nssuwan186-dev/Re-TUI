@@ -4,7 +4,7 @@ This page contains draft store copy for the official Re:T-UI Play Store release.
 
 ## Short Description
 
-Terminal-style Android launcher with deep theming, presets, widgets, and command-first control.
+Terminal-style Android launcher with deep theming, presets, modules, and command-first control.
 
 ## Full Description
 

@@ -275,7 +275,7 @@ class WidgetEditorActivity : Activity() {
                             this,
                             newId
                         ) || LuaWidgetManager.exists(newId))
-                    ) { "Widget id already exists: " + newId }
+                    ) { "Lua module id already exists: " + newId }
                     LuaWidgetManager.rename(widgetId, newId)
                     ModuleManager.renameScriptModule(
                         this,
@@ -329,7 +329,7 @@ class WidgetEditorActivity : Activity() {
 
     private fun updateHeader() {
         if (header != null) {
-            header!!.setText(if (widgetMode) "Widgets" else "Documents")
+            header!!.setText(if (widgetMode) "Lua Modules" else "Documents")
         }
     }
 

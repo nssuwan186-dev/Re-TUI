@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Re:T-UI</title>
-  <meta name="description" content="Re:T-UI is a command-first Android launcher with terminal styling, app drawer management, Lua widgets, modules, presets, Termux integration, and practical wiki-style guides.">
+  <meta name="description" content="Re:T-UI is a command-first Android launcher with terminal styling, app drawer management, Lua modules, Termux modules, presets, Termux integration, and practical wiki-style guides.">
   <style>
     :root {
       color-scheme: dark;
@@ -533,7 +533,7 @@
       <a href="#wiki">Wiki</a>
       <a href="apps.html">Apps</a>
       <a href="modules.html">Modules</a>
-      <a href="widgets.html">Widgets</a>
+      <a href="widgets.html">Lua modules</a>
       <a href="ascii.html">ASCII Lab</a>
       <a href="gallery.html">Presets</a>
       <a href="#downloads">Downloads</a>
@@ -550,7 +550,7 @@
         <span>Product showcase</span>
         <span>Command wiki</span>
         <span>Preset marketplace</span>
-        <span>Module and widget guides</span>
+        <span>Module guides</span>
       </div>
       <div class="cta-row" aria-label="Primary actions">
         <a href="#wiki">Find a guide</a>
@@ -586,11 +586,11 @@
           </div>
         </div>
         <div class="tile">
-          <h3>Modules and widgets</h3>
-          <p>Use dock panels, native modules, Termux modules, and Lua widgets that feel built into the launcher.</p>
+          <h3>Modules</h3>
+          <p>Use dock panels, native modules, Termux modules, and Lua modules that feel built into the launcher.</p>
           <div class="doc-links">
             <a class="doc-link" href="modules.html">Modules</a>
-            <a class="doc-link" href="widgets.html">Widgets</a>
+            <a class="doc-link" href="widgets.html">Lua modules</a>
           </div>
         </div>
         <div class="tile">
@@ -626,8 +626,8 @@
           <figcaption>The settings hub groups setup while preserving the terminal look.</figcaption>
         </figure>
         <figure>
-          <img src="phone-blog-assets/lua-widget-preview.png" alt="Lua widget preview in Re:T-UI">
-          <figcaption>Lua widgets and modules bring small tools directly into the home surface.</figcaption>
+          <img src="phone-blog-assets/lua-widget-preview.png" alt="Lua module preview in Re:T-UI">
+          <figcaption>Lua modules bring small tools directly into the home surface.</figcaption>
         </figure>
       </div>
     </section>
@@ -661,12 +661,12 @@
           </div>
         </div>
         <div class="wiki-card">
-          <div class="path">modules / widgets</div>
+          <div class="path">modules / lua</div>
           <h3>Panels and scripts</h3>
-          <p>Use native modules, script modules, Lua widgets, suggestion chips, and widget config surfaces.</p>
+          <p>Use native modules, Termux modules, Lua modules, suggestion chips, and Lua config surfaces.</p>
           <div class="doc-links">
             <a class="doc-link" href="modules.html">Modules guide</a>
-            <a class="doc-link" href="widgets.html">Widgets guide</a>
+            <a class="doc-link" href="widgets.html">Lua modules guide</a>
           </div>
         </div>
         <div class="wiki-card">
@@ -713,7 +713,7 @@
         <div class="command-card"><strong>apps -tutorial</strong><p>Open the new Apps command guide.</p></div>
         <div class="command-card"><strong>apps -ls</strong><p>Open the app drawer or list visible apps.</p></div>
         <div class="command-card"><strong>module -ls</strong><p>Inspect native and custom modules.</p></div>
-        <div class="command-card"><strong>widget -add focus</strong><p>Create a launcher-native Lua widget.</p></div>
+        <div class="command-card"><strong>module -new lua focus</strong><p>Create a launcher-native Lua module.</p></div>
         <div class="command-card"><strong>termux -setup</strong><p>Print the Termux dispatch checklist.</p></div>
         <div class="command-card"><strong>wallpaper -auto</strong><p>Derive a theme palette from wallpaper.</p></div>
         <div class="command-card"><strong>preset -save name</strong><p>Save a stable theme snapshot.</p></div>
@@ -782,7 +782,7 @@
         <pre>$ help
 $ apps -tutorial
 $ module -ls
-$ widget -ls
+$ module -new lua focus
 $ termux -setup
 $ debug -settings
 $ refresh</pre>

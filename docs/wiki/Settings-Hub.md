@@ -63,7 +63,7 @@ Toolbar Buttons exposes two optional command buttons for the launcher toolbar. E
 This currently includes:
 
 - preferred music app selection
-- music widget behavior through `behavior.xml`
+- music module behavior through `behavior.xml`
 
 ## Terminal UI Rules
 

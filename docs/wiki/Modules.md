@@ -52,37 +52,36 @@ module -show server
 
 Simple stdout becomes the module body.
 
-## Lua Widgets
+## Lua Modules
 
-Lua widgets are an in-app scripting surface for regular users who do not want to manage Termux files. They are saved in Re:T-UI's local `widgets/<id>/main.lua` folder, included in personal backup/restore, and can register as `lua:<id>` modules so they share the same module dock as built-ins and Termux modules.
+Lua modules are an in-app scripting surface for regular users who do not want to manage Termux files. They are saved in Re:T-UI's local `widgets/<id>/main.lua` storage folder for compatibility, included in personal backup/restore, and register as `lua:<id>` modules so they share the same module dock as built-ins and Termux modules.
 
 Test commands:
 
 ```text
-widget -add counter
-widget -new counter
-widget -edit counter
-widget -rename counter better_counter
-widget -show counter
-widget -refresh counter
-widget -check counter
-widget -info counter
-widget -export counter
-widget -toggle counter
-widget -expand counter
-widget -collapse counter
-widget -rm counter
+module -new lua counter
+module -edit counter
+module -rename counter better_counter
+module -show counter
+module -refresh counter
+module -check counter
+module -info counter
+module -approve counter
+module -export counter
+module -toggle counter
+module -expand counter
+module -collapse counter
 ```
 
-The current platform supports launcher-native UI output, native widget buttons, declarative rows/containers/progress layouts, persistent `prefs`, widget-local `files`, JSON, small standard libraries, async HTTP callbacks, expandable state, indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, app/intent/shortcut buttons, active-widget ticking, Lua suggestion scripts, editor paste flow, clipboard export, and launcher/system helpers. See the full scripting reference: [Lua Widgets](./Lua-Widgets.md).
+The current platform supports launcher-native UI output, native module buttons, declarative rows/containers/progress layouts, persistent `prefs`, module-local `files`, JSON, small standard libraries, async HTTP callbacks, expandable state, indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, app/intent/shortcut buttons, active ticking, Lua suggestion scripts, editor paste flow, clipboard export, and launcher/system helpers. See the full scripting reference: [Lua Modules](./Lua-Widgets.md).
 
-Lua permissions are script-level consent only. Scripts that use `network`, `clipboard`, `vibrate`, `local-files`, `active-tick`, `notifications`, `apps`, `intents`, or `shortcuts` must declare `-- permissions = "..."` and be approved with `widget -approve <id>`. Re:T-UI does not add Android manifest permissions for Lua.
+Lua permissions are script-level consent only. Scripts that use `network`, `clipboard`, `vibrate`, `local-files`, `active-tick`, `notifications`, `apps`, `intents`, or `shortcuts` must declare `-- permissions = "..."` and be approved with `module -approve <id>`. Re:T-UI does not add Android manifest permissions for Lua.
 
-Lua scripts can declare `-- retui = "1"` for API compatibility. Runtime failures show recovery controls, and `widget -disable <id>` parks a broken script without deleting it.
+Lua scripts can declare `-- retui = "1"` for API compatibility. Runtime failures show recovery controls, and `module -disable <id>` parks a broken script without deleting it.
 
-Button labels become native widget buttons and matching module suggestion chips. Tapping either dispatches `widget -click <id> <index>`, which calls the widget's `on_click(index)` handler and repaints the active module. Scripts can also expose payload chips with `ui:show_action(label, value)` and handle them with `on_action(value)`.
+Button labels become native module buttons and matching module suggestion chips. Tapping either dispatches `module -click <id> <index>`, which calls the module's `on_click(index)` handler and repaints the active module. Scripts can also expose payload chips with `ui:show_action(label, value)` and handle them with `on_action(value)`.
 
-Active Lua widgets refresh when they are shown. Tapping the widget title forces a refresh, so scripts no longer need to add a default refresh chip just to keep state current. Manual `widget -refresh <id>` and `module -refresh <id>` still work for explicit rerenders.
+Active Lua modules refresh when they are shown. Tapping the module title forces a refresh, so scripts no longer need to add a default refresh chip just to keep state current. Manual `module -refresh <id>` still works for explicit rerenders. The older `widget` command remains as a compatibility alias for existing shared Lua packages.
 
 ## Launcher Variables For Scripts
 

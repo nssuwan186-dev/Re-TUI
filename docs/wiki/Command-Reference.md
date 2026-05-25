@@ -149,7 +149,7 @@ Most important forms:
 
 Notes:
 
-- `notifications -on` and `notifications -off` control the notification terminal widget.
+- `notifications -on` and `notifications -off` control the notifications module.
 - `terminal_notifications` in `notifications.xml` controls printing into the output terminal.
 - `notifications -prev` and `notifications -next` page through the selected notification module item.
 - `notifications -reply` starts a native prompt and replies to the selected notification when Android exposes a reply action.
@@ -275,7 +275,7 @@ TBridge is not the file browser. Use `files` for interactive file navigation, or
 
 ### `module`
 
-Show and manage built-in modules, Termux-backed modules, launcher-backed modules, and prototype Lua widgets.
+Show and manage built-in modules, Termux-backed modules, launcher-backed modules, and Lua modules.
 
 Built-in modules:
 
@@ -293,10 +293,15 @@ Common commands:
 - `module -prompt reminder add`
 - `module -prompt reminder edit`
 - `module -prompt reminder remove`
+- `module -new lua counter`
+- `module -edit counter`
+- `module -config counter`
+- `module -check counter`
+- `module -approve counter`
+- `module -export counter`
 - `module -dock add notifications`
 - `module -dock remove music`
 - `module -add server termux:/data/data/com.termux/files/home/retui/server-health.sh`
-- `module -add counter lua:retui_counter`
 - `module -refresh server`
 - `module -rm server`
 - `module -hide music`
@@ -310,10 +315,11 @@ Design direction:
 
 - modules are Re:T-UI-owned terminal panels, not Android widgets
 - active modules can provide suggestion chips when input is empty
-- script modules should stay text/callback based, with no arbitrary code loaded into Re:T-UI
+- Termux modules should stay text/callback based, with no arbitrary shell code loaded into Re:T-UI
+- Lua modules use the launcher-native Lua runtime for safe panels, buttons, config, and app/intent/shortcut helpers
 - future module sessions will let modules ask users for values step by step
 
-Script modules use Termux for execution and render text back inside a Re:T-UI module window. Prototype Lua widgets use app-local source files and the same dock. `module -rm` removes only Re:T-UI's registry entry; it does not delete the Termux script.
+Termux modules use Termux for execution and render text back inside a Re:T-UI module window. Lua modules use app-local source files and the same dock. `module -rm` removes only Re:T-UI's registry entry; it does not delete the Termux script.
 
 See also: [Modules](./Modules.md).
 
@@ -321,7 +327,7 @@ TBridge is no longer positioned as the file manager backend. Use `files` for fil
 
 ### `widget`
 
-Create, edit, and test prototype Lua widgets from inside Re:T-UI.
+Legacy aliases for Lua module package management. Prefer `module` for new work.
 
 Useful forms:
 
@@ -343,7 +349,7 @@ Useful forms:
 - `widget -collapse counter`
 - `widget -rm counter`
 
-Widgets are saved under Re:T-UI's local widget folder and can register as `lua:<id>` modules. The document name is the module title; the id is the storage/command slug. Widgets can expose indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, expandable/collapsed render modes, active ticking, and clipboard export. Use `widget -add <name>` to open the editor and paste shared Lua manually. Sensitive Lua capabilities require `-- permissions = "..."` metadata and `widget -approve <id>` consent; this does not add Android manifest permissions. Runtime errors surface recovery chips for check/copy-error/disable.
+Lua modules are saved under Re:T-UI's local `widgets/<id>/` storage folder for compatibility and register as `lua:<id>` modules. The document name is the module title; the id is the storage/command slug. Lua modules can expose indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, expandable/collapsed render modes, active ticking, and clipboard export. Use `module -new lua <name>` to open the editor and paste shared Lua manually. Sensitive Lua capabilities require `-- permissions = "..."` metadata and `module -approve <id>` consent; this does not add Android manifest permissions. Runtime errors surface recovery chips for check/copy-error/disable.
 
 ### `webhook`
 

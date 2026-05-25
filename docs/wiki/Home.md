@@ -21,7 +21,7 @@ This wiki is organized like the original upstream docs, but rebuilt around the c
 - [Migration Guide](./Migration-Guide.md)
 - [Preset Sharing](./Preset-Sharing.md)
 - [Termux Integration](./Termux-Integration.md)
-- [Lua Widgets](./Lua-Widgets.md)
+- [Lua Modules](./Lua-Widgets.md)
 - [Modules](./Modules.md)
 - [Re:T-UI Files](./ReTUI-Files.md)
 - [FAQ and Troubleshooting](./FAQ-and-Troubleshooting.md)
@@ -57,7 +57,7 @@ UI surfaces like the app drawer and settings hub exist to make the launcher easi
 - `settings`
 - `files`
 - `module -ls`
-- `widget -add <name>`
+- `module -new lua <name>`
 - `preset -save <name>`
 - `preset -apply <name>`
 - `wallpaper`

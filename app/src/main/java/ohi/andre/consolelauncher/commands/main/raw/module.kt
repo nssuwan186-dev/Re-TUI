@@ -1,5 +1,6 @@
 package ohi.andre.consolelauncher.commands.main.raw
 
+import android.app.Activity
 import android.content.Intent
 import android.text.TextUtils
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -7,8 +8,10 @@ import ohi.andre.consolelauncher.R
 import ohi.andre.consolelauncher.UIManager
 import ohi.andre.consolelauncher.commands.CommandAbstraction
 import ohi.andre.consolelauncher.commands.ExecutePack
+import ohi.andre.consolelauncher.commands.tuixt.WidgetEditorActivity
 import ohi.andre.consolelauncher.managers.modules.ModuleManager
 import ohi.andre.consolelauncher.managers.modules.ModulePromptManager
+import ohi.andre.consolelauncher.managers.widgets.LuaWidgetManager
 import ohi.andre.consolelauncher.tuils.Tuils
 import java.util.Arrays
 import java.util.Locale
@@ -26,10 +29,21 @@ class module : CommandAbstraction {
             input.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val option = parts[0]!!.lowercase(Locale.getDefault())
 
+        if ("-new" == option || "-create" == option) {
+            return createLuaModule(pack, input)
+        }
+
+        if (isLuaModuleCommand(option)) {
+            return delegateLuaCommand(pack, input)
+        }
+
         if ("-show" == option || "-open" == option) {
             if (parts.size < 2) return pack.context.getString(R.string.help_module)
             val module = ModuleManager.normalize(parts[1])
             if (!ModuleManager.isKnown(pack.context, module)) {
+                if (LuaWidgetManager.exists(module)) {
+                    return delegateLuaCommand(pack, "-show " + module)
+                }
                 return "Unknown module: " + parts[1]
             }
             send(pack, "show", module)
@@ -97,6 +111,9 @@ class module : CommandAbstraction {
             if (parts.size < 2) return pack.context.getString(R.string.help_module)
             val module = ModuleManager.normalize(parts[1])
             if (!ModuleManager.isKnown(pack.context, module)) {
+                if (LuaWidgetManager.exists(module)) {
+                    return delegateLuaCommand(pack, "-refresh " + module)
+                }
                 return "Unknown module: " + parts[1]
             }
             if (TextUtils.isEmpty(ModuleManager.getModuleSource(pack.context, module))) {
@@ -148,14 +165,78 @@ class module : CommandAbstraction {
     }
 
     private fun listModules(pack: ExecutePack): String {
-        return ("Modules: " + TextUtils.join(", ", ModuleManager.listAll(pack.context))
+        val modules = ModuleManager.listAll(pack.context)
+        val localLua = ArrayList<String?>()
+        for (id in LuaWidgetManager.listIds()) {
+            if (!modules.contains(id)) {
+                localLua.add(id)
+            }
+        }
+        return ("Modules: " + TextUtils.join(", ", modules)
+                + (if (localLua.isEmpty()) "" else "\nLocal Lua modules: " + TextUtils.join(", ", localLua))
                 + "\nDock: " + formatDock(pack)
-                + "\nUse module -add [name] termux:/path/script.sh, module -refresh [name], module -show [name], events -access, module -prompt reminder add|edit|remove, module -hide [name], module -dock add [name], module -dock remove [name], module -rm [name], module -close.")
+                + "\nUse module -new lua [name], module -edit [name], module -config [name], module -check [name], module -add [name] termux:/path/script.sh, module -refresh [name], module -show [name], events -access, module -prompt reminder add|edit|remove, module -hide [name], module -dock add [name], module -dock remove [name], module -rm [name], module -close.")
     }
 
     private fun formatDock(pack: ExecutePack): String? {
         val dock = ModuleManager.getDock(pack.context)
         return if (dock.isEmpty()) "<empty>" else TextUtils.join(", ", dock)
+    }
+
+    private fun createLuaModule(pack: ExecutePack, input: String): String? {
+        val args = Tuils.splitArgs(input)
+        if (args.size < 3 || !"lua".equals(args.get(1), ignoreCase = true)) {
+            return pack.context.getString(R.string.help_module)
+        }
+        val requestedName = TextUtils.join(" ", args.subList(2, args.size)).trim { it <= ' ' }
+        val id = LuaWidgetManager.idFromName(requestedName)
+        if (TextUtils.isEmpty(id)) {
+            return "Invalid Lua module id."
+        }
+        if (!LuaWidgetManager.exists(id)) {
+            LuaWidgetManager.save(id, requestedName, LuaWidgetManager.newWidgetTemplate(id))
+        }
+        val intent = Intent(pack.context, WidgetEditorActivity::class.java)
+        intent.putExtra(WidgetEditorActivity.EXTRA_WIDGET_ID, id)
+        (pack.context as Activity).startActivity(intent)
+        return "Lua module created: " + id
+    }
+
+    private fun isLuaModuleCommand(option: String?): Boolean {
+        return "-edit" == option
+                || "-config" == option
+                || "-prefs" == option
+                || "-check" == option
+                || "-info" == option
+                || "-approve" == option
+                || "-trust" == option
+                || "-copy-error" == option
+                || "-disable" == option
+                || "-enable" == option
+                || "-export" == option
+                || "-rename" == option
+                || "-mv" == option
+                || "-click" == option
+                || "-action" == option
+                || "-send" == option
+                || "-input" == option
+                || "-dialog" == option
+                || "-expand" == option
+                || "-collapse" == option
+                || "-toggle" == option
+    }
+
+    private fun delegateLuaCommand(pack: ExecutePack, input: String): String? {
+        val previousArgs = pack.args
+        val previousIndex = pack.currentIndex
+        return try {
+            pack.set(arrayOf(input))
+            pack.currentIndex = 0
+            widget().exec(pack)
+        } finally {
+            pack.set(previousArgs)
+            pack.currentIndex = previousIndex
+        }
     }
 
     private fun send(pack: ExecutePack, command: String?, module: String?) {

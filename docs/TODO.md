@@ -530,10 +530,10 @@ Goal: make advanced file management a Termux power-user option while keeping the
   - The settings/Themer terminal surface now forces an opaque internal background.
   - The outside overlay can still let wallpaper bleed through without showing prior Themer screens under the current one.
 
-- Widget / terminal polish
-  - Added separate theme keys for music and notification widget border/text colors.
+- Module / terminal polish
+  - Added separate theme keys for music and notification module border/text colors.
   - Added auto-color support for those new keys.
-  - Widget border labels now paint an opaque surface mask so border lines do not show through transparent themes.
+  - Module border labels now paint an opaque surface mask so border lines do not show through transparent themes.
   - Music song line now uses `Title:` instead of repeating `Now Playing:`.
   - Toolbar app drawer icon background was aligned with the other toolbar buttons.
 
@@ -553,8 +553,8 @@ Goal: make advanced file management a Termux power-user option while keeping the
   - Stabilized the `PREV`, `PLAY/PAUSE`, and `NEXT` row with weighted button widths.
   - Reduced oversized title/singer text while keeping controls readable.
 
-- Normalized terminal border behavior for current widget surfaces.
-  - `enable_dashed_border=false` now removes the terminal-style widget border.
+- Normalized terminal border behavior for current module surfaces.
+  - `enable_dashed_border=false` now removes the terminal-style module border.
   - `enable_dashed_border=true` with gap `0` remains the solid-border path.
 
 - Started the layered home terminal cutover.
@@ -574,7 +574,7 @@ Goal: make advanced file management a Termux power-user option while keeping the
   - Keep the idea of user-extensible panels, but rebuild it as Re-TUI-owned modules.
   - Do not support KWGT/native Android widgets for now; they break visual consistency and add provider/OEM instability.
 
-- Fix music widget control sizing (done on `codex/termux-integration`; pending wider device testing)
+- Fix music module control sizing (done on `codex/termux-integration`; pending wider device testing)
   - Restore readable `PREV`, `PLAY/PAUSE`, and `NEXT` text while keeping the compact widget height.
   - Make the control row stable across narrow devices and large user font settings.
   - Keep the visualizer as the background layer and avoid button squish when text scale changes.
@@ -693,13 +693,13 @@ Goal: make advanced file management a Termux power-user option while keeping the
 ## Deferred / Watchlist
 
 - True cutout borders for floating tabs
-  - Current widget/module tabs use an opaque surface mask to hide the parent border line.
+  - Current module tabs use an opaque surface mask to hide the parent border line.
   - Research found Material `TextInputLayout` has a similar outlined floating-label cutout behavior, but it is text-field-specific and not a good visual fit for Re-TUI.
   - Preferred future approach: build a small custom terminal border view/drawable that draws the border in segments and skips the tab rectangle.
 
 ## Next Module Roadmap - Interactive Terminal Tools
 
-- Position modules as small terminal instruments, not passive widgets.
+- Position modules as small terminal instruments, not passive panels.
 - Add module inspection:
   - `module -inspect <name>`
   - show type, path, dock state, active state, last refresh time, last exit code, stderr summary, cached suggestions, refresh policy.

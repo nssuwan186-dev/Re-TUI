@@ -1167,7 +1167,7 @@ enum class Behavior : XMLPrefsSave {
         }
 
         override fun info(): String? {
-            return "If true, a music player widget will be shown in the context container"
+            return "If true, the music module will be shown in the context container"
         }
 
         override fun type(): String? {
@@ -1180,7 +1180,7 @@ enum class Behavior : XMLPrefsSave {
         }
 
         override fun info(): String? {
-            return "If true, Re:T-UI will automatically show the music widget when music starts playing"
+            return "If true, Re:T-UI will automatically show the music module when music starts playing"
         }
 
         override fun type(): String? {

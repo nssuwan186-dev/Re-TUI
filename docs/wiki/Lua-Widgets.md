@@ -1,41 +1,39 @@
-# Lua Widgets
+# Lua Modules
 
-Lua widgets are Re:TUI's in-app scripting surface. They are meant for users who want reactive launcher widgets without setting up Termux files. Termux remains the shell automation surface; Lua is the launcher-native UI surface.
+Lua modules are Re:TUI's in-app scripting surface. They are meant for users who want reactive launcher panels without setting up Termux files. Termux remains the shell automation surface; Lua is the launcher-native UI surface.
 
-Widgets live under Re:TUI's local `widgets/<id>/` folder and are included in personal backup/restore. A saved widget can be registered as a `lua:<id>` module, so it shares the same module dock as built-in modules and Termux-backed modules. The document name is the user-facing module title; the id is the generated slug used for commands and storage.
+Lua modules live under Re:TUI's local `widgets/<id>/` storage folder for compatibility and are included in personal backup/restore. A saved Lua module is registered as a `lua:<id>` module, so it shares the same module dock as built-in modules and Termux-backed modules. The document name is the user-facing module title; the id is the generated slug used for commands and storage.
 
-Lua files can also be suggestion scripts with `-- type = "suggest"`. These are installed locally like widgets, but they do not appear in the module dock. They contribute command chips while the user types.
+Lua files can also be suggestion scripts with `-- type = "suggest"`. These are installed locally like Lua modules, but they do not appear in the module dock. They contribute command chips while the user types.
 
 ## Commands
 
 ```text
-widget -ls
-widget -add counter
-widget -new counter
-widget -edit counter
-widget -rename counter better_counter
-widget -show counter
-widget -refresh counter
-widget -check counter
-widget -info counter
-widget -approve counter
-widget -copy-error counter
-widget -disable counter
-widget -enable counter
-widget -export counter
-widget -toggle counter
-widget -expand counter
-widget -collapse counter
-widget -rm counter
+module -ls
+module -new lua counter
+module -edit counter
+module -rename counter better_counter
+module -show counter
+module -refresh counter
+module -check counter
+module -info counter
+module -approve counter
+module -copy-error counter
+module -disable counter
+module -enable counter
+module -export counter
+module -toggle counter
+module -expand counter
+module -collapse counter
 ```
 
-Changing the document name in the editor updates the module title. If the name changes enough to produce a different slug, Re:TUI moves the local widget folder and updates module dock references. You can do the same from the terminal with `widget -rename`.
+Changing the document name in the editor updates the module title. If the name changes enough to produce a different slug, Re:TUI moves the local Lua module folder and updates module dock references. You can do the same from the terminal with `module -rename`.
 
-`widget -add <name>` opens the editor with a starter script. Users can paste Lua from a marketplace, Reddit, GitHub, or a friend, then save/run. `widget -new <name>` is the same creation flow kept for command compatibility.
+`module -new lua <name>` opens the editor with a starter script. Users can paste Lua from a marketplace, Reddit, GitHub, or a friend, then save/run. The older `widget -add <name>` and `widget -new <name>` commands remain compatibility aliases.
 
-`widget -export <id>` copies a shareable JSON package to the clipboard. Re:TUI does not auto-install clipboard packages; pasted Lua should go through the editor so the user sees and names what they are adding.
+`module -export <id>` copies a shareable JSON package to the clipboard. Re:TUI does not auto-install clipboard packages; pasted Lua should go through the editor so the user sees and names what they are adding.
 
-`widget -check <id>` loads and renders the script once, returning Lua errors without opening it as the active module. `widget -info <id>` shows metadata parsed from the script header.
+`module -check <id>` loads and renders the script once, returning Lua errors without opening it as the active module. `module -info <id>` shows metadata parsed from the script header.
 
 Scripts that use sensitive Re:TUI Lua capabilities must declare them before they run:
 
@@ -43,17 +41,17 @@ Scripts that use sensitive Re:TUI Lua capabilities must declare them before they
 -- permissions = "network,clipboard,local-files,active-tick,vibrate,notifications,apps,intents,shortcuts"
 ```
 
-These are script permissions, not Android manifest permissions. Re:TUI does not expand launcher permissions for Lua. The supported script permissions are `network`, `clipboard`, `vibrate`, `local-files`, `active-tick`, `notifications`, `apps`, `intents`, and `shortcuts`. `widget -check <id>` reports missing or unsupported metadata without executing blocked scripts. `widget -approve <id>` stores consent for the current script hash and permission set; changing the script or adding a capability requires approval again.
+These are script permissions, not Android manifest permissions. Re:TUI does not expand launcher permissions for Lua. The supported script permissions are `network`, `clipboard`, `vibrate`, `local-files`, `active-tick`, `notifications`, `apps`, `intents`, and `shortcuts`. `module -check <id>` reports missing or unsupported metadata without executing blocked scripts. `module -approve <id>` stores consent for the current script hash and permission set; changing the script or adding a capability requires approval again.
 
 Use `-- retui = "1"` to declare the Re:TUI Lua API version a script targets. Missing metadata defaults to API `1` for compatibility.
 
-When a script fails at runtime, the widget panel adds recovery chips for `edit`, `check`, `copy error`, and `disable`. `widget -disable <id>` parks a script without deleting it; `widget -enable <id>` makes it runnable again after edits. `widget -copy-error <id>` copies the last saved Lua error for sharing/debugging. Script execution is guarded by a short runtime timeout so accidental infinite loops fail as Lua errors instead of hanging indefinitely.
+When a script fails at runtime, the Lua module panel adds recovery chips for `edit`, `check`, `copy error`, and `disable`. `module -disable <id>` parks a script without deleting it; `module -enable <id>` makes it runnable again after edits. `module -copy-error <id>` copies the last saved Lua error for sharing/debugging. Script execution is guarded by a short runtime timeout so accidental infinite loops fail as Lua errors instead of hanging indefinitely.
 
 ## Script Shape
 
 ```lua
 -- name = "Counter"
--- type = "widget"
+-- type = "module"
 
 local prefs = require "prefs"
 
@@ -77,10 +75,10 @@ end
 ## Lifecycle
 
 - `on_load()` runs once when the Lua engine loads the script.
-- `on_resume()` runs when the widget is rendered, including when the widget is shown.
-- `on_alarm()` runs on the first render, then no more than once every 30 minutes unless the user runs `widget -refresh` / `module -refresh` or taps the widget title to force a refresh.
-- `on_tick(n)` runs only while the widget is the active open module and only after the script opts in with `ui:set_tick_interval(seconds)`. Intervals are clamped between 1 and 60 seconds.
-- `on_click(index)` runs when a widget button suggestion is tapped.
+- `on_resume()` runs when the Lua module is rendered, including when the module is shown.
+- `on_alarm()` runs on the first render, then no more than once every 30 minutes unless the user runs `module -refresh` or taps the module title to force a refresh.
+- `on_tick(n)` runs only while the Lua module is the active open module and only after the script opts in with `ui:set_tick_interval(seconds)`. Intervals are clamped between 1 and 60 seconds.
+- `on_click(index)` runs when a module button suggestion is tapped.
 - `on_action(value)` runs when a parameterized action suggestion is tapped. `on_command(value)` and `on_submit(value)` are fallback names for the same event.
 - `on_dialog_action(index)` runs when a script-owned choice list is answered. `-1` means cancel.
 - `on_network_result(body, code, headers)` runs after `http:get/post/put/delete`.
@@ -126,16 +124,16 @@ end
 - `ui:collapse()`
 - `ui:toggle()`
 
-Button labels render as native widget buttons and matching dock suggestion chips. Tapping either dispatches `widget -click <id> <index>`.
-Action labels become dock suggestion chips that dispatch `widget -action <id> <value>`, which lets widgets receive text or other small parameters without parsing the whole command line.
-Dialog/list items become suggestion chips that dispatch `widget -dialog <id> <index>`, keeping choices in the Re:TUI suggestion surface instead of opening a separate Android modal.
-Command labels render as native widget buttons and matching chips that execute the command directly.
+Button labels render as native module buttons and matching dock suggestion chips. Tapping either dispatches `module -click <id> <index>`.
+Action labels become dock suggestion chips that dispatch `module -action <id> <value>`, which lets Lua modules receive text or other small parameters without parsing the whole command line.
+Dialog/list items become suggestion chips that dispatch `module -dialog <id> <index>`, keeping choices in the Re:TUI suggestion surface instead of opening a separate Android modal.
+Command labels render as native module buttons and matching chips that execute the command directly.
 
-The active widget no longer needs a default refresh chip. Opening a widget renders it, and tapping the widget title forces a refresh. Manual `widget -refresh <id>` and `module -refresh <id>` still work.
+The active Lua module no longer needs a default refresh chip. Opening a module renders it, and tapping the module title forces a refresh. Manual `module -refresh <id>` still works.
 
 ## Native Layout and Buttons
 
-`ui:render(table)` lets a widget describe a small native panel instead of only returning text. The renderer currently supports:
+`ui:render(table)` lets a Lua module describe a small native panel instead of only returning text. The renderer currently supports:
 
 - `text` objects: `{ type = "text", text = "..." }`
 - `row` objects with `children`
@@ -154,7 +152,7 @@ function render()
     ui:render({
         { type = "text", text = "Launcher-native controls" },
         { type = "row", children = {
-            { type = "text", text = "Widget state" },
+            { type = "text", text = "Module state" },
             { type = "progress", label = "Done", value = 2, max = 5, width = 8 },
         }},
     })
@@ -174,11 +172,11 @@ function on_click(index)
 end
 ```
 
-Example parameterized todo widget:
+Example parameterized todo module:
 
 ```lua
 -- name = "Quick Todo"
--- type = "widget"
+-- type = "module"
 -- retui = "1"
 
 function ensure()
@@ -197,7 +195,7 @@ end
 function render()
     ui:set_title("Quick Todo")
     ui:show_lines(lines())
-    ui:show_action("Add create good widgets", "create good widgets")
+    ui:show_action("Add create good modules", "create good modules")
     ui:show_action("Add review release", "review release")
 end
 
@@ -212,7 +210,7 @@ function on_action(text)
 end
 ```
 
-Expandable state is stored per widget. A script can render compact and expanded modes:
+Expandable state is stored per Lua module. A script can render compact and expanded modes:
 
 ```lua
 function on_resume()
@@ -225,7 +223,7 @@ function on_resume()
 end
 ```
 
-Ticking widgets update only while open:
+Ticking Lua modules update only while open:
 
 ```lua
 function on_resume()
@@ -241,7 +239,7 @@ end
 
 ## Persistent Settings
 
-`prefs` is a per-widget persistent Lua table:
+`prefs` is a per-module persistent Lua table:
 
 ```lua
 local prefs = require "prefs"
@@ -264,7 +262,7 @@ Helper methods are available when you prefer explicit access:
 
 ## Local Files
 
-`files` stores small widget-owned text files under `widgets/<id>/files/`.
+`files` stores small module-owned text files under `widgets/<id>/files/`.
 
 ```lua
 files:write("count.txt", "42")
@@ -275,7 +273,7 @@ local names = files:list()
 files:delete("count.txt")
 ```
 
-File names are local to the widget and cannot include path separators.
+File names are local to the Lua module and cannot include path separators.
 
 ## JSON
 
@@ -381,7 +379,7 @@ Supported calls:
 
 ## Launcher, App, Intent, and Shortcut Helpers
 
-`launcher:state()` returns a table with launcher-safe values such as `widget_id`, `widget_name`, `app_version`, `app_version_code`, `language`, `timezone`, `battery`, and `network`.
+`launcher:state()` returns a table with launcher-safe values such as `widget_id`, `widget_name`, `app_version`, `app_version_code`, `language`, `timezone`, `battery`, and `network`. The `widget_*` names are retained for compatibility with existing Lua packages.
 
 `launcher:vars()` returns a compact API discovery table for scripts that want to show the available helper groups.
 
@@ -441,10 +439,10 @@ Sensitive APIs are enforced when the API is called, not just by scanning the scr
 - `intents:*` and `ui:intent_button` require `intents`
 - `shortcuts:*` and `ui:shortcut_button` require `shortcuts`
 
-Declare these with `-- permissions = "network,clipboard"` and approve with `widget -approve <id>`. This does not add Android manifest permissions.
+Declare these with `-- permissions = "network,clipboard"` and approve with `module -approve <id>`. This does not add Android manifest permissions.
 
-Network responses and widget-local files are size-limited to protect launcher memory and app storage. Shell automation belongs in Termux modules.
+Network responses and module-local files are size-limited to protect launcher memory and app storage. Shell automation belongs in Termux modules.
 
 ## Current Limits
 
-Android AppWidgetHost bridging, arbitrary Android view classes, arbitrary Java/Kotlin execution, and global filesystem or shell access are not part of the Lua widget surface. Use Termux modules when a workflow needs Linux tools, long-running background work, or shell automation.
+Android AppWidgetHost bridging, arbitrary Android view classes, arbitrary Java/Kotlin execution, and global filesystem or shell access are not part of the Lua module surface. Use Termux modules when a workflow needs Linux tools, long-running background work, or shell automation.

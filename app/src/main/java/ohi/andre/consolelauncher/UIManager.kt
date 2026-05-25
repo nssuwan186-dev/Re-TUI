@@ -535,7 +535,7 @@ class UIManager(
         "[PIPE] rerouting common sense to /dev/null",
         "[OVRD] replacing launcher calmness with urgency",
         "[OVRD] amplifying green phosphor output",
-        "[OVRD] preserving user music widget because priorities",
+        "[OVRD] preserving user music module because priorities",
         "[HOOK] intercepting idle state...",
         "[HOOK] intercepting wallpaper refresh...",
         "[HOOK] intercepting harmless command execution...",
@@ -3233,7 +3233,7 @@ class UIManager(
         if (TextUtils.isEmpty(widgetId) || !LuaWidgetManager.exists(widgetId)) {
             ModuleManager.setScriptText(
                 mContext, id, ("::title " + ModuleManager.displayName(id)
-                        + "\n::body Lua widget source not found: " + widgetId)
+                        + "\n::body Lua module source not found: " + widgetId)
             )
             return null
         } else if (!applyLuaWidgetUnavailablePayload(id, widgetId, true, false, false)) {
@@ -3245,7 +3245,7 @@ class UIManager(
             }
             updateModuleDockSelection()
             if (announce) {
-                Tuils.sendOutput(mContext, "Widget refreshed: " + id)
+                Tuils.sendOutput(mContext, "Lua module refreshed: " + id)
             }
             return result
         }
@@ -3255,7 +3255,7 @@ class UIManager(
         }
         updateModuleDockSelection()
         if (announce) {
-            Tuils.sendOutput(mContext, "Widget refreshed: " + id)
+            Tuils.sendOutput(mContext, "Lua module refreshed: " + id)
         }
         return null
     }
@@ -3318,7 +3318,7 @@ class UIManager(
         val source = ModuleManager.getModuleSource(mContext, id)
         val widgetId = ModuleManager.luaWidgetId(source)
         if (TextUtils.isEmpty(widgetId) || !LuaWidgetManager.exists(widgetId)) {
-            Tuils.sendOutput(mContext, "Lua widget source not found: " + id)
+            Tuils.sendOutput(mContext, "Lua module source not found: " + id)
             return
         }
         if (applyLuaWidgetUnavailablePayload(id, widgetId, false, true, true)) {

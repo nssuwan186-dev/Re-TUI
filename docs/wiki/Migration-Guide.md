@@ -64,7 +64,7 @@ Instead of just printing app lists, Re:T-UI includes a terminal-style drawer wit
 
 Re:T-UI now separates:
 
-- notification terminal widget
+- notifications module
 - notification output in the command history
 
 That means you can keep notifications visible on screen without necessarily dumping them into the output terminal.

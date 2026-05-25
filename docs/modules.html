@@ -384,7 +384,7 @@
   <main>
     <nav aria-label="Module guide sections">
       <a href="index.html">Showcase</a>
-      <a href="widgets.html">Widgets</a>
+      <a href="widgets.html">Lua modules</a>
       <a href="#start">Start</a>
       <a href="#dock">Dock</a>
       <a href="#built-ins">Built-ins</a>
@@ -397,7 +397,7 @@
       <a href="#rss">RSS</a>
       <a href="#weather">Weather</a>
       <a href="#custom">Custom</a>
-      <a href="#lua-widgets">Lua</a>
+      <a href="#lua-modules">Lua</a>
       <a href="#module-maker">Build</a>
       <a href="#troubleshooting">Troubleshooting</a>
     </nav>
@@ -411,12 +411,12 @@
         <span>Dock commands</span>
         <span>Reminder prompts</span>
         <span>Termux script modules</span>
-        <span>Lua widget modules</span>
+        <span>Lua modules</span>
         <span>Battery-friendly habits</span>
       </div>
       <div class="cta-row">
         <a href="#dock">Start with dock behavior</a>
-        <a class="secondary" href="widgets.html">Widget guide</a>
+        <a class="secondary" href="widgets.html">Lua module guide</a>
         <a class="secondary" href="#built-ins">Jump to modules</a>
         <a class="secondary" href="index.html">Back to showcase</a>
       </div>
@@ -430,7 +430,7 @@
       </div>
       <div class="command-list">
         <div><strong>Registry:</strong> all known modules. Built-ins always exist; custom script modules are registered with <code>module -add</code>.</div>
-        <div><strong>Dock:</strong> the row of module buttons shown on the home widgets page. Change it with <code>module -dock add</code>, <code>module -dock remove</code>, or <code>module -hide</code>.</div>
+        <div><strong>Dock:</strong> the row of module buttons shown on the home module page. Change it with <code>module -dock add</code>, <code>module -dock remove</code>, or <code>module -hide</code>.</div>
         <div><strong>Active panel:</strong> the module currently visible above the terminal tray. Change it with <code>module -show</code> or close it with <code>module -close</code>.</div>
       </div>
     </section>
@@ -738,20 +738,21 @@ $ module -dock add server</pre>
       </div>
     </section>
 
-    <section class="guide" id="lua-widgets">
+    <section class="guide" id="lua-modules">
       <div class="module-header">
         <div>
-          <div class="kicker">Lua widget modules</div>
+          <div class="kicker">Lua modules</div>
           <h2>Use Lua when the module needs launcher-native controls.</h2>
         </div>
         <span>module source: lua:&lt;id&gt;</span>
       </div>
-      <p>Lua widgets register as modules and share the same dock as built-ins and Termux modules. They can render text, rows, containers, progress glyphs, and native buttons inside the widget panel while still publishing matching suggestion chips for keyboard-first use.</p>
+      <p>Lua modules share the same dock as built-ins and Termux modules. They are launcher-native scripts stored locally by Re:T-UI, so they can render text, rows, containers, progress glyphs, and native buttons inside the active module panel while still publishing matching suggestion chips for keyboard-first use.</p>
       <div class="command-list">
-        <div><strong>Create:</strong> <code>widget -add name</code>, save the Lua source, then <code>widget -show name</code>.</div>
+        <div><strong>Create:</strong> <code>module -new lua name</code>, save the Lua source, then <code>module -show name</code>.</div>
+        <div><strong>Edit/check:</strong> <code>module -edit name</code>, <code>module -config name</code>, <code>module -check name</code>, and <code>module -approve name</code>.</div>
         <div><strong>Controls:</strong> <code>ui:button</code>, <code>ui:command_button</code>, <code>ui:module_button</code>, <code>ui:app_button</code>, <code>ui:intent_button</code>, and <code>ui:shortcut_button</code>.</div>
         <div><strong>Layout:</strong> <code>ui:render</code> / <code>ui:layout</code> can declare small rows, columns, text, buttons, progress bars, dividers, and spacers.</div>
-        <div><strong>Refresh:</strong> opening the widget renders it; tapping the widget title forces a refresh. Manual <code>widget -refresh</code> and <code>module -refresh</code> remain available.</div>
+        <div><strong>Refresh:</strong> opening the module renders it; tapping the module title forces a refresh. Manual <code>module -refresh</code> remains available.</div>
       </div>
       <div class="note">
         <p><strong>Boundary:</strong> keep Linux tools, long-running jobs, and shell automation in Termux modules. Use Lua when the user needs a compact launcher-owned UI surface with safe app, intent, shortcut, config, and storage helpers.</p>

@@ -1669,7 +1669,7 @@ class LuaWidgetEngine(
         if (!approvedPermissions.contains(normalized)) {
             throw LuaError(
                 ("Permission required: " + normalized
-                        + ". Add -- permissions = \"" + normalized + "\" and run widget -approve " + id + ".")
+                        + ". Add -- permissions = \"" + normalized + "\" and run module -approve " + id + ".")
             )
         }
     }

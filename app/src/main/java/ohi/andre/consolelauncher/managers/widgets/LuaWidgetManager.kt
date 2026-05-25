@@ -45,14 +45,14 @@ object LuaWidgetManager {
     )
     private val BUNDLED_SAMPLE_MARKERS: Array<String?> = arrayOf<String?>(
         "Persistent counter using Re:TUI prefs and dock actions",
-        "Progress widget using Re:TUI prefs, system state, and progress APIs",
-        "Clock widget using Re:TUI system helpers",
-        "Compact and expanded rendering using Re:TUI widget state",
-        "Active-widget ticking lifecycle demo",
+        "Progress Lua module using Re:TUI prefs, system state, and progress APIs",
+        "Clock Lua module using Re:TUI system helpers",
+        "Compact and expanded rendering using Re:TUI Lua module state",
+        "Active Lua module ticking lifecycle demo",
         "Small standard library demo",
         "Lua suggestion script demo",
         "Preferences helper demo",
-        "Widget-local file helper demo",
+        "Lua module-local file helper demo",
         "System/platform helper demo",
         "https://api.ipify.org?format=json"
     )
@@ -179,7 +179,7 @@ object LuaWidgetManager {
 
     fun getScriptTypeFromScript(script: kotlin.String?): kotlin.String {
         val type = metadata(script).get("type")
-        return if (TextUtils.isEmpty(type)) "widget" else type!!.lowercase()
+        return if (TextUtils.isEmpty(type)) "module" else type!!.lowercase()
     }
 
     fun apiVersion(id: kotlin.String?): kotlin.String {
@@ -221,7 +221,7 @@ object LuaWidgetManager {
     @Throws(Exception::class)
     fun setEnabled(id: kotlin.String?, enabled: Boolean) {
         val normalized = normalizeId(id)
-        require(exists(normalized)) { "Unknown widget: " + normalized }
+        require(exists(normalized)) { "Unknown Lua module: " + normalized }
         var manifest = readManifest(normalized)
         if (manifest == null) {
             manifest = JSONObject()
@@ -243,7 +243,7 @@ object LuaWidgetManager {
     @Throws(Exception::class)
     fun save(id: kotlin.String?, name: kotlin.String?, script: kotlin.String?) {
         val normalized = normalizeId(id)
-        require(!TextUtils.isEmpty(normalized)) { "Widget id is required" }
+        require(!TextUtils.isEmpty(normalized)) { "Lua module id is required" }
         val code = if (script == null) "" else script
         val meta = metadata(code)
         val scriptName = meta.get("name")
@@ -256,7 +256,7 @@ object LuaWidgetManager {
             effectiveName = scriptName
         }
         val dir = widgetDir(normalized)
-        check(!(!dir.exists() && !dir.mkdirs())) { "Unable to create widget folder" }
+        check(!(!dir.exists() && !dir.mkdirs())) { "Unable to create Lua module folder" }
         val previousManifest = readManifest(normalized)
         val previousApprovedHash = if (previousManifest == null) "" else previousManifest.optString(
             "approvedScriptHash",
@@ -326,7 +326,7 @@ object LuaWidgetManager {
     @Throws(Exception::class)
     private fun saveSystem(id: kotlin.String?, name: kotlin.String?, script: kotlin.String?) {
         val normalized = normalizeId(id)
-        require(!TextUtils.isEmpty(normalized)) { "Widget id is required" }
+        require(!TextUtils.isEmpty(normalized)) { "Lua module id is required" }
         val code = if (script == null) "" else script
         val meta = metadata(code)
         val hash = scriptHash(code)
@@ -363,7 +363,7 @@ object LuaWidgetManager {
     @Throws(Exception::class)
     fun exportPackage(id: kotlin.String?): kotlin.String {
         val normalized = normalizeId(id)
-        require(exists(normalized)) { "Unknown widget: " + normalized }
+        require(exists(normalized)) { "Unknown Lua module: " + normalized }
         val `object` = JSONObject()
         `object`.put("type", "retui-widget-package")
         `object`.put("schema", 1)
@@ -378,18 +378,18 @@ object LuaWidgetManager {
     fun rename(oldId: kotlin.String?, newId: kotlin.String?) {
         val oldNormalized = normalizeId(oldId)
         val newNormalized = normalizeId(newId)
-        require(!(TextUtils.isEmpty(oldNormalized) || TextUtils.isEmpty(newNormalized))) { "Widget id is required" }
+        require(!(TextUtils.isEmpty(oldNormalized) || TextUtils.isEmpty(newNormalized))) { "Lua module id is required" }
         if (TextUtils.equals(oldNormalized, newNormalized)) {
             return
         }
 
         val oldDir = widgetDir(oldNormalized)
-        require(File(oldDir, SCRIPT_FILE).isFile()) { "Unknown widget: " + oldNormalized }
+        require(File(oldDir, SCRIPT_FILE).isFile()) { "Unknown Lua module: " + oldNormalized }
 
         val newDir = widgetDir(newNormalized)
-        require(!newDir.exists()) { "Widget id already exists: " + newNormalized }
+        require(!newDir.exists()) { "Lua module id already exists: " + newNormalized }
 
-        check(oldDir.renameTo(newDir)) { "Unable to rename widget folder" }
+        check(oldDir.renameTo(newDir)) { "Unable to rename Lua module folder" }
 
         val name = getName(newNormalized)
         val script = readScript(newNormalized)
@@ -400,7 +400,7 @@ object LuaWidgetManager {
         val normalized = normalizeId(id)
         val title = displayName(normalized)
         return ("-- name = \"" + title + "\"\n"
-                + "-- type = \"widget\"\n"
+                + "-- type = \"module\"\n"
                 + "-- retui = \"1\"\n"
                 + "\n"
                 + "local count = 0\n"
@@ -452,29 +452,29 @@ object LuaWidgetManager {
                 appendDirective(out, "body", line)
             }
         } else {
-            appendDirective(out, "body", "No widget output yet.")
+            appendDirective(out, "body", "No Lua module output yet.")
         }
 
         var index = 1
         for (button in result.buttons) {
-            appendSuggest(out, button, "widget -click " + normalizeId(id) + " " + index)
+            appendSuggest(out, button, "module -click " + normalizeId(id) + " " + index)
             index += 1
         }
         for (action in result.valueActions) {
             appendSuggest(
                 out,
                 action!!.label,
-                "widget -action " + normalizeId(id) + " " + quoteArg(action.value)
+                "module -action " + normalizeId(id) + " " + quoteArg(action.value)
             )
         }
         if (result.dialogOpen) {
             var dialogIndex = 1
             for (item in result.dialogItems) {
                 val label = if (dialogIndex == result.dialogSelected) "* " + item else item
-                appendSuggest(out, label, "widget -dialog " + normalizeId(id) + " " + dialogIndex)
+                appendSuggest(out, label, "module -dialog " + normalizeId(id) + " " + dialogIndex)
                 dialogIndex += 1
             }
-            appendSuggest(out, "cancel", "widget -dialog " + normalizeId(id) + " -1")
+            appendSuggest(out, "cancel", "module -dialog " + normalizeId(id) + " -1")
         }
         for (action in result.commands) {
             appendSuggest(out, action!!.label, action.command)
@@ -482,17 +482,17 @@ object LuaWidgetManager {
         if (result.expandable) {
             appendSuggest(
                 out, if (result.expanded) "collapse" else "expand",
-                "widget " + (if (result.expanded) "-collapse " else "-expand ") + normalizeId(id)
+                "module " + (if (result.expanded) "-collapse " else "-expand ") + normalizeId(id)
             )
         }
         if (hasConfig(id)) {
-            appendSuggest(out, "edit", "widget -config " + normalizeId(id))
+            appendSuggest(out, "edit", "module -config " + normalizeId(id))
         }
-        appendSuggest(out, "edit script", "widget -edit " + normalizeId(id))
+        appendSuggest(out, "edit script", "module -edit " + normalizeId(id))
         if (!TextUtils.isEmpty(result.error)) {
-            appendSuggest(out, "copy error", "widget -copy-error " + normalizeId(id))
-            appendSuggest(out, "check", "widget -check " + normalizeId(id))
-            appendSuggest(out, "disable", "widget -disable " + normalizeId(id))
+            appendSuggest(out, "copy error", "module -copy-error " + normalizeId(id))
+            appendSuggest(out, "check", "module -check " + normalizeId(id))
+            appendSuggest(out, "disable", "module -disable " + normalizeId(id))
         }
         return out.toString().trim { it <= ' ' }
     }
@@ -501,9 +501,9 @@ object LuaWidgetManager {
         val normalized = normalizeId(id)
         val out = StringBuilder()
         appendDirective(out, "title", getName(normalized))
-        appendDirective(out, "body", "Lua widget disabled.")
-        appendSuggest(out, "enable", "widget -enable " + normalized)
-        appendSuggest(out, "check", "widget -check " + normalized)
+        appendDirective(out, "body", "Lua module disabled.")
+        appendSuggest(out, "enable", "module -enable " + normalized)
+        appendSuggest(out, "check", "module -check " + normalized)
         return out.toString().trim { it <= ' ' }
     }
 
@@ -539,9 +539,9 @@ object LuaWidgetManager {
             appendDirective(out, "body", "Script changed since last approval.")
         }
         if (status.canApprove()) {
-            appendSuggest(out, "approve", "widget -approve " + normalized)
+            appendSuggest(out, "approve", "module -approve " + normalized)
         }
-        appendSuggest(out, "check", "widget -check " + normalized)
+        appendSuggest(out, "check", "module -check " + normalized)
         return out.toString().trim { it <= ' ' }
     }
 
@@ -601,7 +601,7 @@ object LuaWidgetManager {
     @Throws(Exception::class)
     fun approve(id: kotlin.String?) {
         val normalized = normalizeId(id)
-        require(exists(normalized)) { "Unknown widget: " + normalized }
+        require(exists(normalized)) { "Unknown Lua module: " + normalized }
         val status = trustStatus(normalized)
         require(status.unsupportedPermissions.isEmpty()) {
             "Unsupported permissions: " + TextUtils.join(
@@ -894,7 +894,7 @@ object LuaWidgetManager {
 
     private fun displayName(id: kotlin.String): kotlin.String {
         if (TextUtils.isEmpty(id)) {
-            return "Lua Widget"
+            return "Lua Module"
         }
         val out = StringBuilder()
         for (part in id.split("[_-]+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
@@ -934,7 +934,7 @@ object LuaWidgetManager {
     @Throws(Exception::class)
     private fun write(file: File, text: kotlin.String?) {
         val parent = file.getParentFile()
-        check(!(parent != null && !parent.exists() && !parent.mkdirs())) { "Unable to create widget folder" }
+        check(!(parent != null && !parent.exists() && !parent.mkdirs())) { "Unable to create Lua module folder" }
         FileOutputStream(file, false).use { out ->
             out.write(
                 (if (text == null) "" else text).toByteArray(
@@ -947,7 +947,7 @@ object LuaWidgetManager {
     private fun systemTimerScript(): kotlin.String {
         return (""
                 + "-- name = \"Timer\"\n"
-                + "-- type = \"widget\"\n"
+                + "-- type = \"module\"\n"
                 + "-- retui = \"1\"\n"
                 + "-- description = \"System timer module backed by Re:T-UI clock state\"\n"
                 + "\n"
@@ -1030,7 +1030,7 @@ object LuaWidgetManager {
             "retui_counter", Sample(
                 "Re:TUI Counter", (""
                         + "-- name = \"Re:TUI Counter\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
                         + "-- description = \"Persistent counter using Re:TUI prefs and dock actions\"\n"
                         + "\n"
@@ -1043,7 +1043,7 @@ object LuaWidgetManager {
                         + "\n"
                         + "local function render()\n"
                         + "    ui:set_title(\"Re:TUI Counter\")\n"
-                        + "    ui:show_text(\"Count: \" .. prefs.count .. \"\\nStep: \" .. prefs.step .. \"\\nWidget: \" .. aio:self_name())\n"
+                        + "    ui:show_text(\"Count: \" .. prefs.count .. \"\\nStep: \" .. prefs.step .. \"\\nModule: \" .. aio:self_name())\n"
                         + "    ui:show_buttons({\"+\" .. prefs.step, \"-\" .. prefs.step, \"Reset\", \"Prefs\"})\n"
                         + "end\n"
                         + "\n"
@@ -1061,9 +1061,9 @@ object LuaWidgetManager {
             "retui_progress", Sample(
                 "Re:TUI Progress", (""
                         + "-- name = \"Re:TUI Progress\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
-                        + "-- description = \"Progress widget using Re:TUI prefs, system state, and progress APIs\"\n"
+                        + "-- description = \"Progress Lua module using Re:TUI prefs, system state, and progress APIs\"\n"
                         + "\n"
                         + "local prefs = require \"prefs\"\n"
                         + "\n"
@@ -1076,7 +1076,7 @@ object LuaWidgetManager {
                         + "    local battery = system:battery_info()\n"
                         + "    ui:set_title(\"Re:TUI Progress\")\n"
                         + "    ui:show_text(\"Progress: \" .. prefs.progress .. \"%\\nBattery: \" .. battery.percent .. \"%\")\n"
-                        + "    ui:show_progress_bar(\"Widget progress\", prefs.progress, 100, 14)\n"
+                        + "    ui:show_progress_bar(\"Module progress\", prefs.progress, 100, 14)\n"
                         + "    ui:set_progress(prefs.progress)\n"
                         + "    ui:show_buttons({\"+\" .. prefs.step, \"-\" .. prefs.step, \"Reset\", \"Prefs\"})\n"
                         + "end\n"
@@ -1095,10 +1095,10 @@ object LuaWidgetManager {
             "retui_clock", Sample(
                 "Re:TUI Clock", (""
                         + "-- name = \"Re:TUI Clock\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
                         + "-- permissions = \"clipboard,vibrate\"\n"
-                        + "-- description = \"Clock widget using Re:TUI system helpers\"\n"
+                        + "-- description = \"Clock Lua module using Re:TUI system helpers\"\n"
                         + "\n"
                         + "local prefs = require \"prefs\"\n"
                         + "\n"
@@ -1134,9 +1134,9 @@ object LuaWidgetManager {
             "retui_expandable", Sample(
                 "Re:TUI Expandable", (""
                         + "-- name = \"Re:TUI Expandable\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
-                        + "-- description = \"Compact and expanded rendering using Re:TUI widget state\"\n"
+                        + "-- description = \"Compact and expanded rendering using Re:TUI Lua module state\"\n"
                         + "\n"
                         + "local prefs = require \"prefs\"\n"
                         + "\n"
@@ -1174,10 +1174,10 @@ object LuaWidgetManager {
             "retui_ticker", Sample(
                 "Re:TUI Ticker", (""
                         + "-- name = \"Re:TUI Ticker\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
                         + "-- permissions = \"active-tick\"\n"
-                        + "-- description = \"Active-widget ticking lifecycle demo\"\n"
+                        + "-- description = \"Active Lua module ticking lifecycle demo\"\n"
                         + "\n"
                         + "local prefs = require \"prefs\"\n"
                         + "\n"
@@ -1213,7 +1213,7 @@ object LuaWidgetManager {
             "retui_toolkit", Sample(
                 "Re:TUI Toolkit", (""
                         + "-- name = \"Re:TUI Toolkit\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
                         + "-- permissions = \"clipboard\"\n"
                         + "-- description = \"Small standard library demo\"\n"
@@ -1272,7 +1272,7 @@ object LuaWidgetManager {
             "retui_prefs", Sample(
                 "Re:TUI Prefs", (""
                         + "-- name = \"Re:TUI Prefs\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
                         + "\n"
                         + "local prefs = require \"prefs\"\n"
@@ -1300,7 +1300,7 @@ object LuaWidgetManager {
             "retui_files", Sample(
                 "Re:TUI Files", (""
                         + "-- name = \"Re:TUI Files\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
                         + "-- permissions = \"local-files\"\n"
                         + "\n"
@@ -1311,7 +1311,7 @@ object LuaWidgetManager {
                         + "local function render()\n"
                         + "    local n = number()\n"
                         + "    ui:set_title(\"Files Demo\")\n"
-                        + "    ui:show_text(\"Stored in widget local files/count.txt\\nValue: \" .. n)\n"
+                        + "    ui:show_text(\"Stored in Lua module local files/count.txt\\nValue: \" .. n)\n"
                         + "    ui:show_buttons({\"Write +1\", \"Delete\"})\n"
                         + "end\n"
                         + "\n"
@@ -1328,7 +1328,7 @@ object LuaWidgetManager {
             "retui_platform", Sample(
                 "Re:TUI Platform", (""
                         + "-- name = \"Re:TUI Platform\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
                         + "-- permissions = \"local-files,clipboard\"\n"
                         + "-- description = \"Platform helper API demo\"\n"
@@ -1371,7 +1371,7 @@ object LuaWidgetManager {
             "retui_public_ip", Sample(
                 "Re:TUI Public IP", (""
                         + "-- name = \"Re:TUI Public IP\"\n"
-                        + "-- type = \"widget\"\n"
+                        + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
                         + "-- permissions = \"network\"\n"
                         + "-- data_source = \"https://api.ipify.org\"\n"

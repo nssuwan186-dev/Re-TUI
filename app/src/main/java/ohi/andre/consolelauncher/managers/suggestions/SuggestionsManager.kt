@@ -1920,6 +1920,46 @@ class SuggestionsManager(
             suggestions.add(
                 Suggestion(
                     beforeLastSpace,
+                    "-new",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-edit",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-config",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-check",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-approve",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
                     "-refresh",
                     false,
                     Suggestion.Companion.TYPE_COMMAND
@@ -1971,6 +2011,35 @@ class SuggestionsManager(
             || "module -rm" == normalized
         ) {
             suggestModules(suggestions, afterLastSpace, beforeLastSpace)
+        } else if ("module -new" == normalized) {
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "lua",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+        } else if ("module -edit" == normalized
+            || "module -config" == normalized
+            || "module -prefs" == normalized
+            || "module -check" == normalized
+            || "module -info" == normalized
+            || "module -approve" == normalized
+            || "module -trust" == normalized
+            || "module -copy-error" == normalized
+            || "module -export" == normalized
+            || "module -disable" == normalized
+            || "module -enable" == normalized
+            || "module -rename" == normalized
+        ) {
+            suggestWidgetIds(suggestions, afterLastSpace, beforeLastSpace, false)
+        } else if ("module -expand" == normalized
+            || "module -collapse" == normalized
+            || "module -toggle" == normalized
+            || "module -click" == normalized
+        ) {
+            suggestWidgetIds(suggestions, afterLastSpace, beforeLastSpace, true)
         } else if ("module -add" == normalized) {
             suggestions.add(
                 Suggestion(
@@ -2149,7 +2218,10 @@ class SuggestionsManager(
             if (lastWord == null) Tuils.EMPTYSTRING else lastWord.lowercase(Locale.getDefault())
         val prefix =
             if (beforeLastSpace == null) Tuils.EMPTYSTRING else beforeLastSpace.trim { it <= ' ' }
-        for (module in listAll(pack.context)) {
+        val modules = LinkedHashSet<String?>()
+        modules.addAll(listAll(pack.context))
+        modules.addAll(LuaWidgetManager.listIds())
+        for (module in modules) {
             val label = displayTitle(pack.context, module)
             val normalizedLabel = normalize(label)
             if (filter.length == 0 || module!!.startsWith(filter) || normalizedLabel.startsWith(

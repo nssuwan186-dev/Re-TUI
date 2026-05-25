@@ -244,8 +244,13 @@
         \n$ module -prompt reminder add
         \n$ module -prompt reminder edit
         \n$ module -prompt reminder remove
+        \n$ module -new lua counter
+        \n$ module -edit counter
+        \n$ module -config counter
+        \n$ module -check counter
+        \n$ module -approve counter
+        \n$ module -export counter
         \n$ module -add server termux:/data/data/com.termux/files/home/retui/server-health.sh
-        \n$ module -add counter lua:retui_counter
         \n$ module -add events termux:/data/data/com.termux/files/home/retui/events.sh
         \n$ module -refresh server
         \n$ module -rm server
@@ -253,9 +258,9 @@
         \n$ module -dock add server
         \n$ module -dock remove music
         \n$ module -close
-        \n\nModules are backed by native panels, Termux scripts, launcher providers, or prototype Lua widgets. Built-in modules include music, notifications, timer, calendar, reminder, notes, rss, and weather. Re:T-UI can safely resolve %RETUI_* placeholders before Termux dispatch so scripts can consume launcher-provided values. Scripts emit ::title, ::body, and ::suggest metadata. Native prompt sessions let supported modules ask for user input step by step.
+        \n\nModules are the single dock/panel category in Re:T-UI. A module can be native, Termux/shell-backed, launcher-backed, or Lua-backed. Built-in modules include music, notifications, timer, calendar, reminder, notes, rss, and weather. Lua modules are edited locally in Re:T-UI, can render native buttons/layouts, and use module -new lua, module -edit, module -config, module -check, and module -approve. Termux modules execute shell scripts and render ::title, ::body, and ::suggest metadata. Suggestion-only Lua scripts remain helpers because they do not render a dock panel.
         \n\nAn empty dock stays empty. To hide the dock row entirely, turn off show_module_dock in Behavior settings or run config -set show_module_dock false.</string>
-    <string name="help_widget">Create, edit, and test prototype Lua widgets inside Re:T-UI.
+    <string name="help_widget">Legacy aliases for Lua modules. Prefer the module command for new work.
         \n\nUsage:
         \n$ widget -ls
         \n$ widget -add counter
@@ -276,7 +281,7 @@
         \n$ widget -expand counter
         \n$ widget -collapse counter
         \n$ widget -rm counter
-        \n\nWidgets are saved locally under Re:T-UI\'s widgets folder and can register as lua:[id] modules in the shared dock. Use widget -add [name] to open the editor, paste shared Lua, then save/run. Scripts that use network, clipboard, vibration, local widget files, active ticking, or notifications must declare -- permissions and be approved with widget -approve [id]; this does not add Android manifest permissions. Broken scripts expose check/copy-error/disable controls. The document name is the module title; changing it in the editor can rename the widget id/folder. Lua widgets support ui, prefs, files, json, date, fmt, strings, colors, debug, async http, config forms, expandable state, direct command chips, parameterized action chips, choice-dialog chips, notification reminders, active-widget ticking, Lua suggestion scripts, system helpers, export, on_load/on_resume/on_alarm/on_tick/on_click/on_action/on_dialog_action/on_config/on_config_submit/on_suggest, and backup/restore.</string>
+        \n\nThe public category is module. Use module -new lua [name], module -edit [id], module -config [id], module -show [id], module -refresh [id], module -check [id], module -approve [id], and module -export [id]. Existing widget commands remain for compatibility with saved packages and older docs. Lua modules are stored locally under Re:T-UI\'s widgets folder for backup/restore compatibility, can register as lua:[id] modules in the shared dock, and support ui, prefs, files, json, date, fmt, strings, colors, debug, async http, config forms, expandable state, native buttons, command/action/dialog chips, app/intent/shortcut buttons, notification reminders, active ticking, suggestion scripts, system helpers, export, on_load/on_resume/on_alarm/on_tick/on_click/on_action/on_dialog_action/on_config/on_config_submit/on_suggest, and backup/restore.</string>
     <!-- status -->
     <string name="battery_label">Battery:</string>
     <string name="mobile_data_label">Mobile data:</string>
