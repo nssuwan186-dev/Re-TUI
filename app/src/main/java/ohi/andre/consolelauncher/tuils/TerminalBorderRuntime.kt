@@ -56,7 +56,8 @@ object TerminalBorderRuntime {
         val bg = GradientDrawable()
         bg.shape = GradientDrawable.RECTANGLE
         bg.cornerRadius = Tuils.dpToPx(context, AppearanceSettings.headerCornerRadius().toFloat())
-        bg.setColor(fillColor)
+        // The panel drawable masks the border behind tabs; the tab itself should not add a box.
+        bg.setColor(Color.TRANSPARENT)
         bg.setStroke(0, Color.TRANSPARENT)
         return bg
     }
