@@ -14,6 +14,9 @@ object AppearanceSettings {
     fun autoColorPick(): Boolean = LauncherSettings.getBoolean(Ui.auto_color_pick)
 
     @JvmStatic
+    fun cyberdeckMode(): Boolean = LauncherSettings.getBoolean(Behavior.enable_cyberdeck_mode)
+
+    @JvmStatic
     fun useSystemFont(): Boolean = LauncherSettings.getBoolean(Ui.system_font)
 
     @JvmStatic

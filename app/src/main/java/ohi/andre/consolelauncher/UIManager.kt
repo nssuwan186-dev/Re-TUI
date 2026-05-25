@@ -94,6 +94,7 @@ import ohi.andre.consolelauncher.managers.music.MusicService
 import ohi.andre.consolelauncher.managers.notifications.NotificationService
 import ohi.andre.consolelauncher.managers.notifications.reply.ReplyManager
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings
+import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.cyberdeckMode
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.dashedBorderCornerRadius
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.dashedBorders
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.moduleBodyTextSize
@@ -114,6 +115,7 @@ import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.terminalHe
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.terminalHeaderTabBackground
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.terminalWindowBackground
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings.getBoolean
+import ohi.andre.consolelauncher.managers.settings.LauncherSettings.getColor
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings.getInt
 import ohi.andre.consolelauncher.managers.settings.MusicSettings.autoShowWidget
 import ohi.andre.consolelauncher.managers.settings.MusicSettings.preferredPackage
@@ -148,6 +150,8 @@ import ohi.andre.consolelauncher.managers.xml.options.Theme
 import ohi.andre.consolelauncher.managers.xml.options.Toolbar
 import ohi.andre.consolelauncher.managers.xml.options.Ui
 import ohi.andre.consolelauncher.tuils.AllowEqualsSequence
+import ohi.andre.consolelauncher.tuils.CyberpunkBackdropDrawable
+import ohi.andre.consolelauncher.tuils.CyberpunkIconFrameDrawable
 import ohi.andre.consolelauncher.tuils.MusicVisualizerView
 import ohi.andre.consolelauncher.tuils.OutlineEditText
 import ohi.andre.consolelauncher.tuils.OutlineTextView
@@ -287,6 +291,8 @@ class UIManager(
     private var termuxInput: EditText? = null
     private var termuxScroll: ScrollView? = null
     private var termuxInputGroup: View? = null
+    private var termuxOutputPanel: View? = null
+    private var termuxOutputLabel: TextView? = null
     private var termuxTools: View? = null
     private val termuxCommandHistory = ArrayList<String?>()
     private var termuxHistoryCursor = -1
@@ -846,6 +852,7 @@ class UIManager(
             mainPack,
             mExecuter
         )
+        styleToolbarButtonChrome(backView, nextView, deleteView, pasteView, appDrawerView)
         if (showToolbar && toolbarView is LinearLayout) {
             addToolbarShortcutButtons(toolbarView as LinearLayout)
         }
@@ -935,6 +942,7 @@ class UIManager(
                 XMLPrefsManager.getColor(Theme.toolbar_color),
                 PorterDuff.Mode.SRC_IN
             )
+            styleToolbarButtonChrome(button)
             button.setContentDescription("Toolbar shortcut " + slot.index + ": " + slot.command)
             button.setOnClickListener(View.OnClickListener { v: View? -> executeToolbarShortcut(slot.command) })
             button.setOnLongClickListener(OnLongClickListener { v: View? ->
@@ -954,6 +962,25 @@ class UIManager(
 
         if (added > 0) {
             toolbarLayout.setWeightSum(countVisibleWeightedChildren(toolbarLayout).toFloat())
+        }
+    }
+
+    private fun styleToolbarButtonChrome(vararg buttons: ImageButton?) {
+        if (!cyberdeckMode()) {
+            return
+        }
+        for (button in buttons) {
+            if (button == null) {
+                continue
+            }
+            button.setBackground(
+                CyberpunkIconFrameDrawable(
+                    ColorUtils.setAlphaComponent(terminalBorderColor(), 230),
+                    Tuils.dpToPx(mContext!!, 1.6f),
+                    Tuils.dpToPx(mContext!!, 9f),
+                    Tuils.dpToPx(mContext!!, 9f)
+                )
+            )
         }
     }
 
@@ -3484,6 +3511,8 @@ class UIManager(
         termuxInput = rootView.findViewById<EditText?>(R.id.termux_input)
         termuxScroll = rootView.findViewById<ScrollView?>(R.id.termux_scroll)
         termuxInputGroup = rootView.findViewById<View?>(R.id.termux_input_group)
+        termuxOutputPanel = rootView.findViewById<View?>(R.id.termux_output_panel)
+        termuxOutputLabel = rootView.findViewById<TextView?>(R.id.termux_output_label)
         termuxTools = rootView.findViewById<View?>(R.id.termux_tools)
         suggestionsContainer = rootView.findViewById<View?>(R.id.suggestions_container)
 
@@ -3925,10 +3954,20 @@ class UIManager(
 
         imm = mContext!!.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
 
-        if (!XMLPrefsManager.getBoolean(Ui.system_wallpaper) || !canApplyTheme) {
-            rootView.setBackgroundColor(XMLPrefsManager.getColor(Theme.bg_color))
+        if (cyberdeckMode()) {
+            val bgColor =
+                if (!XMLPrefsManager.getBoolean(Ui.system_wallpaper) || !canApplyTheme)
+                    getColor(Theme.bg_color)
+                else getColor(Theme.overlay_color)
+            rootView.background = CyberpunkBackdropDrawable(
+                bgColor,
+                terminalBorderColor(),
+                getColor(Theme.device_color)
+            )
+        } else if (!XMLPrefsManager.getBoolean(Ui.system_wallpaper) || !canApplyTheme) {
+            rootView.setBackgroundColor(getColor(Theme.bg_color))
         } else {
-            rootView.setBackgroundColor(XMLPrefsManager.getColor(Theme.overlay_color))
+            rootView.setBackgroundColor(getColor(Theme.overlay_color))
         }
 
         styleHackOverlay(rootView)
@@ -4706,6 +4745,27 @@ class UIManager(
             termuxOutput!!.setTextColor(textColor)
             termuxOutput!!.setTextIsSelectable(true)
         }
+
+        if (termuxOutputPanel != null) {
+            termuxOutputPanel!!.setBackground(
+                TerminalBorderRuntime.panelDrawable(
+                    mContext!!,
+                    ColorUtils.blendARGB(bgColor, Color.BLACK, 0.1f),
+                    ColorUtils.setAlphaComponent(borderColor, 210),
+                    1.2f,
+                    outputCornerRadius(),
+                    dashedBorders()
+                )
+            )
+        }
+
+        if (termuxOutputLabel != null) {
+            termuxOutputLabel!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
+            termuxOutputLabel!!.setTextSize(max(10f, outputHeaderTextSize().toFloat() - 2f))
+            termuxOutputLabel!!.setTextColor(textColor)
+            termuxOutputLabel!!.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, labelBg))
+        }
+        TerminalBorderRuntime.bind(termuxOutputPanel, termuxOutputLabel)
 
         if (termuxPrefix != null) {
             termuxPrefix!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)

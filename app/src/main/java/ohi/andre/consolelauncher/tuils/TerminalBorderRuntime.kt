@@ -3,6 +3,7 @@ package ohi.andre.consolelauncher.tuils
 import android.content.Context
 import android.graphics.Color
 import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import kotlin.math.max
@@ -36,7 +37,10 @@ object TerminalBorderRuntime {
         radiusPx: Float,
         dashed: Boolean
     ): TerminalBorderDrawable {
-        val stroke = if (dashed) {
+        val cyberdeck = AppearanceSettings.cyberdeckMode()
+        val stroke = if (cyberdeck) {
+            max(1, Tuils.dpToPx(context, strokeDp).toInt())
+        } else if (dashed) {
             max(1, Tuils.dpToPx(context, AppearanceSettings.dashedBorderStrokeWidthDp(strokeDp / 1.5f)).toInt())
         } else {
             0
@@ -45,14 +49,28 @@ object TerminalBorderRuntime {
             fillColor,
             borderColor,
             stroke,
-            radiusPx,
-            dashed,
+            if (cyberdeck) 0f else radiusPx,
+            dashed && !cyberdeck,
             Tuils.dpToPx(context, AppearanceSettings.dashLength().toFloat()).toFloat(),
-            Tuils.dpToPx(context, AppearanceSettings.dashGap().toFloat()).toFloat()
+            Tuils.dpToPx(context, AppearanceSettings.dashGap().toFloat()).toFloat(),
+            cyberdeck
         )
     }
 
-    fun tabDrawable(context: Context, fillColor: Int): GradientDrawable {
+    fun tabDrawable(context: Context, fillColor: Int): Drawable {
+        if (AppearanceSettings.cyberdeckMode()) {
+            return TerminalBorderDrawable(
+                fillColor,
+                AppearanceSettings.terminalHeaderTabBorderColor(),
+                max(1, Tuils.dpToPx(context, 1.2f).toInt()),
+                0f,
+                false,
+                0f,
+                0f,
+                true
+            )
+        }
+
         val bg = GradientDrawable()
         bg.shape = GradientDrawable.RECTANGLE
         bg.cornerRadius = Tuils.dpToPx(context, AppearanceSettings.headerCornerRadius().toFloat())

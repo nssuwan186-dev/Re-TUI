@@ -502,6 +502,12 @@ object PresetManager {
                 colors.put(Theme.enter_color, "#FCEE09")
                 colors.put(Theme.toolbar_color, "#39FF14")
                 colors.put(Theme.time_color, "#00F0FF")
+                colors.put(Theme.dashed_border_color, "#E6F2F2F2")
+                colors.put(Theme.terminal_header_border_color, "#E6F2F2F2")
+                colors.put(Theme.window_terminal_bg, "#CC070711")
+                colors.put(Theme.terminal_header_bg, "#E6070711")
+                colors.put(Theme.module_button_bg_color, "#66070711")
+                colors.put(Theme.module_name_text_color, "#F2F2F2")
 
                 suggestionColors.put(Suggestions.apps_bg_color, "#FF003C")
                 suggestionColors.put(Suggestions.alias_bg_color, "#FCEE09")

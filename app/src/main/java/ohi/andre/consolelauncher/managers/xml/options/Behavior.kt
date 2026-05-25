@@ -167,6 +167,19 @@ enum class Behavior : XMLPrefsSave {
             return XMLPrefsSave.BOOLEAN
         }
     },
+    enable_cyberdeck_mode {
+        override fun defaultValue(): String? {
+            return "false"
+        }
+
+        override fun info(): String? {
+            return "If true, Re:T-UI uses angular cyberdeck drawables while keeping the active theme colors"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.BOOLEAN
+        }
+    },
     clear_after_cmds {
         override fun defaultValue(): String? {
             return "-1"

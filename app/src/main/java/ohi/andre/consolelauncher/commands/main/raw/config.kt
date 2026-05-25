@@ -64,6 +64,8 @@ class config : ParamCommand() {
                     intent.putExtra(UIManager.EXTRA_MODULE_COMMAND, "rebuild")
                     LocalBroadcastManager.getInstance(pack.context.getApplicationContext())
                         .sendBroadcast(intent)
+                } else if (save === Behavior.enable_cyberdeck_mode && pack.context is Reloadable) {
+                    (pack.context as Reloadable).reload()
                 } else if (save === Behavior.duo_mode && !"true".equals(
                         value,
                         ignoreCase = true
@@ -296,6 +298,8 @@ class config : ParamCommand() {
                 )
                 if (save === Behavior.orientation && pack.context is LauncherActivity) {
                     (pack.context as LauncherActivity).applyOrientationPreference()
+                } else if (save === Behavior.enable_cyberdeck_mode && pack.context is Reloadable) {
+                    (pack.context as Reloadable).reload()
                 } else if (save === Behavior.duo_mode && pack.context is LauncherActivity
                     && (pack.context as LauncherActivity).uiManager != null
                 ) {
