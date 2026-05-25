@@ -74,13 +74,15 @@ widget -collapse counter
 widget -rm counter
 ```
 
-The current platform supports launcher-native UI output, persistent `prefs`, widget-local `files`, JSON, small standard libraries, async HTTP callbacks, expandable state, indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, active-widget ticking, Lua suggestion scripts, editor paste flow, clipboard export, and basic `system`/`aio` helpers. See the full scripting reference: [Lua Widgets](./Lua-Widgets.md).
+The current platform supports launcher-native UI output, native widget buttons, declarative rows/containers/progress layouts, persistent `prefs`, widget-local `files`, JSON, small standard libraries, async HTTP callbacks, expandable state, indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, app/intent/shortcut buttons, active-widget ticking, Lua suggestion scripts, editor paste flow, clipboard export, and launcher/system helpers. See the full scripting reference: [Lua Widgets](./Lua-Widgets.md).
 
-Lua permissions are script-level consent only. Scripts that use `network`, `clipboard`, `vibrate`, `local-files`, or `active-tick` must declare `-- permissions = "..."` and be approved with `widget -approve <id>`. Re:T-UI does not add Android manifest permissions for Lua.
+Lua permissions are script-level consent only. Scripts that use `network`, `clipboard`, `vibrate`, `local-files`, `active-tick`, `notifications`, `apps`, `intents`, or `shortcuts` must declare `-- permissions = "..."` and be approved with `widget -approve <id>`. Re:T-UI does not add Android manifest permissions for Lua.
 
 Lua scripts can declare `-- retui = "1"` for API compatibility. Runtime failures show recovery controls, and `widget -disable <id>` parks a broken script without deleting it.
 
-Button labels become module suggestion chips. Tapping a chip dispatches `widget -click <id> <index>`, which calls the widget's `on_click(index)` handler and repaints the active module. Scripts can also expose payload chips with `ui:show_action(label, value)` and handle them with `on_action(value)`.
+Button labels become native widget buttons and matching module suggestion chips. Tapping either dispatches `widget -click <id> <index>`, which calls the widget's `on_click(index)` handler and repaints the active module. Scripts can also expose payload chips with `ui:show_action(label, value)` and handle them with `on_action(value)`.
+
+Active Lua widgets refresh when they are shown. Tapping the widget title forces a refresh, so scripts no longer need to add a default refresh chip just to keep state current. Manual `widget -refresh <id>` and `module -refresh <id>` still work for explicit rerenders.
 
 ## Launcher Variables For Scripts
 

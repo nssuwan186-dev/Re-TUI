@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Re:T-UI Widgets Guide</title>
-  <meta name="description" content="A practical guide to Re:T-UI widgets, Lua scripting, config forms, widget persistence, suggestion scripts, commands, permissions, and widget-friendly launcher UI patterns.">
+  <meta name="description" content="A practical guide to Re:T-UI widgets, Lua scripting, native widget controls, config forms, widget persistence, suggestion scripts, commands, permissions, and widget-friendly launcher UI patterns.">
   <style>
     :root {
       color-scheme: dark;
@@ -443,18 +443,19 @@
     <section class="hero" id="start">
       <div class="eyebrow">Re:T-UI widgets</div>
       <h1>Build small launcher tools without turning the launcher into an IDE.</h1>
-      <p class="lead">Widgets are Re:T-UI-owned surfaces for quick, inspectable tools. Lua gives regular users a native scripting layer for timers, todos, notes, status panels, action chips, config forms, and command suggestions without needing Termux plumbing.</p>
+      <p class="lead">Widgets are Re:T-UI-owned surfaces for quick, inspectable tools. Lua gives regular users a native scripting layer for timers, todos, notes, status panels, widget buttons, config forms, app/intent shortcuts, and command suggestions without needing Termux plumbing.</p>
       <div class="chips" aria-label="Widget guide topics">
         <span>Lua widgets</span>
         <span>Config surfaces</span>
         <span>Persistent prefs</span>
         <span>Widget-local files</span>
+        <span>Native controls</span>
         <span>Suggestion scripts</span>
       </div>
       <div class="cta-row">
         <a href="#first-widget">Create a widget</a>
         <a class="secondary" href="#config">Config forms</a>
-        <a class="secondary" href="#habit-example">Habit experiment</a>
+        <a class="secondary" href="#native-controls">Native controls</a>
         <a class="secondary" href="index.html#lua-scripting">Back to screenshots</a>
       </div>
     </section>
@@ -465,7 +466,7 @@
         <h2>Keep preview, config, and source editing separate.</h2>
         <p>A widget has a live launcher surface, optional config UI, and a script editor path. Those surfaces should stay separate so the launcher remains predictable instead of becoming a tangle of custom mini-apps.</p>
         <div class="command-list">
-          <div><strong>Preview:</strong> the active module panel rendered by Lua with <code>ui:show_text</code>, <code>ui:show_kv</code>, buttons, actions, tables, or progress.</div>
+          <div><strong>Preview:</strong> the active module panel rendered by Lua with <code>ui:show_text</code>, <code>ui:render</code>, native buttons, rows, containers, tables, or progress.</div>
           <div><strong>Config:</strong> a launcher-owned form declared by Lua through <code>ui:show_config</code>. Use it for user-editable values.</div>
           <div><strong>Source:</strong> the Lua editor opened explicitly through <code>widget -edit &lt;id&gt;</code> or the <code>edit script</code> chip.</div>
         </div>
@@ -473,7 +474,7 @@
       <div class="two-grid" aria-label="Lua widget screenshots">
         <figure>
           <img src="phone-blog-assets/lua-widget-preview.png" alt="Re:T-UI Lua Focus widget preview rendered in the module dock">
-          <figcaption>A Lua widget renders live state into the module dock and exposes widget-specific action chips.</figcaption>
+          <figcaption>A Lua widget renders live state into the module dock and can expose both in-widget buttons and matching action chips.</figcaption>
         </figure>
         <figure>
           <img src="phone-blog-assets/lua-widget-config.png" alt="Re:T-UI Lua widget config panel with text, number, toggle, select, and textarea fields">
@@ -533,8 +534,8 @@
             </tr>
             <tr>
               <td><code>widget -refresh &lt;id&gt;</code></td>
-              <td>Re-render a saved widget.</td>
-              <td>Usually a widget-specific chip, not root noise.</td>
+              <td>Manually re-render a saved widget.</td>
+              <td>Advanced/manual path. Active widgets refresh when shown, and tapping the widget title forces a refresh.</td>
             </tr>
             <tr>
               <td><code>widget -rm &lt;id&gt;</code></td>
@@ -555,7 +556,7 @@ $ widget -edit focus_sprint</pre>
       <div>
         <div class="kicker">First widget</div>
         <h2>Start with a tiny durable script.</h2>
-        <p>A good first widget should render a small body, expose one or two actions, and keep state in <code>prefs</code>. That proves the lifecycle without dragging in networking, files, or complex config.</p>
+        <p>A good first widget should render a small body, expose one or two buttons, and keep state in <code>prefs</code>. That proves the lifecycle without dragging in networking, files, or complex config.</p>
         <div class="steps">
           <div class="step">
             <div class="step-number">1</div>
@@ -567,7 +568,7 @@ $ widget -edit focus_sprint</pre>
           </div>
           <div class="step">
             <div class="step-number">3</div>
-            <div><h3>Open</h3><p>Run <code>widget -show counter</code>. Button chips call <code>on_click(index)</code>.</p></div>
+            <div><h3>Open</h3><p>Run <code>widget -show counter</code>. In-widget buttons and matching chips call <code>on_click(index)</code>.</p></div>
           </div>
         </div>
       </div>
@@ -654,22 +655,33 @@ end</pre>
       </div>
     </section>
 
-    <section class="guide split" id="habit-example">
+    <section class="guide split" id="native-controls">
       <div>
-        <div class="kicker">Experiment module</div>
-        <h2>Habit tracking stays removable.</h2>
-        <p>The habit tracker is a Lua widget example, not a built-in module. It uses the generic config form, notification reminder API, and glyph progress renderer, then opens through <code>widget -show habit_tracker</code> like any other user script.</p>
+        <div class="kicker">Native controls</div>
+        <h2>Buttons can live in the widget, not only in suggestions.</h2>
+        <p>Lua widgets still publish suggestion chips for keyboard-first use, but they can now render clickable controls directly inside the module panel. Use this for actions the user should see even when they ignore the suggestion row.</p>
         <div class="command-list">
-          <div><strong>Source:</strong> <code>docs/examples/habit_tracker.lua</code>.</div>
-          <div><strong>Install:</strong> run <code>widget -add habit_tracker</code>, paste the script, save, approve notifications, then <code>widget -show habit_tracker</code>.</div>
-          <div><strong>Edit habits:</strong> use the active module <code>edit</code> chip or <code>widget -config habit_tracker</code>.</div>
+          <div><strong>Callbacks:</strong> <code>ui:button(label)</code> maps to <code>on_click(index)</code>.</div>
+          <div><strong>Commands:</strong> <code>ui:command_button</code> and <code>ui:module_button</code> run launcher commands from the widget.</div>
+          <div><strong>Android:</strong> <code>ui:app_button</code>, <code>ui:intent_button</code>, and <code>ui:shortcut_button</code> require declared permissions and route through Re:T-UI commands.</div>
+          <div><strong>Refresh:</strong> opening a widget re-renders it; tapping its title forces a refresh, so a default refresh chip is no longer needed.</div>
         </div>
       </div>
       <div>
-        <h3>Habit line format</h3>
-        <pre>Meditate | daily | 08:30
-Walk | daily | 18:00
-Read docs | once | 2026-05-24 21:00</pre>
+        <h3>Control snippet</h3>
+        <pre>-- permissions = "apps,intents"
+
+function render()
+    ui:set_title("Control Pad")
+    ui:render({
+        { type = "text", text = "Launcher-native controls" },
+        { type = "progress", label = "Done", value = 2, max = 5, width = 8 },
+    })
+    ui:button("+1")
+    ui:command_button("Modules", "module -ls")
+    ui:app_button("Settings", "Settings")
+    ui:intent_button("Open Web", { view = "https://example.com" })
+end</pre>
       </div>
     </section>
 
@@ -747,7 +759,7 @@ end</pre>
         </div>
         <div class="tile">
           <h3>Render</h3>
-          <p><code>ui:set_title</code>, <code>ui:show_text</code>, <code>ui:show_lines</code>, <code>ui:show_kv</code>, <code>ui:show_table</code>, <code>ui:show_buttons</code>, <code>ui:show_action</code>, <code>ui:show_command</code>.</p>
+          <p><code>ui:set_title</code>, <code>ui:show_text</code>, <code>ui:render</code>, <code>ui:layout</code>, <code>ui:show_lines</code>, <code>ui:show_kv</code>, <code>ui:show_table</code>, <code>ui:show_buttons</code>, <code>ui:button</code>, <code>ui:show_action</code>, <code>ui:show_command</code>.</p>
         </div>
         <div class="tile">
           <h3>Panels</h3>
@@ -759,7 +771,11 @@ end</pre>
         </div>
         <div class="tile">
           <h3>Helpers</h3>
-          <p><code>date</code>, <code>fmt</code> including bounded Unicode <code>progress_bar(value, max, width)</code>, <code>clock</code> for timer, stopwatch, and Pomodoro state, <code>strings</code>, <code>colors</code>, <code>debug</code>, <code>system</code>, and <code>aio</code> cover common launcher-safe work.</p>
+          <p><code>launcher</code>, <code>date</code>, <code>fmt</code> including bounded Unicode <code>progress_bar(value, max, width)</code>, <code>clock</code> for timer, stopwatch, and Pomodoro state, <code>strings</code>, <code>colors</code>, <code>debug</code>, <code>system</code>, and <code>aio</code> cover common launcher-safe work.</p>
+        </div>
+        <div class="tile">
+          <h3>Launcher Buttons</h3>
+          <p><code>apps:list</code>, <code>apps:find</code>, <code>apps:launch_command</code>, <code>intents:view</code>, <code>intents:activity</code>, <code>shortcuts:use_command</code>, and their button helpers create visible launcher/app actions.</p>
         </div>
         <div class="tile">
           <h3>Reminders</h3>
@@ -821,10 +837,25 @@ end</pre>
               <td>Schedule local notifications through the Lua <code>reminders</code> helper.</td>
               <td>Use stable ids so widgets can replace or cancel their own reminders.</td>
             </tr>
+            <tr>
+              <td><code>apps</code></td>
+              <td>List launchable apps and create app-launch buttons through the Lua <code>apps</code> helper.</td>
+              <td>Routes through explicit Re:T-UI launch commands.</td>
+            </tr>
+            <tr>
+              <td><code>intents</code></td>
+              <td>Create view/activity intent buttons through the Lua <code>intents</code> helper.</td>
+              <td>Android may still block unsafe or unavailable targets.</td>
+            </tr>
+            <tr>
+              <td><code>shortcuts</code></td>
+              <td>Create buttons for pinned or app shortcuts through the Lua <code>shortcuts</code> helper.</td>
+              <td>Shortcut availability depends on the target app and Android version.</td>
+            </tr>
           </tbody>
         </table>
       </div>
-      <pre>-- permissions = "network,clipboard,local-files,active-tick,vibrate,notifications"
+      <pre>-- permissions = "network,clipboard,local-files,active-tick,vibrate,notifications,apps,intents,shortcuts"
 -- retui = "1"</pre>
       <div class="note">
         <p><strong>Reality check:</strong> widgets should stay small. If a script needs background daemons, Linux CLIs, Android shell access, or heavy parsing, build a Termux-backed module and let the widget surface remain light.</p>

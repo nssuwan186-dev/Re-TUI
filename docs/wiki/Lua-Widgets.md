@@ -40,10 +40,10 @@ Changing the document name in the editor updates the module title. If the name c
 Scripts that use sensitive Re:TUI Lua capabilities must declare them before they run:
 
 ```lua
--- permissions = "network,clipboard,local-files,active-tick,vibrate"
+-- permissions = "network,clipboard,local-files,active-tick,vibrate,notifications,apps,intents,shortcuts"
 ```
 
-These are script permissions, not Android manifest permissions. Re:TUI does not expand launcher permissions for Lua. The supported script permissions are `network`, `clipboard`, `vibrate`, `local-files`, and `active-tick`. `widget -check <id>` reports missing or unsupported metadata without executing blocked scripts. `widget -approve <id>` stores consent for the current script hash and permission set; changing the script or adding a capability requires approval again.
+These are script permissions, not Android manifest permissions. Re:TUI does not expand launcher permissions for Lua. The supported script permissions are `network`, `clipboard`, `vibrate`, `local-files`, `active-tick`, `notifications`, `apps`, `intents`, and `shortcuts`. `widget -check <id>` reports missing or unsupported metadata without executing blocked scripts. `widget -approve <id>` stores consent for the current script hash and permission set; changing the script or adding a capability requires approval again.
 
 Use `-- retui = "1"` to declare the Re:TUI Lua API version a script targets. Missing metadata defaults to API `1` for compatibility.
 
@@ -77,8 +77,8 @@ end
 ## Lifecycle
 
 - `on_load()` runs once when the Lua engine loads the script.
-- `on_resume()` runs when the widget is rendered.
-- `on_alarm()` runs when the widget is rendered, no more than once every 30 minutes unless the user runs `widget -refresh` or `module -refresh`.
+- `on_resume()` runs when the widget is rendered, including when the widget is shown.
+- `on_alarm()` runs on the first render, then no more than once every 30 minutes unless the user runs `widget -refresh` / `module -refresh` or taps the widget title to force a refresh.
 - `on_tick(n)` runs only while the widget is the active open module and only after the script opts in with `ui:set_tick_interval(seconds)`. Intervals are clamped between 1 and 60 seconds.
 - `on_click(index)` runs when a widget button suggestion is tapped.
 - `on_action(value)` runs when a parameterized action suggestion is tapped. `on_command(value)` and `on_submit(value)` are fallback names for the same event.
@@ -93,16 +93,24 @@ end
 - `ui:set_title(text)`
 - `ui:default_title()`
 - `ui:clear()`
+- `ui:render(layout_table)`
+- `ui:layout(layout_table)`
 - `ui:show_text(text)`
 - `ui:add_line(text)`
 - `ui:show_lines(lines)`
 - `ui:show_table(rows)`
 - `ui:show_kv(table)`
 - `ui:show_buttons(labels)`
+- `ui:button(label[, action])`
 - `ui:add_button(label)`
 - `ui:show_action(label, value)`
 - `ui:show_command(label, command)`
 - `ui:show_module(module, label)`
+- `ui:command_button(label, command)`
+- `ui:module_button(label, module)`
+- `ui:app_button(label, app_query)`
+- `ui:intent_button(label, intent_spec)`
+- `ui:shortcut_button(label, shortcut_id, app)`
 - `ui:show_radio_dialog(title, items, selected_index)`
 - `ui:show_list_dialog(title, items, selected_index)`
 - `ui:show_progress_bar(label, current, max, width)` renders a bounded Unicode bar using `░▒▓█`; `width` is optional and capped.
@@ -118,10 +126,53 @@ end
 - `ui:collapse()`
 - `ui:toggle()`
 
-Button labels become dock suggestion chips. Tapping a chip dispatches `widget -click <id> <index>`.
+Button labels render as native widget buttons and matching dock suggestion chips. Tapping either dispatches `widget -click <id> <index>`.
 Action labels become dock suggestion chips that dispatch `widget -action <id> <value>`, which lets widgets receive text or other small parameters without parsing the whole command line.
 Dialog/list items become suggestion chips that dispatch `widget -dialog <id> <index>`, keeping choices in the Re:TUI suggestion surface instead of opening a separate Android modal.
-Command labels become chips that execute the command directly.
+Command labels render as native widget buttons and matching chips that execute the command directly.
+
+The active widget no longer needs a default refresh chip. Opening a widget renders it, and tapping the widget title forces a refresh. Manual `widget -refresh <id>` and `module -refresh <id>` still work.
+
+## Native Layout and Buttons
+
+`ui:render(table)` lets a widget describe a small native panel instead of only returning text. The renderer currently supports:
+
+- `text` objects: `{ type = "text", text = "..." }`
+- `row` objects with `children`
+- `column` / `container` objects with `children`
+- `progress` objects: `{ type = "progress", label = "Done", value = 2, max = 5, width = 8 }`
+- `button`, `command`, and `module` objects that run launcher commands
+- `divider` and `spacer`
+
+Example:
+
+```lua
+-- permissions = "apps,intents"
+
+function render()
+    ui:set_title("Control Pad")
+    ui:render({
+        { type = "text", text = "Launcher-native controls" },
+        { type = "row", children = {
+            { type = "text", text = "Widget state" },
+            { type = "progress", label = "Done", value = 2, max = 5, width = 8 },
+        }},
+    })
+    ui:button("+1")
+    ui:command_button("Modules", "module -ls")
+    ui:app_button("Settings", "Settings")
+    ui:intent_button("Open Web", { view = "https://example.com" })
+end
+
+function on_resume()
+    render()
+end
+
+function on_click(index)
+    -- Handle ui:button callbacks here.
+    render()
+end
+```
 
 Example parameterized todo widget:
 
@@ -328,6 +379,36 @@ Supported calls:
 - `system:widget_id()`
 - `system:widget_name()`
 
+## Launcher, App, Intent, and Shortcut Helpers
+
+`launcher:state()` returns a table with launcher-safe values such as `widget_id`, `widget_name`, `app_version`, `app_version_code`, `language`, `timezone`, `battery`, and `network`.
+
+`launcher:vars()` returns a compact API discovery table for scripts that want to show the available helper groups.
+
+Launcher button helpers:
+
+- `launcher:command_button(label, command)`
+- `launcher:module_button(label, module)`
+
+App helpers require `apps`:
+
+- `apps:list(limit)` returns launchable app entries with `name`, `label`, `package`, `class`, `component`, and `command`.
+- `apps:find(query)` finds a launchable app by label, package, or component.
+- `apps:launch_command(query)` returns an explicit Re:TUI `intent -activity -n ...` command.
+- `apps:button(label, query)` adds an app launch button.
+
+Intent helpers require `intents`:
+
+- `intents:view(url)`
+- `intents:activity(component)`
+- `intents:command(spec)`
+- `intents:button(label, spec)`
+
+Shortcut helpers require `shortcuts`:
+
+- `shortcuts:use_command(shortcut_id, app)`
+- `shortcuts:button(label, shortcut_id, app)`
+
 ## Clock Helpers
 
 - `clock:timer()` returns `{ running, remaining_ms, total_ms, elapsed_ms }`.
@@ -355,6 +436,10 @@ Sensitive APIs are enforced when the API is called, not just by scanning the scr
 - `system:vibrate` requires `vibrate`
 - `files:*` requires `local-files`
 - `ui:set_tick_interval` / `ui:set_tick` requires `active-tick`
+- `reminders:*` requires `notifications`
+- `apps:*` and `ui:app_button` require `apps`
+- `intents:*` and `ui:intent_button` require `intents`
+- `shortcuts:*` and `ui:shortcut_button` require `shortcuts`
 
 Declare these with `-- permissions = "network,clipboard"` and approve with `widget -approve <id>`. This does not add Android manifest permissions.
 
@@ -362,4 +447,4 @@ Network responses and widget-local files are size-limited to protect launcher me
 
 ## Current Limits
 
-Drawer scripts, rich UI layout, Android AppWidgetHost bridging, and full settings dialogs are not part of this first platform pass yet.
+Android AppWidgetHost bridging, arbitrary Android view classes, arbitrary Java/Kotlin execution, and global filesystem or shell access are not part of the Lua widget surface. Use Termux modules when a workflow needs Linux tools, long-running background work, or shell automation.

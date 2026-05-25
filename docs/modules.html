@@ -397,6 +397,7 @@
       <a href="#rss">RSS</a>
       <a href="#weather">Weather</a>
       <a href="#custom">Custom</a>
+      <a href="#lua-widgets">Lua</a>
       <a href="#module-maker">Build</a>
       <a href="#troubleshooting">Troubleshooting</a>
     </nav>
@@ -410,6 +411,7 @@
         <span>Dock commands</span>
         <span>Reminder prompts</span>
         <span>Termux script modules</span>
+        <span>Lua widget modules</span>
         <span>Battery-friendly habits</span>
       </div>
       <div class="cta-row">
@@ -733,6 +735,26 @@ $ module -dock add server</pre>
       </div>
       <div class="note">
         <p><strong>Battery rule:</strong> do not build modules around <code>while true</code> loops or one-second polling. Let the launcher show cached output while idle, then refresh from a command, suggestion, callback, or Android event.</p>
+      </div>
+    </section>
+
+    <section class="guide" id="lua-widgets">
+      <div class="module-header">
+        <div>
+          <div class="kicker">Lua widget modules</div>
+          <h2>Use Lua when the module needs launcher-native controls.</h2>
+        </div>
+        <span>module source: lua:&lt;id&gt;</span>
+      </div>
+      <p>Lua widgets register as modules and share the same dock as built-ins and Termux modules. They can render text, rows, containers, progress glyphs, and native buttons inside the widget panel while still publishing matching suggestion chips for keyboard-first use.</p>
+      <div class="command-list">
+        <div><strong>Create:</strong> <code>widget -add name</code>, save the Lua source, then <code>widget -show name</code>.</div>
+        <div><strong>Controls:</strong> <code>ui:button</code>, <code>ui:command_button</code>, <code>ui:module_button</code>, <code>ui:app_button</code>, <code>ui:intent_button</code>, and <code>ui:shortcut_button</code>.</div>
+        <div><strong>Layout:</strong> <code>ui:render</code> / <code>ui:layout</code> can declare small rows, columns, text, buttons, progress bars, dividers, and spacers.</div>
+        <div><strong>Refresh:</strong> opening the widget renders it; tapping the widget title forces a refresh. Manual <code>widget -refresh</code> and <code>module -refresh</code> remain available.</div>
+      </div>
+      <div class="note">
+        <p><strong>Boundary:</strong> keep Linux tools, long-running jobs, and shell automation in Termux modules. Use Lua when the user needs a compact launcher-owned UI surface with safe app, intent, shortcut, config, and storage helpers.</p>
       </div>
     </section>
 
