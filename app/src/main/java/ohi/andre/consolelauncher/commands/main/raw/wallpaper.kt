@@ -126,11 +126,18 @@ class wallpaper : ParamCommand() {
                 answer = afterObjects.get(0).toString().trim { it <= ' ' }
             }
 
-            mainPack.redirectator!!.cleanup()
             if ("yes".equals(answer, ignoreCase = true) || "y".equals(answer, ignoreCase = true)) {
+                mainPack.redirectator!!.cleanup()
+                markCompletedCommand("wallpaper -auto")
                 return enableWallpaperAuto(pack)
             }
-            return "Wallpaper auto cancelled."
+            if ("no".equals(answer, ignoreCase = true) || "n".equals(answer, ignoreCase = true)) {
+                mainPack.redirectator!!.cleanup()
+                return "Wallpaper auto cancelled."
+            }
+
+            afterObjects.clear()
+            return "Please answer Yes or No."
         }
 
         public override fun getHint(): Int {

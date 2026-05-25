@@ -369,7 +369,8 @@ class SuggestionsManager(
     fun disable() {
         enabled = false
 
-        hide()
+        clear()
+        suggestionsView.setVisibility(View.GONE)
     }
 
     fun clickSuggestion(suggestion: Suggestion) {
@@ -626,11 +627,6 @@ class SuggestionsManager(
                 comparator.noInput = true
 
                 if (suggestActiveModule(suggestionList)) {
-                    Collections.sort<Suggestion?>(suggestionList, comparator)
-                    return suggestionList
-                }
-
-                if (suggestActiveGuide(suggestionList)) {
                     Collections.sort<Suggestion?>(suggestionList, comparator)
                     return suggestionList
                 }

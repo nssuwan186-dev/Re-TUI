@@ -172,11 +172,15 @@ class MainManager(private val mContext: LauncherActivity) {
         if (alias == null) updateServices(input, wasMusicService)
 
         if (redirect != null) {
-            if (!redirect!!.isWaitingPermission()) {
-                redirect!!.afterObjects.add(input)
+            val currentRedirect = redirect!!
+            if (!currentRedirect.isWaitingPermission()) {
+                currentRedirect.afterObjects.add(input)
             }
-            val output = redirect!!.onRedirect(mainPack)
+            val output = currentRedirect.onRedirect(mainPack)
             Tuils.sendOutput(mContext, output)
+            if (redirect == null) {
+                publishGuideProgress(currentRedirect.consumeCompletedCommand())
+            }
 
             return
         }
@@ -219,10 +223,21 @@ class MainManager(private val mContext: LauncherActivity) {
                     break
                 }
                 if (r) {
-                    GuideManager.observeCommand(mContext, cmds[c])
+                    if (trigger !is TuiCommandTrigger && redirect == null) {
+                        publishGuideProgress(cmds[c])
+                    }
                     break
                 }
             }
+        }
+    }
+
+    private fun publishGuideProgress(command: String?) {
+        val guideOutput = GuideManager.observeCommand(mContext, command)
+        if (!guideOutput.isNullOrEmpty()) {
+            Tuils.sendOutput(mContext, guideOutput)
+            mContext.uiManager?.refreshSuggestionsSoon()
+            mContext.uiManager?.scrollTerminalToEndSoon()
         }
     }
 
@@ -648,6 +663,9 @@ class MainManager(private val mContext: LauncherActivity) {
                         val output = command.exec(info)
                         if (output != null) {
                             Tuils.sendOutput(info, output, TerminalManager.CATEGORY_OUTPUT)
+                        }
+                        if (redirect == null) {
+                            publishGuideProgress(input)
                         }
                     } catch (e: Exception) {
                         Tuils.sendOutput(mContext, Tuils.getStackTrace(e))

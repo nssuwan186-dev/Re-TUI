@@ -12,6 +12,7 @@ object GuideManager {
     private const val KEY_ACTIVE = "active"
     private const val KEY_PATH = "path"
     private const val KEY_STEP = "step"
+    private const val KEY_PENDING_RESUME_MESSAGE = "pending_resume_message"
     private const val DEFAULT_PATH = "basics"
 
     data class Suggestion(val command: String, val execute: Boolean = true)
@@ -20,7 +21,8 @@ object GuideManager {
         val title: String,
         val body: String,
         val command: String,
-        val matchPrefix: String = command
+        val matchPrefix: String = command,
+        val restoreOutputOnResume: Boolean = false
     )
 
     private data class Path(
@@ -54,7 +56,8 @@ object GuideManager {
                 Step(
                     "Open settings",
                     "The settings hub is still available when a visual edit surface is faster than XML.",
-                    "settings"
+                    "settings",
+                    restoreOutputOnResume = true
                 )
             )
         ),
@@ -187,8 +190,7 @@ object GuideManager {
         val path = activePath(context) ?: return start(context, DEFAULT_PATH)
         val next = stepIndex(context) + 1
         if (next >= path.steps.size) {
-            stopInternal(context)
-            return "Guide complete: " + path.title + Tuils.NEWLINE + "Start another path with guide -start customize or guide -start modules."
+            return complete(context, path)
         }
         saveStep(context, path, next)
         return currentStepText(context, path)
@@ -210,6 +212,15 @@ object GuideManager {
         prefs(context).edit().clear().commit()
         notifySuggestionsChanged(context)
         return "Guide reset." + Tuils.NEWLINE + overview(context)
+    }
+
+    fun consumePendingResumeMessage(context: Context): String? {
+        val prefs = prefs(context)
+        val message = prefs.getString(KEY_PENDING_RESUME_MESSAGE, null)
+        if (!message.isNullOrEmpty()) {
+            prefs.edit().remove(KEY_PENDING_RESUME_MESSAGE).commit()
+        }
+        return message
     }
 
     fun activeSuggestions(context: Context): List<Suggestion> {
@@ -251,25 +262,33 @@ object GuideManager {
         "-reset"
     )
 
-    fun observeCommand(context: Context, rawCommand: String?) {
-        val path = activePath(context) ?: return
-        val command = rawCommand?.trim { it <= ' ' } ?: return
+    fun observeCommand(context: Context, rawCommand: String?): String? {
+        val path = activePath(context) ?: return null
+        val command = rawCommand?.trim { it <= ' ' } ?: return null
         if (command.length == 0 || command.lowercase(Locale.getDefault()).startsWith("guide")) {
-            return
+            return null
         }
 
-        val step = currentStep(context, path) ?: return
+        val step = currentStep(context, path) ?: return null
         val expected = step.matchPrefix.lowercase(Locale.getDefault())
         val actual = command.lowercase(Locale.getDefault())
         if (actual == expected || actual.startsWith(expected + " ")) {
+            val output: String
             val next = stepIndex(context) + 1
             if (next >= path.steps.size) {
-                stopInternal(context)
-                notifySuggestionsChanged(context)
+                output = complete(context, path)
             } else {
                 saveStep(context, path, next)
+                output = currentStepText(context, path)
             }
+            if (step.restoreOutputOnResume) {
+                savePendingResumeMessage(context, output)
+                return null
+            }
+            return output
         }
+
+        return null
     }
 
     fun isActive(context: Context): Boolean = activePath(context) != null
@@ -343,6 +362,16 @@ object GuideManager {
         notifySuggestionsChanged(context)
     }
 
+    private fun complete(context: Context, path: Path): String {
+        stopInternal(context)
+        return "Guide complete: " + path.title + Tuils.NEWLINE +
+            "Start another path with guide -start customize or guide -start modules."
+    }
+
+    private fun savePendingResumeMessage(context: Context, message: String) {
+        prefs(context).edit().putString(KEY_PENDING_RESUME_MESSAGE, message).commit()
+    }
+
     private fun findPath(id: String?): Path? {
         val normalized = normalizePathId(id)
         return paths.firstOrNull { it.id == normalized }
@@ -357,6 +386,7 @@ object GuideManager {
 
     private fun stopInternal(context: Context) {
         prefs(context).edit().putBoolean(KEY_ACTIVE, false).commit()
+        notifySuggestionsChanged(context)
     }
 
     private fun notifySuggestionsChanged(context: Context) {

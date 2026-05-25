@@ -480,6 +480,12 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
         if (this@LauncherActivity.uiManager != null) {
             uiManager!!.resume()
             uiManager!!.activateTerminalInput(openKeyboardOnStart)
+            val guideMessage = GuideManager.consumePendingResumeMessage(this)
+            if (!guideMessage.isNullOrEmpty()) {
+                uiManager!!.setOutput(guideMessage, TerminalManager.CATEGORY_OUTPUT)
+                uiManager!!.refreshSuggestionsSoon()
+                uiManager!!.scrollTerminalToEndSoon()
+            }
         }
     }
 
@@ -595,8 +601,7 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
             return
         }
         uiManager!!.setOutput(GuideManager.status(this), TerminalManager.CATEGORY_OUTPUT)
-        LocalBroadcastManager.getInstance(applicationContext)
-            .sendBroadcast(Intent(UIManager.ACTION_UPDATE_SUGGESTIONS))
+        uiManager!!.refreshSuggestionsSoon()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

@@ -7597,7 +7597,54 @@ class UIManager(
     }
 
     fun enableSuggestions() {
-        if (suggestionsManager != null) suggestionsManager!!.enable()
+        if (suggestionsManager != null) {
+            suggestionsManager!!.enable()
+            refreshSuggestionsSoon()
+        }
+    }
+
+    fun refreshSuggestions() {
+        runOnUiThread(Runnable { refreshSuggestionsNow() })
+    }
+
+    fun refreshSuggestionsSoon() {
+        postOnUiThread(Runnable { refreshSuggestionsNow() })
+    }
+
+    fun scrollTerminalToEndSoon() {
+        postOnUiThread(Runnable {
+            if (mTerminalAdapter != null) {
+                mTerminalAdapter!!.scrollToEnd()
+            }
+        })
+    }
+
+    private fun refreshSuggestionsNow() {
+        if (suggestionsManager == null) {
+            return
+        }
+        val input = if (mTerminalAdapter != null) mTerminalAdapter!!.input else Tuils.EMPTYSTRING
+        suggestionsManager!!.requestSuggestion(input)
+    }
+
+    private fun runOnUiThread(action: Runnable) {
+        if (Looper.getMainLooper() == Looper.myLooper()) {
+            action.run()
+            return
+        }
+        postOnUiThread(action)
+    }
+
+    private fun postOnUiThread(action: Runnable) {
+        if (mRootView != null) {
+            mRootView.post(action)
+            return
+        }
+        if (mContext is Activity) {
+            (mContext as Activity).runOnUiThread(action)
+        } else {
+            action.run()
+        }
     }
 
     fun onBackPressed() {
