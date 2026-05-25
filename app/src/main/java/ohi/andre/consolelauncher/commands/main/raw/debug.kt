@@ -111,6 +111,7 @@ class debug : ParamCommand() {
             appendValue(output, Theme.output_color)
             appendValue(output, Theme.apps_drawer_color)
             appendValue(output, Theme.window_terminal_bg)
+            appendValue(output, Theme.terminal_header_bg)
             appendValue(output, Theme.dashed_border_color)
             appendValue(output, Theme.module_name_text_color)
             appendValue(output, Suggestions.apps_bg_color)

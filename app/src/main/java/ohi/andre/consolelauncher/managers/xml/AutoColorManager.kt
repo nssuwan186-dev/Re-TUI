@@ -214,7 +214,7 @@ object AutoColorManager {
             )
 
             Theme.output_color, Theme.toolbar_color, Theme.enter_color, Theme.cursor_color, Theme.restart_message_color, Theme.session_info_color, Theme.link_color, Theme.mark_color, Theme.app_installed_color, Theme.app_uninstalled_color, Theme.apps_drawer_color -> return palette.text
-            Theme.battery_text_high, Theme.battery_text_medium, Theme.battery_text_low, Theme.status_lines_bgrectcolor, Theme.status_lines_bg, Theme.status_lines_shadow_color, Theme.input_shadow_color, Theme.output_shadow_color, Theme.input_bgrectcolor, Theme.output_bgrectcolor, Theme.toolbar_bgrectcolor, Theme.suggestions_bgrectcolor, Theme.module_button_border_color -> return fallbackColor
+            Theme.battery_text_high, Theme.battery_text_medium, Theme.battery_text_low, Theme.status_lines_bgrectcolor, Theme.status_lines_bg, Theme.status_lines_shadow_color, Theme.input_shadow_color, Theme.output_shadow_color, Theme.input_bgrectcolor, Theme.output_bgrectcolor, Theme.toolbar_bgrectcolor, Theme.suggestions_bgrectcolor, Theme.module_button_border_color, Theme.terminal_header_bg -> return fallbackColor
             else -> return fallbackColor
         }
     }

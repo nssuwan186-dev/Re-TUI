@@ -106,12 +106,22 @@ object TuixtTheme {
         drawable.shape = GradientDrawable.RECTANGLE
         drawable.cornerRadius = dp(context, radiusDp.toFloat()).toFloat()
         if (AppearanceSettings.dashedBorders()) {
-            drawable.setStroke(
-                max(1, dp(context, AppearanceSettings.dashedBorderStrokeWidthDp(strokeDp / 1.5f).toFloat())),
-                stroke,
-                Tuils.dpToPx(context, AppearanceSettings.dashLength().toFloat()),
-                Tuils.dpToPx(context, AppearanceSettings.dashGap().toFloat())
+            val strokePx = max(
+                1,
+                dp(context, AppearanceSettings.dashedBorderStrokeWidthDp(strokeDp / 1.5f).toFloat())
             )
+            val dashLength = AppearanceSettings.dashLength()
+            val dashGap = AppearanceSettings.dashGap()
+            if (dashLength <= 0 || dashGap <= 0) {
+                drawable.setStroke(strokePx, stroke)
+            } else {
+                drawable.setStroke(
+                    strokePx,
+                    stroke,
+                    Tuils.dpToPx(context, dashLength.toFloat()),
+                    Tuils.dpToPx(context, dashGap.toFloat())
+                )
+            }
         }
         drawable.setColor(fill)
         return drawable

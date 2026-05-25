@@ -50,6 +50,9 @@ object AppearanceSettings {
     }
 
     @JvmStatic
+    fun terminalHeaderTabBackground(): Int = LauncherSettings.getColor(Theme.terminal_header_bg)
+
+    @JvmStatic
     fun dashedBorders(): Boolean = LauncherSettings.getBoolean(Ui.enable_dashed_border)
 
     @JvmStatic

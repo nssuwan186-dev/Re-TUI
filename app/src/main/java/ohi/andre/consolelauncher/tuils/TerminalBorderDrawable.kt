@@ -26,7 +26,7 @@ class TerminalBorderDrawable(
         style = Paint.Style.STROKE
         color = borderColor
         strokeWidth = strokeWidthPx.toFloat()
-        if (dashed && strokeWidthPx > 0) {
+        if (dashed && strokeWidthPx > 0 && dashLengthPx > 0f && dashGapPx > 0f) {
             pathEffect = DashPathEffect(
                 floatArrayOf(max(1f, dashLengthPx), max(1f, dashGapPx)),
                 0f

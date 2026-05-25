@@ -43,7 +43,7 @@ object TuiWidgetDecorator {
 
         val context = widgetRoot.context
         val widgetBgColor = AppearanceSettings.terminalWindowBackground()
-        val labelMaskColor = AppearanceSettings.terminalHeaderBackground()
+        val labelMaskColor = AppearanceSettings.terminalHeaderTabBackground()
         val useDashed = AppearanceSettings.dashedBorders()
 
         val borderView = widgetRoot.findViewById<View>(borderViewId)
@@ -87,11 +87,11 @@ object TuiWidgetDecorator {
         bg.cornerRadius = Tuils.dpToPx(context, AppearanceSettings.moduleCornerRadius().toFloat())
         bg.setColor(rowBackground)
         if (AppearanceSettings.dashedBorders()) {
-            bg.setStroke(
+            setDashedAwareStroke(
+                bg,
+                context,
                 dashedStrokePx(context, 0.8f),
-                strokeColor,
-                Tuils.dpToPx(context, AppearanceSettings.dashLength().toFloat()),
-                Tuils.dpToPx(context, AppearanceSettings.dashGap().toFloat())
+                strokeColor
             )
         }
         return bg
@@ -116,4 +116,24 @@ object TuiWidgetDecorator {
 
     private fun dashedStrokePx(context: Context, scale: Float): Int =
         max(1, Tuils.dpToPx(context, AppearanceSettings.dashedBorderStrokeWidthDp(scale)).toInt())
+
+    private fun setDashedAwareStroke(
+        drawable: GradientDrawable,
+        context: Context,
+        strokePx: Int,
+        color: Int
+    ) {
+        val dashLength = AppearanceSettings.dashLength()
+        val dashGap = AppearanceSettings.dashGap()
+        if (dashLength <= 0 || dashGap <= 0) {
+            drawable.setStroke(strokePx, color)
+        } else {
+            drawable.setStroke(
+                strokePx,
+                color,
+                Tuils.dpToPx(context, dashLength.toFloat()),
+                Tuils.dpToPx(context, dashGap.toFloat())
+            )
+        }
+    }
 }
