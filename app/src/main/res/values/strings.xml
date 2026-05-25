@@ -59,7 +59,7 @@
     <string name="notification_low_api">Notifications are supported on Android 4.3+ only. Use \'config -set show_notifications false\' to disable this message</string>
 
     <!-- helps texts -->
-    <string name="firsthelp_text">First time with Re:T-UI?\n\thelp -> command list and workstation quickstart\n\ttutorial -> open the wiki</string>
+    <string name="firsthelp_text">First time with Re:T-UI?\n\thelp -> command list and workstation quickstart\n\tguide -> non-blocking walkthrough\n\ttutorial -> open the wiki</string>
     <string name="permissions_toast">You have to grant Storage permission</string>
     <string name="output_usedefapp">You can use \"apps -default_app\" instead</string>
 
@@ -397,10 +397,24 @@
         \n\nUsage:
         \n$ help [command]
     </string>
+    <string name="help_guide">Run a non-blocking command-first walkthrough
+        \n\nUsage:
+        \n$ guide
+        \n$ guide -start basics
+        \n$ guide -start customize
+        \n$ guide -start modules
+        \n$ guide -next
+        \n$ guide -back
+        \n$ guide -status
+        \n$ guide -off
+        \n$ guide -reset
+        \n\nWhen a guide is active, blank input suggestions show the current step command plus guide controls. No first-run modal is shown.
+    </string>
     <string name="help_workstation_quickstart">Re:T-UI workstation quickstart
         \nThis launcher expects you to drive. Use commands first; UI surfaces are helpers.
         \n
         \nTry:
+        \n  guide                 -> start a non-blocking walkthrough
         \n  app name              -> launch an app by name
         \n  alias -add ll apps -ls -> create a reusable shortcut
         \n  apps -hide appName    -> remove visual noise from the drawer

@@ -30,6 +30,7 @@ import ohi.andre.consolelauncher.managers.modules.ModulePromptManager
 import ohi.andre.consolelauncher.managers.music.MusicManager2
 import ohi.andre.consolelauncher.managers.music.MusicService
 import ohi.andre.consolelauncher.managers.notifications.KeeperService
+import ohi.andre.consolelauncher.managers.onboarding.GuideManager
 import ohi.andre.consolelauncher.managers.settings.MusicSettings.enabled
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager
 import ohi.andre.consolelauncher.managers.xml.options.Behavior
@@ -218,6 +219,7 @@ class MainManager(private val mContext: LauncherActivity) {
                     break
                 }
                 if (r) {
+                    GuideManager.observeCommand(mContext, cmds[c])
                     break
                 }
             }

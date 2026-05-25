@@ -29,6 +29,26 @@ Examples:
 - `help wallpaper`
 - `help module`
 
+## Optional Guide
+
+Run:
+
+`guide`
+
+The guide is a non-blocking walkthrough. It prints paths in the terminal and, when active, uses the normal suggestion row for the current step. It does not show a first-run modal.
+
+Useful paths:
+
+- `guide -start basics`
+- `guide -start customize`
+- `guide -start modules`
+
+Controls:
+
+- `guide -next`
+- `guide -back`
+- `guide -off`
+
 ## Basic Navigation
 
 - `settings` opens the settings hub.
@@ -58,6 +78,7 @@ Auto color derives colors from the current wallpaper, but it is separate from ma
 ## Good First Commands
 
 - `help`
+- `guide -start basics`
 - launch an app by typing its name
 - `alias -add ll apps -ls`
 - `apps -hide <app>`

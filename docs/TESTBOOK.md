@@ -50,6 +50,21 @@ Use this as the phone test pass for the workstation rollout. Test on a clean ins
 - Confirm normal launch suggestions still appear when no module is active.
 - Confirm no first-run modal or tutorial blocks the terminal.
 
+### Guide Flow
+
+- Run `guide`.
+- Confirm it prints available paths and does not open a blocking overlay.
+- Run `guide -start basics`.
+- Confirm the output shows a progress bar, the current step, and controls:
+  - `guide -next`
+  - `guide -back`
+  - `guide -off`
+- With the input empty, confirm guide suggestions show the current step command and guide controls.
+- Tap/run the current step command.
+- Confirm the guide advances to the next step in the empty-input suggestions.
+- Run `guide -off`.
+- Confirm normal blank input suggestions return.
+
 ## Phase 2 - Search And Suggestions 2.0
 
 ### App Search

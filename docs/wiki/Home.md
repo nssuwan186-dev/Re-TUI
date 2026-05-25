@@ -55,6 +55,7 @@ UI surfaces like the app drawer and settings hub exist to make the launcher easi
 
 - `themer`
 - `settings`
+- `guide`
 - `files`
 - `module -ls`
 - `module -new lua <name>`

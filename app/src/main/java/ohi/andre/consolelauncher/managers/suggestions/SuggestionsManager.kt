@@ -96,6 +96,7 @@ import ohi.andre.consolelauncher.managers.WebhookManager
 import ohi.andre.consolelauncher.managers.modules.ModuleManager
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings
+import ohi.andre.consolelauncher.managers.onboarding.GuideManager
 import ohi.andre.consolelauncher.commands.CommandTuils.xmlPrefsEntrys
 import ohi.andre.consolelauncher.commands.CommandTuils.xmlPrefsFiles
 
@@ -620,6 +621,11 @@ class SuggestionsManager(
                     return suggestionList
                 }
 
+                if (suggestActiveGuide(suggestionList)) {
+                    Collections.sort<Suggestion?>(suggestionList, comparator)
+                    return suggestionList
+                }
+
                 suggestOrientationCommand(suggestionList)
 
                 val apps = pack.appsManager.suggestedApps
@@ -659,6 +665,12 @@ class SuggestionsManager(
 
                 if (isHelpQuickstart(beforeLastSpace)) {
                     suggestHelpQuickstartActions(suggestionList)
+                    Collections.sort<Suggestion?>(suggestionList, comparator)
+                    return suggestionList
+                }
+
+                if (isGuideCommand(beforeLastSpace)) {
+                    suggestGuideSubcommands(suggestionList)
                     Collections.sort<Suggestion?>(suggestionList, comparator)
                     return suggestionList
                 }
@@ -820,6 +832,12 @@ class SuggestionsManager(
                     return suggestionList
                 }
 
+                if (isGuideCommand(lastWord)) {
+                    suggestGuideRootActions(suggestionList)
+                    Collections.sort<Suggestion?>(suggestionList, comparator)
+                    return suggestionList
+                }
+
                 suggestCommand(pack, suggestionList, lastWord, beforeLastSpace)
                 suggestLuaScripts(suggestionList, lastWord)
                 suggestAlias(pack.aliasManager, suggestionList, lastWord)
@@ -919,6 +937,10 @@ class SuggestionsManager(
         return value != null && "help".equals(value.trim { it <= ' ' }, ignoreCase = true)
     }
 
+    private fun isGuideCommand(value: String?): Boolean {
+        return value != null && "guide".equals(value.trim { it <= ' ' }, ignoreCase = true)
+    }
+
     private fun suggestHelpQuickstartActions(suggestions: MutableList<Suggestion?>) {
         suggestions.add(Suggestion(null, "apps -l", true, Suggestion.Companion.TYPE_PERMANENT))
         suggestions.add(Suggestion(null, "alias -add", false, Suggestion.Companion.TYPE_PERMANENT))
@@ -940,6 +962,43 @@ class SuggestionsManager(
             )
         )
         suggestions.add(Suggestion(null, "module -ls", true, Suggestion.Companion.TYPE_PERMANENT))
+    }
+
+    private fun suggestActiveGuide(suggestions: MutableList<Suggestion?>): Boolean {
+        val guideSuggestions = GuideManager.activeSuggestions(pack.context)
+        if (guideSuggestions.isEmpty()) {
+            return false
+        }
+        for (suggestion in guideSuggestions) {
+            suggestions.add(
+                Suggestion(
+                    null,
+                    suggestion.command,
+                    suggestion.execute,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+        }
+        return true
+    }
+
+    private fun suggestGuideRootActions(suggestions: MutableList<Suggestion?>) {
+        for (suggestion in GuideManager.rootSuggestions(pack.context)) {
+            suggestions.add(
+                Suggestion(
+                    null,
+                    suggestion.command,
+                    suggestion.execute,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+        }
+    }
+
+    private fun suggestGuideSubcommands(suggestions: MutableList<Suggestion?>) {
+        for (suggestion in GuideManager.subcommandSuggestions()) {
+            suggestions.add(Suggestion(null, suggestion, false, Suggestion.Companion.TYPE_PERMANENT))
+        }
     }
 
     private fun suggestFirstPresetAction(suggestions: MutableList<Suggestion?>) {

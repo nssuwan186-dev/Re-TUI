@@ -16,6 +16,20 @@ Examples:
 - `help preset`
 - `help notifications`
 
+### `guide`
+
+Run a non-blocking walkthrough in the terminal. Active guide steps use the normal suggestion row for the current command and guide controls.
+
+Useful forms:
+
+- `guide`
+- `guide -start basics`
+- `guide -start customize`
+- `guide -start modules`
+- `guide -next`
+- `guide -back`
+- `guide -off`
+
 ### `restart`
 
 Reload Re:T-UI and re-apply modified settings.
