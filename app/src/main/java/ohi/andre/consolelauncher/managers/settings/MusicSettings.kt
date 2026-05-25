@@ -11,6 +11,9 @@ object MusicSettings {
     fun showWidget(): Boolean = LauncherSettings.getBoolean(Behavior.show_music_widget)
 
     @JvmStatic
+    fun autoShowWidget(): Boolean = LauncherSettings.getBoolean(Behavior.auto_show_music_widget)
+
+    @JvmStatic
     fun preferredPackage(): String? = LauncherSettings.get(Behavior.preferred_music_app)
 
     @JvmStatic

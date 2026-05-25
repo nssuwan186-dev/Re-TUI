@@ -201,20 +201,20 @@ object AutoColorManager {
         when (theme) {
             Theme.bg_color, Theme.statusbar_color, Theme.navigationbar_color -> return palette.background
             Theme.overlay_color -> return palette.overlay
-            Theme.window_terminal_bg, Theme.toolbar_bg -> return palette.surface
+            Theme.window_terminal_bg, Theme.terminal_header_bg, Theme.toolbar_bg -> return palette.surface
             Theme.input_bg, Theme.output_bg, Theme.suggestions_bg -> return ColorUtils.setAlphaComponent(
                 palette.surface,
                 208
             )
 
-            Theme.input_color, Theme.device_color, Theme.ascii_color, Theme.time_color, Theme.storage_color, Theme.ram_color, Theme.network_info_color, Theme.alias_content_color, Theme.hint_color, Theme.notes_color, Theme.notes_locked_color, Theme.weather_color, Theme.unlock_counter_color, Theme.dashed_border_color, Theme.module_name_text_color -> return palette.accent
+            Theme.input_color, Theme.device_color, Theme.ascii_color, Theme.time_color, Theme.storage_color, Theme.ram_color, Theme.network_info_color, Theme.alias_content_color, Theme.hint_color, Theme.notes_color, Theme.notes_locked_color, Theme.weather_color, Theme.unlock_counter_color, Theme.dashed_border_color, Theme.terminal_header_border_color, Theme.module_name_text_color -> return palette.accent
             Theme.module_button_bg_color -> return ColorUtils.setAlphaComponent(
                 palette.surface,
                 208
             )
 
             Theme.output_color, Theme.toolbar_color, Theme.enter_color, Theme.cursor_color, Theme.restart_message_color, Theme.session_info_color, Theme.link_color, Theme.mark_color, Theme.app_installed_color, Theme.app_uninstalled_color, Theme.apps_drawer_color -> return palette.text
-            Theme.battery_text_high, Theme.battery_text_medium, Theme.battery_text_low, Theme.status_lines_bgrectcolor, Theme.status_lines_bg, Theme.status_lines_shadow_color, Theme.input_shadow_color, Theme.output_shadow_color, Theme.input_bgrectcolor, Theme.output_bgrectcolor, Theme.toolbar_bgrectcolor, Theme.suggestions_bgrectcolor, Theme.module_button_border_color, Theme.terminal_header_bg -> return fallbackColor
+            Theme.battery_text_high, Theme.battery_text_medium, Theme.battery_text_low, Theme.status_lines_bgrectcolor, Theme.status_lines_bg, Theme.status_lines_shadow_color, Theme.input_shadow_color, Theme.output_shadow_color, Theme.input_bgrectcolor, Theme.output_bgrectcolor, Theme.toolbar_bgrectcolor, Theme.suggestions_bgrectcolor, Theme.module_button_border_color -> return fallbackColor
             else -> return fallbackColor
         }
     }

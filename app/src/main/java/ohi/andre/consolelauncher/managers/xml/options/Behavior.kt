@@ -1174,6 +1174,19 @@ enum class Behavior : XMLPrefsSave {
             return XMLPrefsSave.BOOLEAN
         }
     },
+    auto_show_music_widget {
+        override fun defaultValue(): String? {
+            return "false"
+        }
+
+        override fun info(): String? {
+            return "If true, Re:T-UI will automatically show the music widget when music starts playing"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.BOOLEAN
+        }
+    },
     preferred_music_app {
         override fun defaultValue(): String? {
             return ""

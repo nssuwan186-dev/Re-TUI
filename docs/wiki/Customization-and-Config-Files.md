@@ -32,6 +32,13 @@ Controls the main visual palette:
 - overlays
 - app drawer color
 
+Terminal chrome uses these shared keys:
+
+- `window_terminal_bg` controls terminal and module panel fill
+- `dashed_border_color` controls terminal and module panel borders
+- `terminal_header_bg` controls header tab fill
+- `terminal_header_border_color` controls header tab borders
+
 ### `ui.xml`
 
 Controls visual behavior and layout:

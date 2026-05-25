@@ -505,6 +505,15 @@ enum class Theme : XMLPrefsSave {
         override fun info(): String? {
             return "The background color of terminal header tabs such as OUTPUT and module titles"
         }
+    },
+    terminal_header_border_color {
+        override fun defaultValue(): String? {
+            return "#ffffffff"
+        }
+
+        override fun info(): String? {
+            return "The border color of terminal header tabs such as OUTPUT and module titles"
+        }
     };
 
     override fun parent(): XMLPrefsElement? {

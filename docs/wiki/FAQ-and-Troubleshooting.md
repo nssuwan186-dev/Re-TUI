@@ -119,6 +119,7 @@ Look for:
 
 - `music_enabled`
 - `music_widget`
+- `music_widget_auto_show`
 - `music_preferred_package`
 
 The current music UI is intentionally more of a visualizer than a full Android widget clone.

@@ -3,11 +3,10 @@ package ohi.andre.consolelauncher.tuils
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.Drawable
 import android.view.View
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
-import kotlin.math.max
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings
 
 object TuiWidgetDecorator {
@@ -73,28 +72,23 @@ object TuiWidgetDecorator {
     }
 
     @JvmStatic
-    fun getRowBackground(context: Context): GradientDrawable =
+    fun getRowBackground(context: Context): Drawable =
         getRowBackground(context, AppearanceSettings.notificationWidgetBorderColor())
 
     @JvmStatic
-    fun getRowBackground(context: Context, borderColor: Int): GradientDrawable {
+    fun getRowBackground(context: Context, borderColor: Int): Drawable {
         val widgetBgColor = AppearanceSettings.terminalWindowBackground()
         val rowBackground = ColorUtils.blendARGB(widgetBgColor, Color.BLACK, 0.22f)
-        val strokeColor = ColorUtils.setAlphaComponent(AppearanceSettings.terminalBorderColor(), 140)
+        val strokeColor = ColorUtils.setAlphaComponent(borderColor, 140)
 
-        val bg = GradientDrawable()
-        bg.shape = GradientDrawable.RECTANGLE
-        bg.cornerRadius = Tuils.dpToPx(context, AppearanceSettings.moduleCornerRadius().toFloat())
-        bg.setColor(rowBackground)
-        if (AppearanceSettings.dashedBorders()) {
-            setDashedAwareStroke(
-                bg,
-                context,
-                dashedStrokePx(context, 0.8f),
-                strokeColor
-            )
-        }
-        return bg
+        return TerminalBorderRuntime.panelDrawable(
+            context,
+            rowBackground,
+            strokeColor,
+            1.2f,
+            AppearanceSettings.moduleCornerRadius(),
+            AppearanceSettings.dashedBorders()
+        )
     }
 
     @JvmStatic
@@ -114,26 +108,4 @@ object TuiWidgetDecorator {
         dashed
     )
 
-    private fun dashedStrokePx(context: Context, scale: Float): Int =
-        max(1, Tuils.dpToPx(context, AppearanceSettings.dashedBorderStrokeWidthDp(scale)).toInt())
-
-    private fun setDashedAwareStroke(
-        drawable: GradientDrawable,
-        context: Context,
-        strokePx: Int,
-        color: Int
-    ) {
-        val dashLength = AppearanceSettings.dashLength()
-        val dashGap = AppearanceSettings.dashGap()
-        if (dashLength <= 0 || dashGap <= 0) {
-            drawable.setStroke(strokePx, color)
-        } else {
-            drawable.setStroke(
-                strokePx,
-                color,
-                Tuils.dpToPx(context, dashLength.toFloat()),
-                Tuils.dpToPx(context, dashGap.toFloat())
-            )
-        }
-    }
 }

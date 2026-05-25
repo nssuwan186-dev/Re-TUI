@@ -57,7 +57,24 @@ object TerminalBorderRuntime {
         bg.shape = GradientDrawable.RECTANGLE
         bg.cornerRadius = Tuils.dpToPx(context, AppearanceSettings.headerCornerRadius().toFloat())
         bg.setColor(fillColor)
-        bg.setStroke(0, Color.TRANSPARENT)
+        val borderColor = AppearanceSettings.terminalHeaderTabBorderColor()
+        if (AppearanceSettings.dashedBorders() && Color.alpha(borderColor) > 0) {
+            val stroke = max(1, Tuils.dpToPx(context, AppearanceSettings.dashedBorderStrokeWidthDp()).toInt())
+            val dashLength = AppearanceSettings.dashLength()
+            val dashGap = AppearanceSettings.dashGap()
+            if (dashLength > 0 && dashGap > 0) {
+                bg.setStroke(
+                    stroke,
+                    borderColor,
+                    Tuils.dpToPx(context, dashLength).toFloat(),
+                    Tuils.dpToPx(context, dashGap).toFloat()
+                )
+            } else {
+                bg.setStroke(stroke, borderColor)
+            }
+        } else {
+            bg.setStroke(0, Color.TRANSPARENT)
+        }
         return bg
     }
 

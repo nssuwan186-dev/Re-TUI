@@ -16,7 +16,6 @@ import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -95,12 +94,8 @@ import ohi.andre.consolelauncher.managers.music.MusicService
 import ohi.andre.consolelauncher.managers.notifications.NotificationService
 import ohi.andre.consolelauncher.managers.notifications.reply.ReplyManager
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings
-import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.dashGap
-import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.dashLength
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.dashedBorderCornerRadius
-import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.dashedBorderStrokeWidthDp
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.dashedBorders
-import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.headerCornerRadius
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.moduleBodyTextSize
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.moduleButtonBackgroundColor
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.moduleButtonBorderColor
@@ -120,6 +115,7 @@ import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.terminalHe
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings.terminalWindowBackground
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings.getBoolean
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings.getInt
+import ohi.andre.consolelauncher.managers.settings.MusicSettings.autoShowWidget
 import ohi.andre.consolelauncher.managers.settings.MusicSettings.preferredPackage
 import ohi.andre.consolelauncher.managers.settings.MusicSettings.showWidget
 import ohi.andre.consolelauncher.managers.settings.NotificationSettings.showTerminal
@@ -1352,22 +1348,14 @@ class UIManager(
     }
 
     private fun createDuoSwitchBackground(): Drawable {
-        val drawable = GradientDrawable()
-        drawable.setShape(GradientDrawable.RECTANGLE)
-        drawable.setCornerRadius(
-            max(
-                genericBorderCornerRadius,
-                Tuils.dpToPx(mContext, 6)
-            ).toFloat()
+        return TerminalBorderRuntime.panelDrawablePx(
+            mContext!!,
+            ColorUtils.setAlphaComponent(terminalHeaderBackground(), 224),
+            terminalBorderColor(),
+            1.5f,
+            max(genericBorderCornerRadius, Tuils.dpToPx(mContext, 6)).toFloat(),
+            useDashed
         )
-        drawable.setColor(ColorUtils.setAlphaComponent(terminalHeaderBackground(), 224))
-        val borderColor = terminalBorderColor()
-        if (useDashed) {
-            setDashedAwareStroke(drawable, dashedStrokePx(mContext), borderColor)
-        } else {
-            drawable.setStroke(dashedStrokePx(mContext), borderColor)
-        }
-        return drawable
     }
 
     private fun applyLandscapeFoldGutter(configuration: Configuration?) {
@@ -2109,15 +2097,17 @@ class UIManager(
         else
             moduleButtonBackgroundColor()
 
-        val gd = GradientDrawable()
-        gd.setShape(GradientDrawable.RECTANGLE)
-        gd.setCornerRadius(Tuils.dpToPx(mContext, moduleCornerRadius()).toFloat())
-        gd.setColor(bg)
-        if (dashedBorders()) {
-            setDashedAwareStroke(gd, dashedStrokePx(mContext, 0.8f), borderColor)
-        }
         button.setTextColor(textColor)
-        button.setBackground(gd)
+        button.setBackground(
+            TerminalBorderRuntime.panelDrawable(
+                mContext!!,
+                bg,
+                borderColor,
+                1.2f,
+                moduleCornerRadius(),
+                dashedBorders()
+            )
+        )
     }
 
     private fun updateModuleDockSelection() {
@@ -2597,14 +2587,14 @@ class UIManager(
     }
 
     private fun luaSurfaceButtonBackground(): Drawable {
-        val gd = GradientDrawable()
-        gd.setShape(GradientDrawable.RECTANGLE)
-        gd.setCornerRadius(Tuils.dpToPx(mContext, moduleCornerRadius()).toFloat())
-        gd.setColor(moduleButtonBackgroundColor())
-        if (dashedBorders()) {
-            setDashedAwareStroke(gd, dashedStrokePx(mContext, 0.8f), moduleButtonBorderColor())
-        }
-        return gd
+        return TerminalBorderRuntime.panelDrawable(
+            mContext!!,
+            moduleButtonBackgroundColor(),
+            moduleButtonBorderColor(),
+            1.2f,
+            moduleCornerRadius(),
+            dashedBorders()
+        )
     }
 
     private fun renderLuaLayout(parent: LinearLayout, module: String?, rawJson: String?): Boolean {
@@ -2880,26 +2870,6 @@ class UIManager(
         val bgColor = terminalHeaderTabBackground()
         close.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, bgColor))
         close.setTextSize(moduleHeaderTextSize().toFloat())
-    }
-
-    private fun setDashedAwareStroke(
-        drawable: GradientDrawable,
-        strokePx: Int,
-        color: Int,
-        dashLengthDp: Int = dashLength(),
-        dashGapDp: Int = dashGap()
-    ) {
-        val context = mContext
-        if (context == null || dashLengthDp <= 0 || dashGapDp <= 0) {
-            drawable.setStroke(strokePx, color)
-            return
-        }
-        drawable.setStroke(
-            strokePx,
-            color,
-            Tuils.dpToPx(context, dashLengthDp).toFloat(),
-            Tuils.dpToPx(context, dashGapDp).toFloat()
-        )
     }
 
     private fun closeHomeModule() {
@@ -3880,6 +3850,10 @@ class UIManager(
                     lastMusicSinger = singer
                     lastMusicPlaying = isPlaying
 
+                    if (isPlaying && autoShowWidget() && ModuleManager.MUSIC != activeModule) {
+                        showHomeModule(ModuleManager.MUSIC)
+                    }
+
                     val musicWidget = rootView.findViewById<View?>(R.id.music_widget)
                     if (musicWidget != null) {
                         musicWidget.setVisibility(if (showMusicWidget) View.VISIBLE else View.GONE)
@@ -4583,20 +4557,16 @@ class UIManager(
                 btn.setSingleLine(true)
                 btn.setEllipsize(TextUtils.TruncateAt.END)
 
-                val gd = GradientDrawable()
-                gd.setShape(GradientDrawable.RECTANGLE)
-                gd.setCornerRadius(Tuils.dpToPx(mContext, moduleCornerRadius()).toFloat())
-                if (useDashed) {
-                    setDashedAwareStroke(
-                        gd,
-                        dashedStrokePx(mContext, 0.8f),
+                btn.setBackgroundDrawable(
+                    TerminalBorderRuntime.panelDrawable(
+                        mContext!!,
+                        Color.TRANSPARENT,
                         widgetBorderColor,
-                        dashLength() / 2,
-                        dashGap() / 2
+                        1.2f,
+                        moduleCornerRadius(),
+                        useDashed
                     )
-                }
-                gd.setColor(Color.TRANSPARENT)
-                btn.setBackgroundDrawable(gd)
+                )
             }
         }
 
@@ -4676,13 +4646,16 @@ class UIManager(
         val surface = ColorUtils.setAlphaComponent(terminalWindowBackground(), 238)
         val border = ColorUtils.setAlphaComponent(accent, 220)
 
-        val bg = GradientDrawable()
-        bg.setShape(GradientDrawable.RECTANGLE)
-        bg.setColor(ColorUtils.setAlphaComponent(surface, 232))
-        if (dashedBorders()) {
-            setDashedAwareStroke(bg, dashedStrokePx(mContext), border)
-        }
-        overlay.setBackground(bg)
+        overlay.setBackground(
+            TerminalBorderRuntime.panelDrawable(
+                mContext!!,
+                ColorUtils.setAlphaComponent(surface, 232),
+                border,
+                1.5f,
+                0,
+                dashedBorders()
+            )
+        )
         overlay.setOnClickListener(View.OnClickListener { v: View? -> dismissHackOverlay() })
 
         hackText.setTextColor(accent)
@@ -4746,18 +4719,16 @@ class UIManager(
         }
 
         if (termuxInputGroup != null) {
-            val inputBg = GradientDrawable()
-            inputBg.setShape(GradientDrawable.RECTANGLE)
-            inputBg.setCornerRadius(Tuils.dpToPx(mContext, outputCornerRadius()).toFloat())
-            inputBg.setColor(ColorUtils.blendARGB(bgColor, Color.BLACK, 0.16f))
-            if (dashedBorders()) {
-                setDashedAwareStroke(
-                    inputBg,
-                    dashedStrokePx(mContext, 0.8f),
-                    ColorUtils.setAlphaComponent(borderColor, 180)
+            termuxInputGroup!!.setBackground(
+                TerminalBorderRuntime.panelDrawable(
+                    mContext!!,
+                    ColorUtils.blendARGB(bgColor, Color.BLACK, 0.16f),
+                    ColorUtils.setAlphaComponent(borderColor, 180),
+                    1.2f,
+                    outputCornerRadius(),
+                    dashedBorders()
                 )
-            }
-            termuxInputGroup!!.setBackground(inputBg)
+            )
         }
 
         if (termuxTools != null) {
@@ -4850,18 +4821,16 @@ class UIManager(
             fileInput!!.setHintTextColor(ColorUtils.setAlphaComponent(textColor, 150))
         }
         if (fileInputGroup != null) {
-            val inputBg = GradientDrawable()
-            inputBg.setShape(GradientDrawable.RECTANGLE)
-            inputBg.setCornerRadius(Tuils.dpToPx(mContext, outputCornerRadius()).toFloat())
-            inputBg.setColor(ColorUtils.blendARGB(bgColor, Color.BLACK, 0.16f))
-            if (dashedBorders()) {
-                setDashedAwareStroke(
-                    inputBg,
-                    dashedStrokePx(mContext, 0.8f),
-                    ColorUtils.setAlphaComponent(borderColor, 180)
+            fileInputGroup!!.setBackground(
+                TerminalBorderRuntime.panelDrawable(
+                    mContext!!,
+                    ColorUtils.blendARGB(bgColor, Color.BLACK, 0.16f),
+                    ColorUtils.setAlphaComponent(borderColor, 180),
+                    1.2f,
+                    outputCornerRadius(),
+                    dashedBorders()
                 )
-            }
-            fileInputGroup!!.setBackground(inputBg)
+            )
         }
         if (fileTools != null) {
             fileTools!!.setBackgroundColor(Color.TRANSPARENT)
@@ -6175,15 +6144,16 @@ class UIManager(
         val bgColor = terminalHeaderBackground()
         val useDashed = dashedBorders()
 
-        val bg = GradientDrawable()
-        bg.setShape(GradientDrawable.RECTANGLE)
-        bg.setCornerRadius(Tuils.dpToPx(mContext, 3).toFloat())
-        if (useDashed) {
-            setDashedAwareStroke(bg, dashedStrokePx(mContext, 0.93f), borderColor)
-        }
-        bg.setColor(bgColor)
-
-        tab.setBackground(bg)
+        tab.setBackground(
+            TerminalBorderRuntime.panelDrawable(
+                mContext!!,
+                bgColor,
+                borderColor,
+                1.4f,
+                3,
+                useDashed
+            )
+        )
         tab.setTextColor(borderColor)
         TextViewCompat.setCompoundDrawableTintList(tab, ColorStateList.valueOf(borderColor))
         tab.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
@@ -6520,12 +6490,16 @@ class UIManager(
         countdown.setBackgroundColor(textBgColor)
         taskDisplay.setBackgroundColor(textBgColor)
 
-        val btnBg = GradientDrawable()
-        if (dashedBorders()) {
-            setDashedAwareStroke(btnBg, dashedStrokePx(mContext, 0.93f), color)
-        }
-        btnBg.setColor(textBgColor)
-        terminateBtn.setBackground(btnBg)
+        terminateBtn.setBackground(
+            TerminalBorderRuntime.panelDrawable(
+                mContext!!,
+                textBgColor,
+                color,
+                1.4f,
+                moduleCornerRadius(),
+                dashedBorders()
+            )
+        )
 
         terminateBtn.setOnClickListener(View.OnClickListener { v: View? ->
             val manager = PomodoroManager.getInstance(mContext)
@@ -7259,13 +7233,16 @@ class UIManager(
             }
         }
 
-        val bg = GradientDrawable()
-        bg.setCornerRadius(Tuils.dpToPx(mContext, 2).toFloat())
-        if (dashedBorders()) {
-            setDashedAwareStroke(bg, dashedStrokePx(mContext), borderColor)
-        }
-        bg.setColor(if (selected) selectedColor else bgColor)
-        tab.setBackground(bg)
+        tab.setBackground(
+            TerminalBorderRuntime.panelDrawable(
+                mContext!!,
+                if (selected) selectedColor else bgColor,
+                borderColor,
+                1.5f,
+                2,
+                dashedBorders()
+            )
+        )
         tab.setTextColor(if (selected) widgetBgColor else fgColor)
         tab.setAlpha(1f)
 
@@ -7405,13 +7382,16 @@ class UIManager(
         tab.setTextColor(if (selected) widgetBgColor else drawerColor)
         val selectedColor = getDrawerSelectionColor(drawerColor, widgetBgColor)
 
-        val bg = GradientDrawable()
-        bg.setCornerRadius(Tuils.dpToPx(mContext, 2).toFloat())
-        if (dashedBorders()) {
-            setDashedAwareStroke(bg, dashedStrokePx(mContext, 0.8f), borderColor)
-        }
-        bg.setColor(if (selected) selectedColor else widgetBgColor)
-        tab.setBackground(bg)
+        tab.setBackground(
+            TerminalBorderRuntime.panelDrawable(
+                mContext!!,
+                if (selected) selectedColor else widgetBgColor,
+                borderColor,
+                1.2f,
+                2,
+                dashedBorders()
+            )
+        )
     }
 
     private fun getDrawerSelectionColor(drawerColor: Int, widgetBgColor: Int): Int {
@@ -7969,10 +7949,6 @@ class UIManager(
             val side: String =
                 normalizeDuoLayoutMode(preferences.getString(DUO_LAST_SIDE_PREF, DUO_LAYOUT_RIGHT))
             return if (DUO_LAYOUT_OFF == side) DUO_LAYOUT_RIGHT else side
-        }
-
-        private fun dashedStrokePx(context: Context?, scale: Float = 1f): Int {
-            return max(1, Tuils.dpToPx(context ?: return 1, dashedBorderStrokeWidthDp(scale)).toInt())
         }
 
         private fun applyBgRect(

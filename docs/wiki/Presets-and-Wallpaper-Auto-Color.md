@@ -18,6 +18,7 @@ The launcher tries to build a usable palette automatically:
 - darker colors for the terminal background
 - lighter colors for text and borders
 - coordinated suggestion and widget colors
+- terminal header tabs whose fill follows the terminal background and whose border follows the terminal border
 
 ## Wallpaper Pickers
 

@@ -13,7 +13,8 @@ The current direction is intentionally not a full media widget. It is a terminal
 
 ## Behavior
 
-- appears when music is active
+- can be shown manually with `module -show music`
+- can auto-open when music starts if `auto_show_music_widget` is enabled in `behavior.xml`
 - hides when playback stops
 - can prioritize a preferred music app
 
