@@ -6,10 +6,8 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.widget.TextView
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.ColorUtils
 import kotlin.math.max
-import ohi.andre.consolelauncher.R
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings
 
 object TuiWidgetDecorator {
@@ -19,6 +17,7 @@ object TuiWidgetDecorator {
             widgetRoot,
             borderViewId,
             labelViewId,
+            0,
             AppearanceSettings.musicWidgetBorderColor(),
             AppearanceSettings.musicWidgetTextColor()
         )
@@ -26,6 +25,18 @@ object TuiWidgetDecorator {
 
     @JvmStatic
     fun decorateWidget(widgetRoot: View?, borderViewId: Int, labelViewId: Int, borderColor: Int, textColor: Int) {
+        decorateWidget(widgetRoot, borderViewId, labelViewId, 0, borderColor, textColor)
+    }
+
+    @JvmStatic
+    fun decorateWidget(
+        widgetRoot: View?,
+        borderViewId: Int,
+        labelViewId: Int,
+        closeViewId: Int,
+        borderColor: Int,
+        textColor: Int
+    ) {
         if (widgetRoot == null) {
             return
         }
@@ -40,7 +51,7 @@ object TuiWidgetDecorator {
             borderView.background = panelDrawable(
                 context,
                 widgetBgColor,
-                AppearanceSettings.terminalBorderColor(),
+                borderColor,
                 1.5f,
                 AppearanceSettings.moduleCornerRadius(),
                 useDashed
@@ -52,26 +63,12 @@ object TuiWidgetDecorator {
             widgetLabel.setTextColor(textColor)
             widgetLabel.setTypeface(Tuils.getTypeface(context), Typeface.BOLD)
             widgetLabel.textSize = AppearanceSettings.moduleHeaderTextSize().toFloat()
-            try {
-                var gd = ResourcesCompat.getDrawable(context.resources, R.drawable.apps_drawer_header_border, null) as GradientDrawable?
-                if (gd != null) {
-                    gd = gd.mutate() as GradientDrawable
-                    gd.cornerRadius = Tuils.dpToPx(context, AppearanceSettings.headerCornerRadius().toFloat())
-                    if (useDashed) {
-                        gd.setStroke(
-                            dashedStrokePx(context, 1f),
-                            AppearanceSettings.terminalBorderColor(),
-                            Tuils.dpToPx(context, AppearanceSettings.dashLength().toFloat()),
-                            Tuils.dpToPx(context, AppearanceSettings.dashGap().toFloat())
-                        )
-                    } else {
-                        gd.setStroke(0, Color.TRANSPARENT)
-                    }
-                    gd.setColor(labelMaskColor)
-                    widgetLabel.background = gd
-                }
-            } catch (ignored: Exception) {
-            }
+            widgetLabel.background = TerminalBorderRuntime.tabDrawable(context, labelMaskColor)
+        }
+
+        if (borderView != null) {
+            val closeView = if (closeViewId == 0) null else widgetRoot.findViewById<View?>(closeViewId)
+            TerminalBorderRuntime.bind(borderView, widgetLabel, closeView)
         }
     }
 
@@ -101,21 +98,21 @@ object TuiWidgetDecorator {
     }
 
     @JvmStatic
-    fun panelDrawable(context: Context, fillColor: Int, borderColor: Int, strokeDp: Float, radiusDp: Int, dashed: Boolean): GradientDrawable {
-        val gd = GradientDrawable()
-        gd.shape = GradientDrawable.RECTANGLE
-        gd.cornerRadius = Tuils.dpToPx(context, radiusDp.toFloat())
-        gd.setColor(fillColor)
-        if (dashed) {
-            gd.setStroke(
-                dashedStrokePx(context, strokeDp / 1.5f),
-                borderColor,
-                Tuils.dpToPx(context, AppearanceSettings.dashLength().toFloat()),
-                Tuils.dpToPx(context, AppearanceSettings.dashGap().toFloat())
-            )
-        }
-        return gd
-    }
+    fun panelDrawable(
+        context: Context,
+        fillColor: Int,
+        borderColor: Int,
+        strokeDp: Float,
+        radiusDp: Int,
+        dashed: Boolean
+    ): TerminalBorderDrawable = TerminalBorderRuntime.panelDrawable(
+        context,
+        fillColor,
+        borderColor,
+        strokeDp,
+        radiusDp,
+        dashed
+    )
 
     private fun dashedStrokePx(context: Context, scale: Float): Int =
         max(1, Tuils.dpToPx(context, AppearanceSettings.dashedBorderStrokeWidthDp(scale)).toInt())

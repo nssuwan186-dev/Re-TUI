@@ -62,7 +62,6 @@ import android.widget.TextView
 import android.widget.TextView.OnEditorActionListener
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.GestureDetectorCompat
@@ -156,6 +155,7 @@ import ohi.andre.consolelauncher.tuils.MusicVisualizerView
 import ohi.andre.consolelauncher.tuils.OutlineEditText
 import ohi.andre.consolelauncher.tuils.OutlineTextView
 import ohi.andre.consolelauncher.tuils.StableHorizontalScrollView
+import ohi.andre.consolelauncher.tuils.TerminalBorderRuntime
 import ohi.andre.consolelauncher.tuils.TuiWidgetDecorator
 import ohi.andre.consolelauncher.tuils.TuiWidgetDecorator.decorateWidget
 import ohi.andre.consolelauncher.tuils.Tuils
@@ -1706,7 +1706,6 @@ class UIManager(
 
         terminalTrayToggle!!.setVisibility(View.VISIBLE)
         val outputColor = moduleNameTextColor()
-        val borderColor = terminalBorderColor()
         terminalTrayToggle!!.setTextColor(outputColor)
         terminalTrayToggle!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
         terminalTrayToggle!!.setTextSize(outputHeaderTextSize().toFloat())
@@ -1727,27 +1726,10 @@ class UIManager(
                 Tuils.dpToPx(mContext, 2)
             )
         }
-        try {
-            var gd = ResourcesCompat.getDrawable(
-                mContext!!.getResources(), R.drawable.apps_drawer_header_border, null
-            ) as GradientDrawable?
-            if (gd != null) {
-                gd = gd.mutate() as GradientDrawable
-                gd.setCornerRadius(Tuils.dpToPx(mContext, headerCornerRadius()).toFloat())
-                if (dashedBorders()) {
-                    gd.setStroke(
-                        dashedStrokePx(mContext), borderColor,
-                        Tuils.dpToPx(mContext, dashLength()).toFloat(),
-                        Tuils.dpToPx(mContext, dashGap()).toFloat()
-                    )
-                } else {
-                    gd.setStroke(0, Color.TRANSPARENT)
-                }
-                gd.setColor(terminalHeaderBackground())
-                terminalTrayToggle!!.setBackground(gd)
-            }
-        } catch (ignored: Exception) {
-        }
+        terminalTrayToggle!!.setBackground(
+            TerminalBorderRuntime.tabDrawable(mContext!!, terminalHeaderBackground())
+        )
+        TerminalBorderRuntime.bind(terminalOutputBorder, terminalTrayToggle)
         terminalTrayToggle!!.setOnClickListener(View.OnClickListener { v: View? ->
             if (!landscapeLayoutActive && this.isOutputTrayToggledMode) {
                 setTerminalTrayExpanded(!terminalTrayExpanded)
@@ -2477,6 +2459,7 @@ class UIManager(
             moduleView,
             R.id.module_text_border,
             R.id.module_text_label,
+            R.id.module_text_close,
             notificationWidgetBorderColor(),
             moduleNameTextColor()
         )
@@ -2836,6 +2819,7 @@ class UIManager(
             moduleView,
             R.id.module_text_border,
             R.id.module_text_label,
+            R.id.module_text_close,
             notificationWidgetBorderColor(),
             moduleNameTextColor()
         )
@@ -2904,20 +2888,8 @@ class UIManager(
 
     private fun styleModuleClose(close: TextView?) {
         if (close == null) return
-        val borderColor = terminalBorderColor()
         val bgColor = terminalHeaderBackground()
-        val gd = GradientDrawable()
-        gd.setShape(GradientDrawable.RECTANGLE)
-        gd.setCornerRadius(Tuils.dpToPx(mContext, headerCornerRadius()).toFloat())
-        gd.setColor(bgColor)
-        if (dashedBorders()) {
-            gd.setStroke(
-                dashedStrokePx(mContext), borderColor,
-                Tuils.dpToPx(mContext, dashLength()).toFloat(),
-                Tuils.dpToPx(mContext, dashGap()).toFloat()
-            )
-        }
-        close.setBackground(gd)
+        close.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, bgColor))
         close.setTextSize(moduleHeaderTextSize().toFloat())
     }
 
@@ -3907,7 +3879,6 @@ class UIManager(
 
                     val widgetBorderColor = musicWidgetBorderColor()
                     val widgetTextColor = musicWidgetTextColor()
-                    val widgetBgColor = terminalWindowBackground()
 
                     val visualizerView =
                         rootView.findViewById<MusicVisualizerView?>(R.id.music_visualizer)
@@ -3932,52 +3903,16 @@ class UIManager(
                         singerView.setTextColor(widgetTextColor)
                     }
 
-                    val borderView = rootView.findViewById<View?>(R.id.music_widget_border)
-                    if (borderView != null) {
-                        val gd = GradientDrawable()
-                        gd.setShape(GradientDrawable.RECTANGLE)
-                        gd.setCornerRadius(
-                            UIUtils.dpToPx(mContext!!, moduleCornerRadius()).toFloat()
-                        )
-                        if (dashedBorders()) {
-                            gd.setStroke(
-                                dashedStrokePx(mContext), widgetBorderColor,
-                                UIUtils.dpToPx(mContext!!, dashLength()).toFloat(),
-                                UIUtils.dpToPx(mContext!!, dashGap()).toFloat()
-                            )
-                        }
-                        gd.setColor(widgetBgColor)
-                        borderView.setBackgroundDrawable(gd)
-                    }
-
-                    val widgetLabel = rootView.findViewById<TextView?>(R.id.music_widget_label)
-                    if (widgetLabel != null) {
-                        widgetLabel.setTextColor(widgetTextColor)
-                        try {
-                            val gd = ResourcesCompat.getDrawable(
-                                mContext!!.getResources(),
-                                R.drawable.apps_drawer_header_border,
-                                null
-                            )!!.mutate() as GradientDrawable
-                            if (gd != null) {
-                                gd.setCornerRadius(
-                                    UIUtils.dpToPx(mContext!!, headerCornerRadius()).toFloat()
-                                )
-                                if (dashedBorders()) {
-                                    gd.setStroke(
-                                        dashedStrokePx(mContext), widgetBorderColor,
-                                        UIUtils.dpToPx(mContext!!, dashLength()).toFloat(),
-                                        UIUtils.dpToPx(mContext!!, dashGap()).toFloat()
-                                    )
-                                } else {
-                                    gd.setStroke(0, Color.TRANSPARENT)
-                                }
-                                gd.setColor(terminalHeaderBackground())
-                                widgetLabel.setBackgroundDrawable(gd)
-                            }
-                        } catch (ignored: Exception) {
-                        }
-                    }
+                    decorateWidget(
+                        rootView,
+                        R.id.music_widget_border,
+                        R.id.music_widget_label,
+                        R.id.music_widget_close,
+                        widgetBorderColor,
+                        widgetTextColor
+                    )
+                    styleModuleClose(rootView.findViewById<TextView?>(R.id.music_widget_close))
+                    sizeMusicVisualizer(rootView)
                     scheduleInternalMusicTickerIfNeeded()
                 } else if (action == ACTION_NOTIFICATION_FEED) {
                     val notifications =
@@ -4597,7 +4532,14 @@ class UIManager(
 
     private fun styleMusicWidget(musicWidget: View?) {
         if (musicWidget == null) return
-        decorateWidget(musicWidget, R.id.music_widget_border, R.id.music_widget_label)
+        decorateWidget(
+            musicWidget,
+            R.id.music_widget_border,
+            R.id.music_widget_label,
+            R.id.music_widget_close,
+            musicWidgetBorderColor(),
+            musicWidgetTextColor()
+        )
         styleModuleClose(musicWidget.findViewById<TextView?>(R.id.music_widget_close))
         sizeMusicVisualizer(musicWidget)
 
@@ -4752,33 +4694,32 @@ class UIManager(
         val labelBg = terminalHeaderBackground()
 
         if (termuxWindowBorder != null) {
-            val border = GradientDrawable()
-            border.setShape(GradientDrawable.RECTANGLE)
-            border.setCornerRadius(Tuils.dpToPx(mContext, outputCornerRadius()).toFloat())
-            border.setColor(bgColor)
-            if (dashedBorders()) {
-                border.setStroke(
-                    dashedStrokePx(mContext), borderColor,
-                    Tuils.dpToPx(mContext, dashLength()).toFloat(),
-                    Tuils.dpToPx(mContext, dashGap()).toFloat()
+            termuxWindowBorder!!.setBackground(
+                TerminalBorderRuntime.panelDrawable(
+                    mContext!!,
+                    bgColor,
+                    borderColor,
+                    1.5f,
+                    outputCornerRadius(),
+                    dashedBorders()
                 )
-            }
-            termuxWindowBorder!!.setBackground(border)
+            )
         }
 
         if (termuxWindowLabel != null) {
             termuxWindowLabel!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
             termuxWindowLabel!!.setTextSize(outputHeaderTextSize().toFloat())
             termuxWindowLabel!!.setTextColor(textColor)
-            termuxWindowLabel!!.setBackground(termuxLabelBackground(labelBg, borderColor))
+            termuxWindowLabel!!.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, labelBg))
         }
 
         if (termuxClose != null) {
             termuxClose!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
             termuxClose!!.setTextSize(outputHeaderTextSize().toFloat())
             termuxClose!!.setTextColor(textColor)
-            termuxClose!!.setBackground(termuxLabelBackground(labelBg, borderColor))
+            termuxClose!!.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, labelBg))
         }
+        TerminalBorderRuntime.bind(termuxWindowBorder, termuxWindowLabel, termuxClose)
 
         if (termuxOutput != null) {
             termuxOutput!!.setTypeface(Tuils.getTypeface(mContext))
@@ -4816,21 +4757,6 @@ class UIManager(
             termuxTools!!.setBackgroundColor(Color.TRANSPARENT)
             styleTermuxToolButtons(termuxTools, textColor)
         }
-    }
-
-    private fun termuxLabelBackground(fill: Int, stroke: Int): GradientDrawable {
-        val bg = GradientDrawable()
-        bg.setShape(GradientDrawable.RECTANGLE)
-        bg.setCornerRadius(Tuils.dpToPx(mContext, headerCornerRadius()).toFloat())
-        bg.setColor(fill)
-        if (dashedBorders()) {
-            bg.setStroke(
-                dashedStrokePx(mContext), stroke,
-                Tuils.dpToPx(mContext, dashLength()).toFloat(),
-                Tuils.dpToPx(mContext, dashGap()).toFloat()
-            )
-        }
-        return bg
     }
 
     private fun styleTermuxToolButton(button: TextView?, color: Int) {
@@ -4873,32 +4799,31 @@ class UIManager(
         val labelBg = terminalHeaderBackground()
 
         if (fileWindowBorder != null) {
-            val border = GradientDrawable()
-            border.setShape(GradientDrawable.RECTANGLE)
-            border.setCornerRadius(Tuils.dpToPx(mContext, outputCornerRadius()).toFloat())
-            border.setColor(bgColor)
-            if (dashedBorders()) {
-                border.setStroke(
-                    dashedStrokePx(mContext), borderColor,
-                    Tuils.dpToPx(mContext, dashLength()).toFloat(),
-                    Tuils.dpToPx(mContext, dashGap()).toFloat()
+            fileWindowBorder!!.setBackground(
+                TerminalBorderRuntime.panelDrawable(
+                    mContext!!,
+                    bgColor,
+                    borderColor,
+                    1.5f,
+                    outputCornerRadius(),
+                    dashedBorders()
                 )
-            }
-            fileWindowBorder!!.setBackground(border)
+            )
         }
 
         if (fileWindowLabel != null) {
             fileWindowLabel!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
             fileWindowLabel!!.setTextSize(outputHeaderTextSize().toFloat())
             fileWindowLabel!!.setTextColor(textColor)
-            fileWindowLabel!!.setBackground(termuxLabelBackground(labelBg, borderColor))
+            fileWindowLabel!!.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, labelBg))
         }
         if (fileClose != null) {
             fileClose!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
             fileClose!!.setTextSize(outputHeaderTextSize().toFloat())
             fileClose!!.setTextColor(textColor)
-            fileClose!!.setBackground(termuxLabelBackground(labelBg, borderColor))
+            fileClose!!.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, labelBg))
         }
+        TerminalBorderRuntime.bind(fileWindowBorder, fileWindowLabel, fileClose)
         if (filePath != null) {
             filePath!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
             filePath!!.setTextColor(textColor)
@@ -6690,6 +6615,7 @@ class UIManager(
             notificationWidget,
             R.id.notification_widget_border,
             R.id.notification_widget_label,
+            R.id.notification_widget_close,
             notificationWidgetBorderColor(),
             notificationWidgetTextColor()
         )
@@ -7209,60 +7135,23 @@ class UIManager(
         appsDrawerFooter.setTextColor(drawerColor)
         appsDrawerHeader.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
         appsDrawerFooter.setTypeface(Tuils.getTypeface(mContext))
-        appsDrawerHeader.setBackgroundColor(headerBgColor)
-        appsDrawerFooter.setBackgroundColor(headerBgColor)
 
         val useDashed = dashedBorders()
-        val dash = dashLength()
-        val gap = dashGap()
-
-        try {
-            val gd = ResourcesCompat.getDrawable(
-                mContext!!.getResources(),
-                R.drawable.apps_drawer_border,
-                null
-            )!!.mutate() as GradientDrawable
-            gd.setCornerRadius(Tuils.dpToPx(mContext, moduleCornerRadius()).toFloat())
-            if (useDashed) {
-                gd.setStroke(
-                    dashedStrokePx(mContext),
-                    borderColor,
-                    Tuils.dpToPx(mContext, dash).toFloat(),
-                    Tuils.dpToPx(mContext, gap).toFloat()
-                )
-            } else {
-                gd.setStroke(0, Color.TRANSPARENT)
-            }
-            gd.setColor(widgetBgColor)
-            appsDrawerRoot!!.findViewById<View?>(R.id.apps_drawer_container)
-                .setBackgroundDrawable(gd)
-        } catch (e: Exception) {
-        }
-
-        try {
-            val gd = ResourcesCompat.getDrawable(
-                mContext!!.getResources(),
-                R.drawable.apps_drawer_header_border,
-                null
-            )!!.mutate() as GradientDrawable
-            if (gd != null) {
-                gd.setCornerRadius(Tuils.dpToPx(mContext, headerCornerRadius()).toFloat())
-                if (useDashed) {
-                    gd.setStroke(
-                        dashedStrokePx(mContext),
-                        borderColor,
-                        Tuils.dpToPx(mContext, dash).toFloat(),
-                        Tuils.dpToPx(mContext, gap).toFloat()
-                    )
-                } else {
-                    gd.setStroke(0, Color.TRANSPARENT)
-                }
-                gd.setColor(headerBgColor)
-                appsDrawerHeader.setBackgroundDrawable(gd)
-                appsDrawerFooter.setBackgroundDrawable(gd)
-            }
-        } catch (e: Exception) {
-        }
+        val drawerPanel = appsDrawerContainer
+            ?: appsDrawerRoot!!.findViewById<View?>(R.id.apps_drawer_container)
+        drawerPanel?.setBackground(
+            TerminalBorderRuntime.panelDrawable(
+                mContext!!,
+                widgetBgColor,
+                borderColor,
+                1.5f,
+                moduleCornerRadius(),
+                useDashed
+            )
+        )
+        appsDrawerHeader.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, headerBgColor))
+        appsDrawerFooter.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, headerBgColor))
+        TerminalBorderRuntime.bind(drawerPanel, appsDrawerHeader, appsDrawerFooter)
 
         if (appsDrawerAdapter == null) {
             appsDrawerAdapter = AppsDrawerAdapter(mContext!!, drawerColor, widgetBgColor)
@@ -8105,34 +7994,27 @@ class UIManager(
             borderColor: Int
         ) {
             try {
-                val d = GradientDrawable()
-                d.setShape(GradientDrawable.RECTANGLE)
-                d.setCornerRadius(cornerRadius.toFloat())
-
-                if (dashed) {
-                    try {
-                        d.setStroke(
-                            dashedStrokePx(context), borderColor,
-                            Tuils.dpToPx(context, dashLength()).toFloat(),
-                            Tuils.dpToPx(context, dashGap()).toFloat()
-                        )
-                    } catch (e: Exception) {
-                        d.setStroke(0, Color.TRANSPARENT)
-                    }
-                }
-
                 applyMargins(v, spaces)
 
-                try {
+                val color = try {
                     var color = Color.parseColor(bgColor)
                     if (color == Color.TRANSPARENT) {
                         color = terminalWindowBackground()
                     }
-                    d.setColor(color)
+                    color
                 } catch (e: Exception) {
-                    d.setColor(terminalWindowBackground())
+                    terminalWindowBackground()
                 }
-                v.setBackgroundDrawable(d)
+                v.setBackgroundDrawable(
+                    TerminalBorderRuntime.panelDrawablePx(
+                        context,
+                        color,
+                        borderColor,
+                        1.5f,
+                        cornerRadius.toFloat(),
+                        dashed
+                    )
+                )
             } catch (e: Exception) {
                 Tuils.toFile(e)
                 Tuils.log(e)
