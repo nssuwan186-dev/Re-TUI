@@ -1,6 +1,7 @@
 package ohi.andre.consolelauncher.managers.widgets
 
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
@@ -33,6 +34,7 @@ import kotlin.math.min
 import android.content.ClipData
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ResolveInfo
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -325,6 +327,10 @@ class LuaWidgetEngine(
         globals.set("json", buildJsonTable())
         globals.set("http", buildHttpTable())
         globals.set("system", buildSystemTable())
+        globals.set("launcher", buildLauncherTable())
+        globals.set("apps", buildAppsTable())
+        globals.set("intents", buildIntentsTable())
+        globals.set("shortcuts", buildShortcutsTable())
         globals.set("reminders", buildRemindersTable())
         globals.set("notify", globals.get("reminders"))
         globals.set("aio", buildAioTable())
@@ -541,6 +547,7 @@ class LuaWidgetEngine(
         )
         ui.set("clear", UiFunction(UiAction { args: Varargs ->
             lastResult.body = ""
+            lastResult.layoutJson = ""
             lastResult.buttons.clear()
             lastResult.commands.clear()
             lastResult.valueActions.clear()
@@ -550,6 +557,8 @@ class LuaWidgetEngine(
             lastResult.dialogSelected = -1
             lastResult.progress = -1.0
         }))
+        ui.set("render", UiFunction(UiAction { args: Varargs -> this.setLayout(args) }))
+        ui.set("layout", UiFunction(UiAction { args: Varargs -> this.setLayout(args) }))
         ui.set(
             "text",
             UiFunction(UiAction { args: Varargs ->
@@ -608,6 +617,7 @@ class LuaWidgetEngine(
                 lastResult.buttons.add(label)
             }
         }))
+        ui.set("button", UiFunction(UiAction { args: Varargs -> this.addButton(args) }))
         ui.set("show_action", UiFunction(UiAction { args: Varargs -> this.addValueAction(args) }))
         ui.set("action", UiFunction(UiAction { args: Varargs -> this.addValueAction(args) }))
         ui.set("add_action", UiFunction(UiAction { args: Varargs -> this.addValueAction(args) }))
@@ -625,6 +635,9 @@ class LuaWidgetEngine(
                 lastResult.commands.add(RenderAction(label, command))
             }
         }))
+        ui.set("command_button", UiFunction(UiAction { args: Varargs ->
+            addCommandButton(stringAt(args, 1, ""), stringAt(args, 2, ""))
+        }))
         ui.set("show_module", UiFunction(UiAction { args: Varargs ->
             val module: String = stringAt(args, 1, "")
             val label: String = stringAt(args, 2, module)
@@ -632,6 +645,17 @@ class LuaWidgetEngine(
                 lastResult.commands.add(RenderAction(label, "module -show " + module))
             }
         }))
+        ui.set("module_button", UiFunction(UiAction { args: Varargs ->
+            val label: String = stringAt(args, 1, "")
+            val module: String = stringAt(args, 2, label)
+            addCommandButton(label, "module -show " + module)
+        }))
+        ui.set("show_app", UiFunction(UiAction { args: Varargs -> this.addAppButton(args) }))
+        ui.set("app_button", UiFunction(UiAction { args: Varargs -> this.addAppButton(args) }))
+        ui.set("show_intent", UiFunction(UiAction { args: Varargs -> this.addIntentButton(args) }))
+        ui.set("intent_button", UiFunction(UiAction { args: Varargs -> this.addIntentButton(args) }))
+        ui.set("show_shortcut", UiFunction(UiAction { args: Varargs -> this.addShortcutButton(args) }))
+        ui.set("shortcut_button", UiFunction(UiAction { args: Varargs -> this.addShortcutButton(args) }))
         ui.set("show_config", UiFunction(UiAction { args: Varargs ->
             val value: LuaValue = tableArg(args)
             if (!value.istable()) {
@@ -993,6 +1017,113 @@ class LuaWidgetEngine(
             })
         )
         return system
+    }
+
+    private fun buildLauncherTable(): LuaTable {
+        val launcher = LuaTable()
+        launcher.set("state", ValueFunction(ValueAction { args: Varargs ->
+            val state = LuaTable()
+            state.set("widget_id", LuaValue.valueOf(id))
+            state.set("widget_name", LuaValue.valueOf(LuaWidgetManager.getName(id)))
+            state.set("app_version", LuaValue.valueOf(BuildConfig.VERSION_NAME))
+            state.set("app_version_code", LuaValue.valueOf(BuildConfig.VERSION_CODE))
+            state.set("language", LuaValue.valueOf(Locale.getDefault().getLanguage()))
+            state.set("timezone", LuaValue.valueOf(TimeZone.getDefault().getID()))
+            state.set("battery", batteryInfo())
+            state.set("network", networkState())
+            state
+        }))
+        launcher.set("vars", ValueFunction(ValueAction { args: Varargs ->
+            val vars = LuaTable()
+            vars.set("launcher", LuaValue.valueOf("state, vars, command_button, module_button"))
+            vars.set("apps", LuaValue.valueOf("list, find, launch_command, button"))
+            vars.set("intents", LuaValue.valueOf("view, activity, button"))
+            vars.set("shortcuts", LuaValue.valueOf("use_command, button"))
+            vars.set("ui", LuaValue.valueOf("render, button, command_button, module_button, app_button, intent_button, shortcut_button"))
+            vars
+        }))
+        launcher.set("command_button", UiFunction(UiAction { args: Varargs ->
+            addCommandButton(stringAt(args, 1, ""), stringAt(args, 2, ""))
+        }))
+        launcher.set("module_button", UiFunction(UiAction { args: Varargs ->
+            val label = stringAt(args, 1, "")
+            val module = stringAt(args, 2, label)
+            addCommandButton(label, "module -show " + module)
+        }))
+        return launcher
+    }
+
+    private fun buildAppsTable(): LuaTable {
+        val apps = LuaTable()
+        apps.set("list", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("apps")
+            val limit = max(0, numberAt(args, 1, 50.0).toInt())
+            val table = LuaTable()
+            val entries = launchableApps()
+            val count = if (limit == 0) entries.size else min(limit, entries.size)
+            for (i in 0..<count) {
+                table.set(i + 1, appEntryTable(entries[i]))
+            }
+            table
+        }))
+        apps.set("find", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("apps")
+            val app = resolveLaunchableApp(stringArg(args))
+            if (app == null) LuaValue.NIL else appEntryTable(app)
+        }))
+        apps.set("launch_command", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("apps")
+            val app = resolveLaunchableApp(stringArg(args))
+            LuaValue.valueOf(app?.command() ?: "")
+        }))
+        apps.set("button", UiFunction(UiAction { args: Varargs -> this.addAppButton(args) }))
+        return apps
+    }
+
+    private fun appEntryTable(app: AppEntry): LuaTable {
+        val table = LuaTable()
+        table.set("name", LuaValue.valueOf(app.label))
+        table.set("label", LuaValue.valueOf(app.label))
+        table.set("package", LuaValue.valueOf(app.packageName))
+        table.set("class", LuaValue.valueOf(app.component.className))
+        table.set("component", LuaValue.valueOf(app.component.flattenToString()))
+        table.set("command", LuaValue.valueOf(app.command()))
+        return table
+    }
+
+    private fun buildIntentsTable(): LuaTable {
+        val intents = LuaTable()
+        intents.set("view", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("intents")
+            LuaValue.valueOf("intent -view " + quoteCommandArg(stringArg(args)))
+        }))
+        intents.set("activity", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("intents")
+            LuaValue.valueOf("intent -activity -n " + quoteCommandArg(stringArg(args)))
+        }))
+        intents.set("command", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("intents")
+            LuaValue.valueOf(commandFromIntentSpec(args.arg(rawIndex(args, 1))) ?: "")
+        }))
+        intents.set("button", UiFunction(UiAction { args: Varargs -> this.addIntentButton(args) }))
+        return intents
+    }
+
+    private fun buildShortcutsTable(): LuaTable {
+        val shortcuts = LuaTable()
+        shortcuts.set("use_command", ValueFunction(ValueAction { args: Varargs ->
+            requirePermission("shortcuts")
+            val shortcutId = stringAt(args, 1, "")
+            val app = stringAt(args, 2, "")
+            val command = StringBuilder("shortcut -use ")
+                .append(quoteCommandArg(shortcutId))
+            if (!TextUtils.isEmpty(app)) {
+                command.append(' ').append(quoteCommandArg(app))
+            }
+            LuaValue.valueOf(command.toString())
+        }))
+        shortcuts.set("button", UiFunction(UiAction { args: Varargs -> this.addShortcutButton(args) }))
+        return shortcuts
     }
 
     private fun buildRemindersTable(): LuaTable {
@@ -1551,6 +1682,268 @@ class LuaWidgetEngine(
         }
     }
 
+    private fun setLayout(args: Varargs) {
+        val value: LuaValue = args.arg(rawIndex(args, 1))
+        if (!value.istable()) {
+            lastResult.layoutJson = ""
+            lastResult.body = appendLine(lastResult.body, "Invalid layout schema.")
+            return
+        }
+        try {
+            val jsonValue: Any? = luaToJson(value)
+            lastResult.layoutJson = if (jsonValue is JSONObject || jsonValue is JSONArray) {
+                jsonValue.toString()
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            lastResult.layoutJson = ""
+            lastResult.body = appendLine(lastResult.body, "Invalid layout schema: " + e.message)
+        }
+    }
+
+    private fun addButton(args: Varargs) {
+        val label: String = stringAt(args, 1, "")
+        if (TextUtils.isEmpty(label)) {
+            return
+        }
+        val action = args.arg(rawIndex(args, 2))
+        if (action.isnil()) {
+            lastResult.buttons.add(label)
+            return
+        }
+        val command = commandFromAction(action)
+        if (!TextUtils.isEmpty(command)) {
+            addCommandButton(label, command)
+        } else {
+            lastResult.buttons.add(label)
+        }
+    }
+
+    private fun addCommandButton(label: String?, command: String?) {
+        if (!TextUtils.isEmpty(label) && !TextUtils.isEmpty(command)) {
+            lastResult.commands.add(RenderAction(label, command))
+        }
+    }
+
+    private fun addAppButton(args: Varargs) {
+        requirePermission("apps")
+        val label = stringAt(args, 1, "")
+        val target = stringAt(args, 2, label)
+        val app = resolveLaunchableApp(target)
+        if (app == null) {
+            lastResult.body = appendLine(lastResult.body, "App not found: " + target)
+            return
+        }
+        addCommandButton(if (TextUtils.isEmpty(label)) app.label else label, app.command())
+    }
+
+    private fun addIntentButton(args: Varargs) {
+        requirePermission("intents")
+        val label = stringAt(args, 1, "")
+        val action = args.arg(rawIndex(args, 2))
+        val command = commandFromIntentSpec(action)
+        if (TextUtils.isEmpty(command)) {
+            lastResult.body = appendLine(lastResult.body, "Invalid intent button: " + label)
+            return
+        }
+        addCommandButton(label, command)
+    }
+
+    private fun addShortcutButton(args: Varargs) {
+        requirePermission("shortcuts")
+        val label = stringAt(args, 1, "")
+        val shortcutId = stringAt(args, 2, "")
+        val app = stringAt(args, 3, "")
+        if (TextUtils.isEmpty(label) || TextUtils.isEmpty(shortcutId)) {
+            return
+        }
+        val command = StringBuilder("shortcut -use ")
+            .append(quoteCommandArg(shortcutId))
+        if (!TextUtils.isEmpty(app)) {
+            command.append(' ').append(quoteCommandArg(app))
+        }
+        addCommandButton(label, command.toString())
+    }
+
+    private fun commandFromAction(action: LuaValue): String? {
+        if (action.isstring()) {
+            return action.tojstring()
+        }
+        if (!action.istable()) {
+            return ""
+        }
+        val type = action.get("type").optjstring("").trim { it <= ' ' }.lowercase()
+        if ("command" == type) {
+            return action.get("value").optjstring(action.get("command").optjstring(""))
+        }
+        if ("module" == type) {
+            val module = action.get("value").optjstring(action.get("module").optjstring(""))
+            return if (TextUtils.isEmpty(module)) "" else "module -show " + module
+        }
+        if ("app" == type) {
+            requirePermission("apps")
+            val target = action.get("value").optjstring(action.get("package").optjstring(""))
+            val app = resolveLaunchableApp(target)
+            return app?.command() ?: ""
+        }
+        if ("intent" == type) {
+            requirePermission("intents")
+            return commandFromIntentSpec(action)
+        }
+        if ("shortcut" == type) {
+            requirePermission("shortcuts")
+            val shortcutId = action.get("value").optjstring(action.get("id").optjstring(""))
+            val app = action.get("app").optjstring("")
+            if (TextUtils.isEmpty(shortcutId)) {
+                return ""
+            }
+            val command = StringBuilder("shortcut -use ")
+                .append(quoteCommandArg(shortcutId))
+            if (!TextUtils.isEmpty(app)) {
+                command.append(' ').append(quoteCommandArg(app))
+            }
+            return command.toString()
+        }
+        return action.get("command").optjstring("")
+    }
+
+    private fun commandFromIntentSpec(spec: LuaValue): String? {
+        if (spec.isstring()) {
+            return "intent -view " + quoteCommandArg(spec.tojstring())
+        }
+        if (!spec.istable()) {
+            return ""
+        }
+
+        val uri = firstString(spec, "uri", "intent_uri")
+        if (!TextUtils.isEmpty(uri)) {
+            return "intent -uri " + quoteCommandArg(uri)
+        }
+
+        val view = firstString(spec, "view", "url", "data")
+        val mode = firstString(spec, "mode", "type").lowercase()
+        val action = firstString(spec, "action")
+        val component = firstString(spec, "component", "name")
+        val pkg = firstString(spec, "package", "pkg")
+        val mime = firstString(spec, "mime", "mime_type")
+        if (TextUtils.isEmpty(view)
+            && TextUtils.isEmpty(action)
+            && TextUtils.isEmpty(component)
+            && TextUtils.isEmpty(pkg)
+            && TextUtils.isEmpty(mime)
+        ) {
+            return ""
+        }
+
+        if (("view" == mode || TextUtils.isEmpty(mode))
+            && !TextUtils.isEmpty(view)
+            && TextUtils.isEmpty(action)
+            && TextUtils.isEmpty(component)
+            && TextUtils.isEmpty(pkg)
+            && TextUtils.isEmpty(mime)
+        ) {
+            return "intent -view " + quoteCommandArg(view)
+        }
+
+        val command = StringBuilder("intent -activity")
+        if (!TextUtils.isEmpty(action)) {
+            command.append(" -a ").append(quoteCommandArg(action))
+        }
+        if (!TextUtils.isEmpty(view)) {
+            command.append(" -d ").append(quoteCommandArg(view))
+        }
+        if (!TextUtils.isEmpty(mime)) {
+            command.append(" -t ").append(quoteCommandArg(mime))
+        }
+        if (!TextUtils.isEmpty(pkg)) {
+            command.append(" -p ").append(quoteCommandArg(pkg))
+        }
+        if (!TextUtils.isEmpty(component)) {
+            command.append(" -n ").append(quoteCommandArg(component))
+        }
+        return command.toString()
+    }
+
+    private fun firstString(table: LuaValue, vararg names: String): String {
+        for (name in names) {
+            val value = table.get(name)
+            if (!value.isnil()) {
+                val text = value.optjstring("")
+                if (!TextUtils.isEmpty(text)) {
+                    return text
+                }
+            }
+        }
+        return ""
+    }
+
+    private fun quoteCommandArg(value: String?): String {
+        var safe = if (value == null) "" else value
+        safe = safe.replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\r", " ")
+            .replace("\n", " ")
+        return "\"" + safe + "\""
+    }
+
+    private fun resolveLaunchableApp(target: String?): AppEntry? {
+        val query = if (target == null) "" else target.trim { it <= ' ' }
+        if (TextUtils.isEmpty(query) || context == null) {
+            return null
+        }
+        val apps = launchableApps()
+        val lower = query.lowercase(Locale.getDefault())
+        var partial: AppEntry? = null
+        for (app in apps) {
+            if (TextUtils.equals(app.packageName, query)
+                || TextUtils.equals(app.component.flattenToString(), query)
+                || TextUtils.equals(app.label, query)
+                || TextUtils.equals(app.label.lowercase(Locale.getDefault()), lower)
+            ) {
+                return app
+            }
+            if (partial == null
+                && (app.label.lowercase(Locale.getDefault()).contains(lower)
+                        || app.packageName.lowercase(Locale.getDefault()).contains(lower))
+            ) {
+                partial = app
+            }
+        }
+        return partial
+    }
+
+    private fun launchableApps(): MutableList<AppEntry> {
+        val out = ArrayList<AppEntry>()
+        val c = context ?: return out
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_LAUNCHER)
+        val results: MutableList<ResolveInfo> = try {
+            c.packageManager.queryIntentActivities(intent, 0)
+        } catch (e: Exception) {
+            ArrayList()
+        }
+        for (info in results) {
+            val activity = info.activityInfo ?: continue
+            val label = info.loadLabel(c.packageManager)?.toString() ?: activity.name
+            out.add(AppEntry(label, activity.packageName, ComponentName(activity.packageName, activity.name)))
+        }
+        out.sortWith(Comparator { a, b ->
+            a.label.compareTo(b.label, ignoreCase = true)
+        })
+        return out
+    }
+
+    private class AppEntry(
+        val label: String,
+        val packageName: String,
+        val component: ComponentName
+    ) {
+        fun command(): String {
+            return "intent -activity -n \"" + component.flattenToString().replace("\"", "") + "\""
+        }
+    }
+
     private fun showChoiceDialog(args: Varargs) {
         var title: String? = stringAt(args, 1, "Choose")
         var items: LuaValue = args.arg(rawIndex(args, 2))
@@ -1915,6 +2308,7 @@ class LuaWidgetEngine(
     class RenderResult {
         var title: String? = ""
         var body: String? = ""
+        var layoutJson: String? = ""
         var error: String? = ""
         var errorStage: String? = ""
         var progress: Double = -1.0
@@ -1935,6 +2329,7 @@ class LuaWidgetEngine(
             val copy = RenderResult()
             copy.title = title
             copy.body = body
+            copy.layoutJson = layoutJson
             copy.error = error
             copy.errorStage = errorStage
             copy.progress = progress
@@ -1964,7 +2359,7 @@ class LuaWidgetEngine(
         }
     }
 
-    class RenderAction internal constructor(val label: String?, val command: String?)
+    class RenderAction internal constructor(val label: String?, val command: String?, val type: String? = "command")
 
     class RenderValueAction internal constructor(val label: String?, val value: String?)
 
@@ -2011,6 +2406,8 @@ class LuaWidgetEngine(
                 || "http" == name || "system" == name || "ui" == name
                 || "suggest" == name || "aio" == name || "clock" == name
                 || "reminders" == name || "notify" == name
+                || "launcher" == name || "apps" == name || "intents" == name
+                || "shortcuts" == name
             ) {
                 return globals?.get(name) ?: LuaValue.NIL
             }

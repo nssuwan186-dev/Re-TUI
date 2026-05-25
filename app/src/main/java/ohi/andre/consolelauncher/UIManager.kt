@@ -204,6 +204,8 @@ import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache
 import ohi.andre.consolelauncher.managers.xml.options.Notifications
 import androidx.annotation.NonNull
 import ohi.andre.consolelauncher.tuils.interfaces.OnBatteryUpdate
+import org.json.JSONArray
+import org.json.JSONObject
 
 class UIManager(
     context: Context,
@@ -1818,7 +1820,11 @@ class UIManager(
         }
         val targetHeight: Int
         if (this.isOutputTrayNativeMode) {
-            targetHeight = calculateNativeTerminalTrayHeight(expandedHeight)
+            targetHeight = if (TextUtils.isEmpty(activeModule)) {
+                calculateNativeTerminalTrayHeight(expandedHeight)
+            } else {
+                collapsedHeight
+            }
         } else if (this.isOutputTrayAutoMode) {
             terminalTrayExpanded = TextUtils.isEmpty(activeModule)
             targetHeight = if (terminalTrayExpanded) expandedHeight else collapsedHeight
@@ -2288,9 +2294,14 @@ class UIManager(
         if (!ModuleManager.isLuaSource(source)) {
             return false
         }
-        renderLuaWidgetModule(id, false, false)
-        val text = ModuleManager.getScriptText(mContext, id)
-        showTextModule(id, if (TextUtils.isEmpty(text)) "No module output yet." else text)
+        val result = renderLuaWidgetModule(id, false, false)
+        val widgetId = ModuleManager.luaWidgetId(source)
+        if (result != null) {
+            showLuaWidgetModule(id, widgetId, result)
+        } else {
+            val text = ModuleManager.getScriptText(mContext, id)
+            showTextModule(id, if (TextUtils.isEmpty(text)) "No module output yet." else text)
+        }
         return true
     }
 
@@ -2381,6 +2392,418 @@ class UIManager(
         } catch (e: Exception) {
             Tuils.log(e)
         }
+    }
+
+    private fun repaintActiveLuaWidgetModule(
+        module: String?,
+        widgetId: String?,
+        result: LuaWidgetEngine.RenderResult
+    ) {
+        if (homeWidgetsContainer == null) {
+            return
+        }
+        homeWidgetsContainer!!.removeAllViews()
+        showLuaWidgetModule(module, widgetId, result)
+        refreshSuggestionsForActiveModule()
+    }
+
+    private fun showLuaWidgetModule(
+        module: String?,
+        widgetId: String?,
+        result: LuaWidgetEngine.RenderResult
+    ) {
+        val moduleView = LayoutInflater.from(mContext)
+            .inflate(R.layout.module_text_widget, homeWidgetsContainer, false)
+        homeWidgetsContainer!!.addView(moduleView)
+
+        val label = moduleView.findViewById<TextView?>(R.id.module_text_label)
+        val close = moduleView.findViewById<TextView?>(R.id.module_text_close)
+        val scroll = moduleView.findViewById<ScrollView?>(R.id.module_text_scroll)
+        val body = moduleView.findViewById<TextView?>(R.id.module_text_body)
+
+        if (label != null) {
+            val title = if (TextUtils.isEmpty(result.title)) ModuleManager.displayTitle(
+                mContext,
+                module
+            ) else result.title
+            label.setText(title)
+            label.setOnClickListener(View.OnClickListener {
+                renderLuaWidgetModule(module, true, true)
+            })
+        }
+        if (close != null) {
+            close.setOnClickListener(View.OnClickListener { v: View? -> closeHomeModule() })
+            close.setTextColor(moduleNameTextColor())
+            close.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
+            close.setTextSize(moduleHeaderTextSize().toFloat())
+        }
+
+        if (scroll != null) {
+            scroll.removeAllViews()
+            val content = LinearLayout(mContext)
+            content.setOrientation(LinearLayout.VERTICAL)
+            content.setLayoutParams(
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+            scroll.addView(content)
+
+            if (!TextUtils.isEmpty(result.error)) {
+                addLuaText(content, "Lua error: " + result.error)
+                if (!TextUtils.isEmpty(result.errorStage)) {
+                    addLuaText(content, "Stage: " + result.errorStage)
+                }
+            } else if (!TextUtils.isEmpty(result.layoutJson)
+                && renderLuaLayout(content, module, result.layoutJson)
+            ) {
+                // The declarative layout rendered itself.
+            } else {
+                addLuaText(
+                    content,
+                    if (TextUtils.isEmpty(result.body)) "No widget output yet." else result.body
+                )
+            }
+            addLuaResultActions(content, module, widgetId, result)
+        } else if (body != null) {
+            body.setText(if (TextUtils.isEmpty(result.body)) "No widget output yet." else result.body)
+            body.setTextColor(notificationWidgetTextColor())
+            body.setTextSize(moduleBodyTextSize().toFloat())
+            applyModuleBodyTypeface(body)
+        }
+
+        decorateWidget(
+            moduleView,
+            R.id.module_text_border,
+            R.id.module_text_label,
+            notificationWidgetBorderColor(),
+            moduleNameTextColor()
+        )
+        styleModuleClose(close)
+    }
+
+    private fun addLuaText(parent: LinearLayout, text: String?) {
+        val view = TextView(mContext)
+        view.setText(text)
+        view.setTextColor(notificationWidgetTextColor())
+        view.setTextSize(moduleBodyTextSize().toFloat())
+        view.setIncludeFontPadding(true)
+        view.setLineSpacing(Tuils.dpToPx(mContext, 2).toFloat(), 1f)
+        view.setTypeface(Typeface.MONOSPACE)
+        view.setLayoutParams(
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+        parent.addView(view)
+    }
+
+    private fun addLuaResultActions(
+        parent: LinearLayout,
+        module: String?,
+        widgetId: String?,
+        result: LuaWidgetEngine.RenderResult
+    ) {
+        val actions = ArrayList<LuaSurfaceAction>()
+        var index = 1
+        for (button in result.buttons) {
+            val actionIndex = index
+            if (!TextUtils.isEmpty(button)) {
+                actions.add(
+                    LuaSurfaceAction(button!!) {
+                        clickLuaWidget(module, actionIndex)
+                    }
+                )
+            }
+            index += 1
+        }
+        for (action in result.valueActions) {
+            if (action == null || TextUtils.isEmpty(action.label)) continue
+            actions.add(
+                LuaSurfaceAction(action.label!!) {
+                    actionLuaWidget(module, action.value)
+                }
+            )
+        }
+        if (result.dialogOpen) {
+            var dialogIndex = 1
+            for (item in result.dialogItems) {
+                val choiceIndex = dialogIndex
+                if (!TextUtils.isEmpty(item)) {
+                    val label = if (choiceIndex == result.dialogSelected) "* " + item else item
+                    actions.add(
+                        LuaSurfaceAction(label!!) {
+                            dialogLuaWidget(module, choiceIndex)
+                        }
+                    )
+                }
+                dialogIndex += 1
+            }
+            actions.add(LuaSurfaceAction("cancel") { dialogLuaWidget(module, -1) })
+        }
+        for (action in result.commands) {
+            if (action == null || TextUtils.isEmpty(action.label) || TextUtils.isEmpty(action.command)) {
+                continue
+            }
+            actions.add(
+                LuaSurfaceAction(action.label!!) {
+                    executeLuaWidgetCommand(action.command)
+                }
+            )
+        }
+        if (result.expandable) {
+            val expanded = result.expanded
+            actions.add(
+                LuaSurfaceAction(if (expanded) "collapse" else "expand") {
+                    if (expanded) setLuaWidgetExpanded(module, false)
+                    else setLuaWidgetExpanded(module, true)
+                }
+            )
+        }
+        addLuaButtonGrid(parent, actions)
+    }
+
+    private fun addLuaButtonGrid(parent: LinearLayout, actions: MutableList<LuaSurfaceAction>) {
+        if (actions.isEmpty()) {
+            return
+        }
+        val topSpacer = View(mContext)
+        topSpacer.setLayoutParams(
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Tuils.dpToPx(mContext, 8)
+            )
+        )
+        parent.addView(topSpacer)
+
+        var row: LinearLayout? = null
+        for (i in actions.indices) {
+            if (i % 2 == 0) {
+                row = LinearLayout(mContext)
+                row.setOrientation(LinearLayout.HORIZONTAL)
+                row.setLayoutParams(
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                )
+                parent.addView(row)
+            }
+            val button = luaSurfaceButton(actions[i])
+            row!!.addView(button)
+        }
+    }
+
+    private fun luaSurfaceButton(action: LuaSurfaceAction): TextView {
+        val button = TextView(mContext)
+        button.setText(action.label)
+        button.setSingleLine(false)
+        button.setGravity(Gravity.CENTER)
+        button.setMinHeight(Tuils.dpToPx(mContext, 36))
+        button.setPadding(
+            Tuils.dpToPx(mContext, 10),
+            Tuils.dpToPx(mContext, 7),
+            Tuils.dpToPx(mContext, 10),
+            Tuils.dpToPx(mContext, 7)
+        )
+        button.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        button.setTextColor(moduleNameTextColor())
+        button.setBackground(luaSurfaceButtonBackground())
+        val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        val margin = Tuils.dpToPx(mContext, 4)
+        lp.setMargins(margin, margin, margin, margin)
+        button.setLayoutParams(lp)
+        button.setOnClickListener(View.OnClickListener { action.run.run() })
+        return button
+    }
+
+    private fun luaSurfaceButtonBackground(): Drawable {
+        val gd = GradientDrawable()
+        gd.setShape(GradientDrawable.RECTANGLE)
+        gd.setCornerRadius(Tuils.dpToPx(mContext, moduleCornerRadius()).toFloat())
+        gd.setColor(moduleButtonBackgroundColor())
+        if (dashedBorders()) {
+            gd.setStroke(
+                dashedStrokePx(mContext, 0.8f), moduleButtonBorderColor(),
+                Tuils.dpToPx(mContext, dashLength()).toFloat(),
+                Tuils.dpToPx(mContext, dashGap()).toFloat()
+            )
+        }
+        return gd
+    }
+
+    private fun renderLuaLayout(parent: LinearLayout, module: String?, rawJson: String?): Boolean {
+        if (TextUtils.isEmpty(rawJson)) {
+            return false
+        }
+        try {
+            val trimmed = rawJson!!.trim { it <= ' ' }
+            if (trimmed.startsWith("[")) {
+                renderLuaLayoutArray(parent, module, JSONArray(trimmed))
+            } else {
+                renderLuaLayoutObject(parent, module, JSONObject(trimmed))
+            }
+            return true
+        } catch (e: Exception) {
+            addLuaText(parent, "Layout error: " + e.message)
+            return true
+        }
+    }
+
+    private fun renderLuaLayoutArray(parent: LinearLayout, module: String?, array: JSONArray) {
+        for (i in 0..<array.length()) {
+            val item = array.opt(i)
+            if (item is JSONObject) {
+                renderLuaLayoutObject(parent, module, item)
+            } else if (item is JSONArray) {
+                renderLuaLayoutCompact(parent, module, item)
+            } else if (item != null) {
+                addLuaText(parent, item.toString())
+            }
+        }
+    }
+
+    private fun renderLuaLayoutCompact(parent: LinearLayout, module: String?, array: JSONArray) {
+        if (array.length() == 0) {
+            return
+        }
+        val type = array.optString(0, "text")
+        val obj = JSONObject()
+        obj.put("type", type)
+        if ("button" == type) {
+            obj.put("label", array.optString(1, ""))
+            if (array.length() > 2) obj.put("command", array.optString(2, ""))
+        } else {
+            obj.put("text", array.optString(1, ""))
+        }
+        renderLuaLayoutObject(parent, module, obj)
+    }
+
+    private fun renderLuaLayoutObject(parent: LinearLayout, module: String?, obj: JSONObject) {
+        val type = obj.optString("type", obj.optString("kind", "text")).lowercase(Locale.US)
+        if ("column" == type || "container" == type) {
+            val column = LinearLayout(mContext)
+            column.setOrientation(LinearLayout.VERTICAL)
+            column.setLayoutParams(
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+            parent.addView(column)
+            renderLuaLayoutChildren(column, module, obj.optJSONArray("children"))
+            return
+        }
+        if ("row" == type) {
+            val row = LinearLayout(mContext)
+            row.setOrientation(LinearLayout.HORIZONTAL)
+            row.setLayoutParams(
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+            parent.addView(row)
+            val children = obj.optJSONArray("children")
+            if (children != null) {
+                for (i in 0..<children.length()) {
+                    val child = children.optJSONObject(i) ?: continue
+                    val childBox = LinearLayout(mContext)
+                    childBox.setOrientation(LinearLayout.VERTICAL)
+                    val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    val margin = Tuils.dpToPx(mContext, 3)
+                    lp.setMargins(margin, margin, margin, margin)
+                    childBox.setLayoutParams(lp)
+                    row.addView(childBox)
+                    renderLuaLayoutObject(childBox, module, child)
+                }
+            }
+            return
+        }
+        if ("button" == type || "command" == type || "module" == type) {
+            val label = obj.optString("label", obj.optString("text", "button"))
+            val command = commandFromLuaLayoutObject(obj)
+            addLuaButtonGrid(
+                parent,
+                mutableListOf(
+                    LuaSurfaceAction(label) {
+                        if (!TextUtils.isEmpty(command)) {
+                            executeLuaWidgetCommand(command)
+                        }
+                    }
+                )
+            )
+            return
+        }
+        if ("progress" == type) {
+            addLuaText(parent, formatLuaLayoutProgress(obj))
+            return
+        }
+        if ("divider" == type) {
+            addLuaText(parent, "----------------")
+            return
+        }
+        if ("spacer" == type) {
+            val spacer = View(mContext)
+            spacer.setLayoutParams(
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    Tuils.dpToPx(mContext, max(1, obj.optInt("size", 8)))
+                )
+            )
+            parent.addView(spacer)
+            return
+        }
+        addLuaText(parent, obj.optString("text", obj.optString("label", "")))
+    }
+
+    private fun renderLuaLayoutChildren(parent: LinearLayout, module: String?, children: JSONArray?) {
+        if (children == null) {
+            return
+        }
+        for (i in 0..<children.length()) {
+            val child = children.opt(i)
+            if (child is JSONObject) {
+                renderLuaLayoutObject(parent, module, child)
+            } else if (child is JSONArray) {
+                renderLuaLayoutCompact(parent, module, child)
+            }
+        }
+    }
+
+    private fun commandFromLuaLayoutObject(obj: JSONObject): String {
+        if (!TextUtils.isEmpty(obj.optString("command", ""))) {
+            return obj.optString("command")
+        }
+        if (!TextUtils.isEmpty(obj.optString("module", ""))) {
+            return "module -show " + obj.optString("module")
+        }
+        return ""
+    }
+
+    private fun formatLuaLayoutProgress(obj: JSONObject): String {
+        val label = obj.optString("label", obj.optString("text", "Progress"))
+        val value = obj.optDouble("value", obj.optDouble("progress", 0.0))
+        val maxValue = obj.optDouble("max", 1.0)
+        val pct = if (maxValue <= 0.0) 0.0 else min(1.0, max(0.0, value / maxValue))
+        val width = max(4, min(32, obj.optInt("width", 12)))
+        val filled = Math.round(pct * width).toInt()
+        val out = StringBuilder(label).append(" [")
+        for (i in 0..<width) {
+            out.append(if (i < filled) '█' else '░')
+        }
+        out.append("] ").append(Math.round(pct * 100.0)).append('%')
+        return out.toString()
+    }
+
+    private fun executeLuaWidgetCommand(command: String?) {
+        if (TextUtils.isEmpty(command) || mTerminalAdapter == null) {
+            return
+        }
+        mTerminalAdapter!!.executeInput(command)
     }
 
     private fun showTextModule(module: String?, text: String?) {
@@ -2848,7 +3271,11 @@ class UIManager(
         }
     }
 
-    private fun renderLuaWidgetModule(module: String?, repaint: Boolean, announce: Boolean) {
+    private fun renderLuaWidgetModule(
+        module: String?,
+        repaint: Boolean,
+        announce: Boolean
+    ): LuaWidgetEngine.RenderResult? {
         val id = ModuleManager.normalize(module)
         val source = ModuleManager.getModuleSource(mContext, id)
         val widgetId = ModuleManager.luaWidgetId(source)
@@ -2857,10 +3284,19 @@ class UIManager(
                 mContext, id, ("::title " + ModuleManager.displayName(id)
                         + "\n::body Lua widget source not found: " + widgetId)
             )
+            return null
         } else if (!applyLuaWidgetUnavailablePayload(id, widgetId, true, false, false)) {
             val engine = getLuaWidgetEngine(widgetId)
             val result = engine.render(announce)
             applyLuaWidgetResult(id, widgetId, result, true, false, false)
+            if (repaint && id == activeModule) {
+                repaintActiveLuaWidgetModule(id, widgetId, result)
+            }
+            updateModuleDockSelection()
+            if (announce) {
+                Tuils.sendOutput(mContext, "Widget refreshed: " + id)
+            }
+            return result
         }
 
         if (repaint && id == activeModule) {
@@ -2870,6 +3306,7 @@ class UIManager(
         if (announce) {
             Tuils.sendOutput(mContext, "Widget refreshed: " + id)
         }
+        return null
     }
 
     private fun clickLuaWidget(module: String?, index: Int) {
@@ -2986,7 +3423,7 @@ class UIManager(
             scheduleLuaWidgetTickIfNeeded(module, result)
         }
         if (repaint && module == activeModule) {
-            repaintActiveTextModule(module)
+            repaintActiveLuaWidgetModule(module, widgetId, result)
         }
         if (updateDock) {
             updateModuleDockSelection()
@@ -3035,7 +3472,14 @@ class UIManager(
                             )
                         }
                         if (module == activeModule) {
-                            repaintActiveTextModule(module)
+                            if (result != null
+                                && LuaWidgetManager.isEnabled(updatedWidgetId)
+                                && LuaWidgetManager.isTrusted(updatedWidgetId)
+                            ) {
+                                repaintActiveLuaWidgetModule(module, updatedWidgetId, result)
+                            } else {
+                                repaintActiveTextModule(module)
+                            }
                             scheduleLuaWidgetTickIfNeeded(module, result)
                         }
                     }
@@ -7138,6 +7582,8 @@ class UIManager(
     private class AppEntry(val app: LaunchInfo) : AppDrawerEntry() {
         override val viewType: Int = 1
     }
+
+    private class LuaSurfaceAction(val label: String, val run: Runnable)
 
     private inner class AppsDrawerAdapter(
         private val context: Context,

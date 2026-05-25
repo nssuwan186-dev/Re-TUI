@@ -66,7 +66,10 @@ object LuaWidgetManager {
             "vibrate",
             "local-files",
             "active-tick",
-            "notifications"
+            "notifications",
+            "apps",
+            "intents",
+            "shortcuts"
         )
     }
 
@@ -453,10 +456,8 @@ object LuaWidgetManager {
         }
 
         var index = 1
-        var hasRefreshButton = false
         for (button in result.buttons) {
             appendSuggest(out, button, "widget -click " + normalizeId(id) + " " + index)
-            hasRefreshButton = hasRefreshButton || "refresh" == normalizeActionLabel(button)
             index += 1
         }
         for (action in result.valueActions) {
@@ -488,9 +489,6 @@ object LuaWidgetManager {
             appendSuggest(out, "edit", "widget -config " + normalizeId(id))
         }
         appendSuggest(out, "edit script", "widget -edit " + normalizeId(id))
-        if (!hasRefreshButton) {
-            appendSuggest(out, "refresh", "module -refresh " + normalizeId(id))
-        }
         if (!TextUtils.isEmpty(result.error)) {
             appendSuggest(out, "copy error", "widget -copy-error " + normalizeId(id))
             appendSuggest(out, "check", "widget -check " + normalizeId(id))
@@ -756,6 +754,29 @@ object LuaWidgetManager {
             capabilities, code.contains("reminders:")
                     || code.contains("notify:"), "notifications"
         )
+        addCapability(
+            capabilities, code.contains("apps:")
+                    || code.contains("require \"apps\"")
+                    || code.contains("require 'apps'")
+                    || code.contains("ui:app_button")
+                    || code.contains("ui:show_app"), "apps"
+        )
+        addCapability(
+            capabilities, code.contains("intents:")
+                    || code.contains("require \"intents\"")
+                    || code.contains("require 'intents'")
+                    || code.contains("ui:intent_button")
+                    || code.contains("ui:show_intent")
+                    || code.contains("intent -"), "intents"
+        )
+        addCapability(
+            capabilities, code.contains("shortcuts:")
+                    || code.contains("require \"shortcuts\"")
+                    || code.contains("require 'shortcuts'")
+                    || code.contains("ui:shortcut_button")
+                    || code.contains("ui:show_shortcut")
+                    || code.contains("shortcut -"), "shortcuts"
+        )
         addCapability(capabilities, code.contains("suggest:"), "suggestions")
         return capabilities
     }
@@ -883,10 +904,6 @@ object LuaWidgetManager {
             if (part.length > 1) out.append(part.substring(1))
         }
         return if (out.length == 0) id else out.toString()
-    }
-
-    private fun normalizeActionLabel(label: kotlin.String?): kotlin.String {
-        return if (label == null) "" else label.trim { it <= ' ' }.lowercase()
     }
 
     private fun quoteArg(value: kotlin.String?): kotlin.String {
