@@ -141,6 +141,7 @@ The active Lua module no longer needs a default refresh chip. Opening a module r
 - `progress` objects: `{ type = "progress", label = "Done", value = 2, max = 5, width = 8 }`
 - `button`, `command`, and `module` objects that run launcher commands
 - `divider` and `spacer`
+- `pre`, `ascii`, and `code` objects for explicitly monospace blocks
 
 Example:
 
@@ -155,6 +156,7 @@ function render()
             { type = "text", text = "Module state" },
             { type = "progress", label = "Done", value = 2, max = 5, width = 8 },
         }},
+        { type = "pre", text = "CPU  [####....] 50%" },
     })
     ui:button("+1")
     ui:command_button("Modules", "module -ls")
@@ -171,6 +173,8 @@ function on_click(index)
     render()
 end
 ```
+
+Plain Lua text follows the active launcher font so custom modules stay visually consistent with the rest of the launcher. Renderer-owned structural elements such as `progress` and `divider`, plus explicit `pre`, `ascii`, and `code` layout objects, use monospace when alignment matters.
 
 Example parameterized todo module:
 

@@ -20,7 +20,8 @@ class TerminalBorderDrawable(
     private val dashed: Boolean,
     private val dashLengthPx: Float,
     private val dashGapPx: Float,
-    private val cyberdeck: Boolean = false
+    private val cyberdeck: Boolean = false,
+    private val cyberdeckNotch: Boolean = true
 ) : Drawable() {
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -132,16 +133,18 @@ class TerminalBorderDrawable(
         path.lineTo(right, bottom - cornerCut)
         path.lineTo(right - cornerCut, bottom)
         path.lineTo(left, bottom)
-        path.lineTo(left, notchCenter + notchHalfHeight)
-        path.lineTo(left + notchDepth, notchCenter + notchHalfHeight)
-        path.lineTo(left + notchDepth, notchCenter - notchHalfHeight)
-        path.lineTo(left, notchCenter - notchHalfHeight)
+        if (cyberdeckNotch) {
+            path.lineTo(left, notchCenter + notchHalfHeight)
+            path.lineTo(left + notchDepth, notchCenter + notchHalfHeight)
+            path.lineTo(left + notchDepth, notchCenter - notchHalfHeight)
+            path.lineTo(left, notchCenter - notchHalfHeight)
+        }
         path.close()
 
         canvas.drawPath(path, fillPaint)
         if (strokeWidthPx > 0) {
             canvas.drawPath(path, strokePaint)
-            drawCyberpunkDetails(canvas, left, top, right, bottom, width, height, cornerCut, notchDepth)
+            drawCyberpunkDetails(canvas, left, top, right, bottom, width, height, cornerCut, if (cyberdeckNotch) notchDepth else 0f)
         }
 
         drawCutouts(canvas)

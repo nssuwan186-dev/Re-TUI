@@ -465,17 +465,134 @@ enum class Ui : XMLPrefsSave {
             return "This is used to order the labels on top of the screen"
         }
     },
-    status_lines_alignment {
+    ram_status_alignment {
         override fun defaultValue(): String? {
-            return "0,-1,-1,-1,-1,-1,-1,-1,-1,-1"
+            return "0"
         }
 
         override fun type(): String? {
-            return XMLPrefsSave.TEXT
+            return XMLPrefsSave.INTEGER
         }
 
         override fun info(): String? {
-            return "The alignment of the nth status line (<0 = left, =0 = center, >0 = right)"
+            return "RAM status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    device_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "Device status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    time_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "Time status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    battery_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "Battery status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    storage_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "Storage status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    network_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "Network status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    notes_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "Notes status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    weather_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "Weather status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    unlock_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "Unlock counter status line alignment (<0 = left, =0 = center, >0 = right)"
+        }
+    },
+    ascii_status_alignment {
+        override fun defaultValue(): String? {
+            return "-1"
+        }
+
+        override fun type(): String? {
+            return XMLPrefsSave.INTEGER
+        }
+
+        override fun info(): String? {
+            return "ASCII status line alignment (<0 = left, =0 = center, >0 = right)"
         }
     },
     input_prefix {
@@ -567,19 +684,6 @@ enum class Ui : XMLPrefsSave {
 
         override fun info(): String? {
             return "If true, Duo keeps the status lines and side switch button on the empty screen while output, input, toolbar, and suggestions stay on the active screen"
-        }
-    },
-    ignore_bar_color {
-        override fun defaultValue(): String? {
-            return "true"
-        }
-
-        override fun type(): String? {
-            return XMLPrefsSave.BOOLEAN
-        }
-
-        override fun info(): String? {
-            return "If true, statusbar_color and navigationbar_color will be ignored"
         }
     },
     show_app_installed {
@@ -788,19 +892,6 @@ enum class Ui : XMLPrefsSave {
 
         override fun info(): String? {
             return "If true, your status bar icons will be white. Dark otherwise"
-        }
-    },
-    bgrect_params {
-        override fun defaultValue(): String? {
-            return "2,0"
-        }
-
-        override fun type(): String? {
-            return XMLPrefsSave.TEXT
-        }
-
-        override fun info(): String? {
-            return "Deprecated: use dashed_border_stroke_width and dashed_border_corner_radius"
         }
     },
     shadow_params {

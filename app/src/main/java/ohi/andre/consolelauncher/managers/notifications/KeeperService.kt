@@ -84,9 +84,9 @@ class KeeperService : android.app.Service() {
             showHome =
                 XMLPrefsManager.getBoolean(ohi.andre.consolelauncher.managers.xml.options.Behavior.tui_notification_click_showhome)
             inputColor =
-                XMLPrefsManager.getColor(ohi.andre.consolelauncher.managers.xml.options.Behavior.tui_notification_input_color)
+                XMLPrefsManager.getColor(ohi.andre.consolelauncher.managers.xml.options.Behavior.tui_notification_input_text_color)
             timeColor =
-                XMLPrefsManager.getColor(ohi.andre.consolelauncher.managers.xml.options.Behavior.tui_notification_time_color)
+                XMLPrefsManager.getColor(ohi.andre.consolelauncher.managers.xml.options.Behavior.tui_notification_time_text_color)
             prefix = XMLPrefsManager.get(Ui.input_prefix)
             upDown =
                 XMLPrefsManager.getBoolean(ohi.andre.consolelauncher.managers.xml.options.Behavior.tui_notification_lastcmds_updown)

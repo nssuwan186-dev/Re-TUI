@@ -30,7 +30,7 @@ class StorageManager(
     override fun update() {
         if (storageFormat == null) {
             storageFormat = XMLPrefsManager.get(Behavior.storage_format)
-            color = XMLPrefsManager.getColor(Theme.storage_color)
+            color = XMLPrefsManager.getColor(Theme.storage_text_color)
         }
 
         if (storagePatterns == null) {

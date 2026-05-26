@@ -736,6 +736,14 @@ $ module -dock add server</pre>
       <div class="note">
         <p><strong>Battery rule:</strong> do not build modules around <code>while true</code> loops or one-second polling. Let the launcher show cached output while idle, then refresh from a command, suggestion, callback, or Android event.</p>
       </div>
+      <div class="note">
+        <p><strong>Preformatted output:</strong> normal script output uses the selected launcher font. Wrap terminal art, tables, or code in <code>::pre</code>, <code>::ascii</code>, or <code>::code</code>, then close it with <code>::end</code>, when alignment must stay monospace. One-line forms such as <code>::pre text</code>, <code>::ascii text</code>, and <code>::code text</code> are also supported.</p>
+        <pre>echo "::title Weather: Chennai"
+echo "::body Weather report: Chennai"
+echo "::ascii"
+curl -s 'wttr.in/Chennai?0T'
+echo "::end"</pre>
+      </div>
     </section>
 
     <section class="guide" id="lua-modules">
@@ -751,8 +759,11 @@ $ module -dock add server</pre>
         <div><strong>Create:</strong> <code>module -new lua name</code>, save the Lua source, then <code>module -show name</code>.</div>
         <div><strong>Edit/check:</strong> <code>module -edit name</code>, <code>module -config name</code>, <code>module -check name</code>, and <code>module -approve name</code>.</div>
         <div><strong>Controls:</strong> <code>ui:button</code>, <code>ui:command_button</code>, <code>ui:module_button</code>, <code>ui:app_button</code>, <code>ui:intent_button</code>, and <code>ui:shortcut_button</code>.</div>
-        <div><strong>Layout:</strong> <code>ui:render</code> / <code>ui:layout</code> can declare small rows, columns, text, buttons, progress bars, dividers, and spacers.</div>
+        <div><strong>Layout:</strong> <code>ui:render</code> / <code>ui:layout</code> can declare small rows, columns, text, buttons, progress bars, dividers, spacers, and explicit preformatted blocks with <code>pre</code>, <code>ascii</code>, or <code>code</code>.</div>
         <div><strong>Refresh:</strong> opening the module renders it; tapping the module title forces a refresh. Manual <code>module -refresh</code> remains available.</div>
+      </div>
+      <div class="note">
+        <p><strong>Font contract:</strong> Lua text follows the active launcher font by default. Renderer-owned progress bars, dividers, and explicit <code>pre</code>/<code>ascii</code>/<code>code</code> layout blocks stay monospace so tables and terminal art keep their shape.</p>
       </div>
       <div class="note">
         <p><strong>Boundary:</strong> keep Linux tools, long-running jobs, and shell automation in Termux modules. Use Lua when the user needs a compact launcher-owned UI surface with safe app, intent, shortcut, config, and storage helpers.</p>
@@ -763,7 +774,7 @@ $ module -dock add server</pre>
       <div>
         <div class="kicker">Build modules with Codex</div>
         <h2>Generate Termux-backed modules without guessing the plumbing.</h2>
-        <p>The Re:T-UI module maker skill teaches Codex how to create launcher-friendly shell modules: scripts that print <code>::title</code>, <code>::body</code>, and <code>::suggest</code> lines, keep expensive work in Termux only when needed, and let Re:T-UI own UI behaviors such as pagination, reply prompts, refresh chips, and quiet module controls.</p>
+        <p>The Re:T-UI module maker skill teaches Codex how to create launcher-friendly shell modules: scripts that print <code>::title</code>, <code>::body</code>, <code>::pre</code>/<code>::ascii</code>/<code>::code</code>, and <code>::suggest</code> lines, keep expensive work in Termux only when needed, and let Re:T-UI own UI behaviors such as pagination, reply prompts, refresh chips, and quiet module controls.</p>
         <div class="command-list">
           <div><strong>Launcher first:</strong> use Re:T-UI variables and module primitives when the launcher already knows the state.</div>
           <div><strong>Termux when needed:</strong> use Linux tools and Termux:API for data Android only exposes through the shell layer.</div>

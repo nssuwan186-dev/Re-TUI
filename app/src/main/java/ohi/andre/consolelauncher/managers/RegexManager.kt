@@ -193,8 +193,8 @@ class RegexManager(context: Context) {
         if (regex.regex == null) return "null"
         val m = regex.regex!!.matcher(test)
 
-        val color = XMLPrefsManager.getColor(Theme.mark_color)
-        val outputColor = XMLPrefsManager.getColor(Theme.output_color)
+        val color = XMLPrefsManager.getColor(Theme.regex_match_background_color)
+        val outputColor = XMLPrefsManager.getColor(Theme.output_text_color)
 
         if (m.matches()) {
             return Tuils.span(color, outputColor, test) ?: SpannableString(test)

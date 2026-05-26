@@ -664,6 +664,7 @@ end</pre>
           <div><strong>Callbacks:</strong> <code>ui:button(label)</code> maps to <code>on_click(index)</code>.</div>
           <div><strong>Commands:</strong> <code>ui:command_button</code> and <code>ui:module_button</code> run launcher commands from the module.</div>
           <div><strong>Android:</strong> <code>ui:app_button</code>, <code>ui:intent_button</code>, and <code>ui:shortcut_button</code> require declared permissions and route through Re:T-UI commands.</div>
+          <div><strong>Preformatted:</strong> plain text follows the theme font; <code>progress</code>, <code>divider</code>, <code>pre</code>, <code>ascii</code>, and <code>code</code> layout objects stay monospace.</div>
           <div><strong>Refresh:</strong> opening a Lua module re-renders it; tapping its title forces a refresh, so a default refresh chip is no longer needed.</div>
         </div>
       </div>
@@ -676,6 +677,7 @@ function render()
     ui:render({
         { type = "text", text = "Launcher-native controls" },
         { type = "progress", label = "Done", value = 2, max = 5, width = 8 },
+        { type = "pre", text = "CPU  [####....] 50%" },
     })
     ui:button("+1")
     ui:command_button("Modules", "module -ls")

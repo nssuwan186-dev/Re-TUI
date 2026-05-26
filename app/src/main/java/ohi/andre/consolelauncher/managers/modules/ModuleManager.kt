@@ -11,6 +11,8 @@ import java.util.LinkedHashSet
 import java.util.Locale
 import java.util.Set
 import ohi.andre.consolelauncher.managers.RssManager
+import org.json.JSONArray
+import org.json.JSONObject
 
 object ModuleManager {
     const val MUSIC: String = "music"
@@ -34,6 +36,7 @@ object ModuleManager {
     private const val KEY_SCRIPT_PATH_PREFIX = "script_path_"
     private const val KEY_SCRIPT_TITLE_PREFIX = "script_title_"
     private const val KEY_SCRIPT_SUGGESTIONS_PREFIX = "script_suggestions_"
+    private const val KEY_SCRIPT_SEGMENTS_PREFIX = "script_segments_"
     private val DEFAULT_DOCK: MutableList<String?> =
         Arrays.asList<String?>(MUSIC, NOTIFICATIONS, TIMER, CALENDAR, REMINDER)
     private val BUILT_INS: MutableList<String?> =
@@ -121,11 +124,17 @@ object ModuleManager {
         ids.add(id)
         val editor = prefs(context).edit()
             .putStringSet(KEY_SCRIPT_IDS, ids)
-            .putString(KEY_SCRIPT_PREFIX + id, payload.body)
+            .putString(KEY_SCRIPT_PREFIX + id, payload.body.toString())
         if (TextUtils.isEmpty(payload.title)) {
             editor.remove(KEY_SCRIPT_TITLE_PREFIX + id)
         } else {
             editor.putString(KEY_SCRIPT_TITLE_PREFIX + id, payload.title)
+        }
+        val serializedSegments = serializeSegments(payload.segments)
+        if (TextUtils.isEmpty(serializedSegments)) {
+            editor.remove(KEY_SCRIPT_SEGMENTS_PREFIX + id)
+        } else {
+            editor.putString(KEY_SCRIPT_SEGMENTS_PREFIX + id, serializedSegments)
         }
         if (payload.suggestions.isEmpty()) {
             editor.remove(KEY_SCRIPT_SUGGESTIONS_PREFIX + id)
@@ -145,10 +154,15 @@ object ModuleManager {
         }
         val ids = LinkedHashSet<String?>(getScriptIds(context))
         ids.add(id)
+        val body = "No module output yet. Run module -refresh " + id
         prefs(context).edit()
             .putStringSet(KEY_SCRIPT_IDS, ids)
             .putString(KEY_SCRIPT_PATH_PREFIX + id, normalizeModuleSource(path))
-            .putString(KEY_SCRIPT_PREFIX + id, "No module output yet. Run module -refresh " + id)
+            .putString(KEY_SCRIPT_PREFIX + id, body)
+            .putString(
+                KEY_SCRIPT_SEGMENTS_PREFIX + id,
+                serializeSegments(mutableListOf(ModuleTextSegment(body, false)))
+            )
             .remove(KEY_SCRIPT_TITLE_PREFIX + id)
             .remove(KEY_SCRIPT_SUGGESTIONS_PREFIX + id)
             .apply()
@@ -170,6 +184,7 @@ object ModuleManager {
             .remove(KEY_SCRIPT_PATH_PREFIX + id)
             .remove(KEY_SCRIPT_TITLE_PREFIX + id)
             .remove(KEY_SCRIPT_SUGGESTIONS_PREFIX + id)
+            .remove(KEY_SCRIPT_SEGMENTS_PREFIX + id)
         if (TextUtils.equals(getActiveModule(context), id)) {
             editor.putString(KEY_ACTIVE_MODULE, "")
         }
@@ -214,6 +229,7 @@ object ModuleManager {
         val body = store.getString(KEY_SCRIPT_PREFIX + oldId, null)
         val title = store.getString(KEY_SCRIPT_TITLE_PREFIX + oldId, null)
         val suggestions = store.getString(KEY_SCRIPT_SUGGESTIONS_PREFIX + oldId, null)
+        val segments = store.getString(KEY_SCRIPT_SEGMENTS_PREFIX + oldId, null)
 
         val editor = store.edit()
             .putStringSet(KEY_SCRIPT_IDS, ids)
@@ -222,6 +238,7 @@ object ModuleManager {
             .remove(KEY_SCRIPT_PATH_PREFIX + oldId)
             .remove(KEY_SCRIPT_TITLE_PREFIX + oldId)
             .remove(KEY_SCRIPT_SUGGESTIONS_PREFIX + oldId)
+            .remove(KEY_SCRIPT_SEGMENTS_PREFIX + oldId)
 
         if (TextUtils.isEmpty(path)) {
             editor.remove(KEY_SCRIPT_PATH_PREFIX + newId)
@@ -237,6 +254,9 @@ object ModuleManager {
         if (suggestions != null) {
             editor.putString(KEY_SCRIPT_SUGGESTIONS_PREFIX + newId, suggestions)
         }
+        if (segments != null) {
+            editor.putString(KEY_SCRIPT_SEGMENTS_PREFIX + newId, segments)
+        }
         if (TextUtils.equals(getActiveModule(context), oldId)) {
             editor.putString(KEY_ACTIVE_MODULE, newId)
         }
@@ -246,6 +266,22 @@ object ModuleManager {
     fun getScriptText(context: Context, module: String?): String? {
         val id = normalize(module)
         return prefs(context).getString(KEY_SCRIPT_PREFIX + id, null)
+    }
+
+    fun getScriptSegments(context: Context, module: String?): MutableList<ModuleTextSegment> {
+        val id = normalize(module)
+        val raw = prefs(context).getString(KEY_SCRIPT_SEGMENTS_PREFIX + id, null)
+        val parsed = parseSegments(raw)
+        if (!parsed.isEmpty()) {
+            return parsed
+        }
+
+        val text = getScriptText(context, id)
+        val fallback = ArrayList<ModuleTextSegment>()
+        if (!TextUtils.isEmpty(text)) {
+            fallback.add(ModuleTextSegment(text!!, false))
+        }
+        return fallback
     }
 
     fun getScriptTitle(context: Context, module: String?): String {
@@ -466,20 +502,32 @@ object ModuleManager {
             return payload
         }
 
-        val body = StringBuilder()
         val lines = text.split("\\r?\\n".toRegex()).toTypedArray()
+        var monoBlock = false
         for (i in lines.indices) {
             val rawLine = lines[i]
             if (i == lines.size - 1 && rawLine.length == 0) {
                 continue
             }
             val line = rawLine.trim { it <= ' ' }
+            if (monoBlock) {
+                if ("::end" == line) {
+                    monoBlock = false
+                } else {
+                    appendBodySegment(payload, rawLine, true)
+                }
+                continue
+            }
             if (line.startsWith("::title ")) {
                 payload.title = line.substring("::title ".length).trim { it <= ' ' }
             } else if (rawLine.startsWith("::body ")) {
-                appendBodyLine(body, rawLine.substring("::body ".length))
+                appendBodySegment(payload, rawLine.substring("::body ".length), false)
             } else if (line.startsWith("::body ")) {
-                appendBodyLine(body, line.substring("::body ".length))
+                appendBodySegment(payload, line.substring("::body ".length), false)
+            } else if (isPreformattedStart(line)) {
+                monoBlock = true
+            } else if (isPreformattedInline(rawLine, line)) {
+                appendBodySegment(payload, preformattedInlineText(rawLine, line), true)
             } else if (line.startsWith("::suggest ")) {
                 val suggestion =
                     parseSuggestion(line.substring("::suggest ".length).trim { it <= ' ' })
@@ -487,11 +535,38 @@ object ModuleManager {
                     payload.suggestions.add(suggestion)
                 }
             } else if (!line.startsWith("::")) {
-                appendBodyLine(body, rawLine)
+                appendBodySegment(payload, rawLine, monoBlock)
             }
         }
-        payload.body = body.toString()
         return payload
+    }
+
+    private fun isPreformattedStart(line: String): Boolean {
+        return "::pre" == line || "::ascii" == line || "::code" == line
+    }
+
+    private fun isPreformattedInline(rawLine: String, line: String): Boolean {
+        return rawLine.startsWith("::pre ")
+                || rawLine.startsWith("::ascii ")
+                || rawLine.startsWith("::code ")
+                || line.startsWith("::pre ")
+                || line.startsWith("::ascii ")
+                || line.startsWith("::code ")
+    }
+
+    private fun preformattedInlineText(rawLine: String, line: String): String {
+        val prefixes = arrayOf("::pre ", "::ascii ", "::code ")
+        for (prefix in prefixes) {
+            if (rawLine.startsWith(prefix)) {
+                return rawLine.substring(prefix.length)
+            }
+        }
+        for (prefix in prefixes) {
+            if (line.startsWith(prefix)) {
+                return line.substring(prefix.length)
+            }
+        }
+        return ""
     }
 
     private fun parseSuggestion(raw: String?): ModuleSuggestion? {
@@ -534,11 +609,56 @@ object ModuleManager {
         return ModuleSuggestion.Companion.MODE_COMMAND
     }
 
-    private fun appendBodyLine(body: StringBuilder, line: String?) {
-        if (body.length > 0) {
-            body.append('\n')
+    private fun appendBodySegment(payload: ScriptPayload, line: String?, mono: Boolean) {
+        if (payload.body.length > 0) {
+            payload.body.append('\n')
         }
-        body.append(line)
+        payload.body.append(line)
+        appendSegment(payload.segments, line, mono)
+    }
+
+    private fun appendSegment(
+        segments: MutableList<ModuleTextSegment>,
+        line: String?,
+        mono: Boolean
+    ) {
+        val value = line ?: ""
+        if (!segments.isEmpty() && segments[segments.size - 1].mono == mono) {
+            val previous = segments[segments.size - 1]
+            previous.text = previous.text + "\n" + value
+        } else {
+            segments.add(ModuleTextSegment(value, mono))
+        }
+    }
+
+    private fun serializeSegments(segments: MutableList<ModuleTextSegment>): String? {
+        if (segments.isEmpty()) {
+            return null
+        }
+        val array = JSONArray()
+        for (segment in segments) {
+            val obj = JSONObject()
+            obj.put("text", segment.text)
+            obj.put("mono", segment.mono)
+            array.put(obj)
+        }
+        return array.toString()
+    }
+
+    private fun parseSegments(raw: String?): MutableList<ModuleTextSegment> {
+        val segments = ArrayList<ModuleTextSegment>()
+        if (TextUtils.isEmpty(raw)) {
+            return segments
+        }
+        try {
+            val array = JSONArray(raw)
+            for (i in 0..<array.length()) {
+                val obj = array.optJSONObject(i) ?: continue
+                segments.add(ModuleTextSegment(obj.optString("text", ""), obj.optBoolean("mono", false)))
+            }
+        } catch (ignored: Exception) {
+        }
+        return segments
     }
 
     private fun serializeSuggestions(suggestions: MutableList<ModuleSuggestion>): String? {
@@ -629,7 +749,13 @@ object ModuleManager {
 
     private class ScriptPayload {
         var title: String = ""
-        var body: String = ""
+        val body = StringBuilder()
+        val segments: MutableList<ModuleTextSegment> = ArrayList<ModuleTextSegment>()
         val suggestions: MutableList<ModuleSuggestion> = ArrayList<ModuleSuggestion>()
     }
+
+    class ModuleTextSegment(
+        var text: String,
+        val mono: Boolean
+    )
 }

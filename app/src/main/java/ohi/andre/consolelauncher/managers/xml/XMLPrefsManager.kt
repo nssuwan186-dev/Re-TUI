@@ -132,6 +132,8 @@ object XMLPrefsManager {
                     Ui.display_margin_top_section.label()
                 )
             }
+            needToWrite = needToWrite or migrateRootValues(d, root, element)
+            needToWrite = needToWrite or ensureDefaultSectionComments(d, root, element)
 
             val nodes = root!!.getElementsByTagName("*")
 
@@ -193,18 +195,376 @@ object XMLPrefsManager {
                 continue
             }
 
-            for (s in enums) {
-                val value = s.defaultValue()
-
-                val em = d.createElement(s.label())
-                em.setAttribute(VALUE_ATTRIBUTE, value)
-                root.appendChild(em)
-
-                element.getValues()!!.add(s.label()!!, value!!)
-            }
+            appendMissingPrefs(d, root, element, enums)
 
             writeTo(d, file)
         }
+    }
+
+    private val STATUS_KEYS = arrayOf(
+        "ram",
+        "device",
+        "time",
+        "battery",
+        "storage",
+        "network",
+        "notes",
+        "weather",
+        "unlock",
+        "ascii"
+    )
+
+    private val THEME_RENAMES = arrayOf(
+        "input_color" to "input_text_color",
+        "output_color" to "output_text_color",
+        "bg_color" to "background_color",
+        "device_color" to "device_text_color",
+        "ascii_color" to "ascii_text_color",
+        "time_color" to "time_text_color",
+        "storage_color" to "storage_text_color",
+        "ram_color" to "ram_text_color",
+        "network_info_color" to "network_info_text_color",
+        "toolbar_bg" to "toolbar_background_color",
+        "toolbar_color" to "toolbar_icon_color",
+        "enter_color" to "enter_icon_color",
+        "overlay_color" to "wallpaper_overlay_color",
+        "alias_content_color" to "alias_content_text_color",
+        "app_installed_color" to "app_installed_text_color",
+        "app_uninstalled_color" to "app_uninstalled_text_color",
+        "mark_color" to "regex_match_background_color",
+        "notes_color" to "notes_text_color",
+        "notes_locked_color" to "locked_notes_text_color",
+        "link_color" to "link_text_color",
+        "restart_message_color" to "restart_message_text_color",
+        "weather_color" to "weather_text_color",
+        "unlock_counter_color" to "unlock_counter_text_color",
+        "session_info_color" to "session_info_text_color",
+        "input_bg" to "input_background_color",
+        "output_bg" to "output_background_color",
+        "suggestions_bg" to "suggestions_background_color",
+        "input_shadow_color" to "input_text_shadow_color",
+        "output_shadow_color" to "output_text_shadow_color",
+        "apps_drawer_color" to "apps_drawer_text_color",
+        "dashed_border_color" to "terminal_border_color",
+        "module_button_bg_color" to "module_button_background_color",
+        "module_name_text_color" to "module_text_color",
+        "window_terminal_bg" to "terminal_window_background_color",
+        "terminal_header_bg" to "terminal_header_background_color"
+    )
+
+    private val SUGGESTION_RENAMES = arrayOf(
+        "default_bg_color" to "default_background_color",
+        "apps_bg_color" to "apps_background_color",
+        "alias_bg_color" to "alias_background_color",
+        "cmd_bg_color" to "cmd_background_color",
+        "song_bg_color" to "song_background_color",
+        "contact_bg_color" to "contact_background_color",
+        "file_bg_color" to "file_background_color"
+    )
+
+    private val NOTIFICATION_RENAMES = arrayOf(
+        "default_notification_color" to "notification_text_color"
+    )
+
+    private val RSS_RENAMES = arrayOf(
+        "rss_default_color" to "rss_item_text_color",
+        "rss_download_message_color" to "rss_download_message_text_color"
+    )
+
+    private val BEHAVIOR_RENAMES = arrayOf(
+        "tui_notification_time_color" to "tui_notification_time_text_color",
+        "tui_notification_input_color" to "tui_notification_input_text_color"
+    )
+
+    private fun migrateRootValues(d: Document, root: Element?, element: XMLPrefsRoot): Boolean {
+        var changed = false
+        if (root == null) {
+            return false
+        }
+
+        val renames = when (element) {
+            XMLPrefsRoot.THEME -> THEME_RENAMES
+            XMLPrefsRoot.SUGGESTIONS -> SUGGESTION_RENAMES
+            XMLPrefsRoot.NOTIFICATIONS -> NOTIFICATION_RENAMES
+            XMLPrefsRoot.RSS -> RSS_RENAMES
+            XMLPrefsRoot.BEHAVIOR -> BEHAVIOR_RENAMES
+            else -> emptyArray<Pair<String, String>>()
+        }
+        for (rename in renames) {
+            changed = renameDirectChild(d, root, rename.first, rename.second) or changed
+        }
+
+        if (element === XMLPrefsRoot.THEME) {
+            changed = expandListValue(
+                d,
+                root,
+                "status_lines_bg",
+                STATUS_KEYS.map { it + "_status_background_color" }.toTypedArray(),
+                "#00000000"
+            ) or changed
+            changed = expandListValue(
+                d,
+                root,
+                "status_lines_shadow_color",
+                STATUS_KEYS.map { it + "_status_text_shadow_color" }.toTypedArray(),
+                "#00000000"
+            ) or changed
+        } else if (element === XMLPrefsRoot.UI) {
+            changed = expandListValue(
+                d,
+                root,
+                "status_lines_alignment",
+                STATUS_KEYS.map { it + "_status_alignment" }.toTypedArray(),
+                "-1"
+            ) or changed
+        }
+
+        return changed
+    }
+
+    private fun renameDirectChild(d: Document, root: Element, oldName: String, newName: String): Boolean {
+        val oldElement = findDirectChild(root, oldName) ?: return false
+        if (findDirectChild(root, newName) != null) {
+            root.removeChild(oldElement)
+            return true
+        }
+
+        try {
+            d.renameNode(oldElement, null, newName)
+        } catch (ignored: Exception) {
+            val replacement = d.createElement(newName)
+            replacement.setAttribute(VALUE_ATTRIBUTE, oldElement.getAttribute(VALUE_ATTRIBUTE))
+            root.insertBefore(replacement, oldElement)
+            root.removeChild(oldElement)
+        }
+        return true
+    }
+
+    private fun expandListValue(
+        d: Document,
+        root: Element,
+        oldName: String,
+        newNames: Array<String>,
+        defaultValue: String
+    ): Boolean {
+        val oldElement = findDirectChild(root, oldName) ?: return false
+        val values = getListOfStringValues(oldElement.getAttribute(VALUE_ATTRIBUTE), newNames.size, defaultValue)
+        for (index in newNames.indices) {
+            if (findDirectChild(root, newNames[index]) != null) {
+                continue
+            }
+            val replacement = d.createElement(newNames[index])
+            replacement.setAttribute(VALUE_ATTRIBUTE, values[index] ?: defaultValue)
+            root.insertBefore(replacement, oldElement)
+        }
+        root.removeChild(oldElement)
+        return true
+    }
+
+    private fun appendMissingPrefs(
+        d: Document,
+        root: Element,
+        element: XMLPrefsRoot,
+        missing: MutableList<XMLPrefsSave>
+    ) {
+        var currentSection: String? = null
+        for (save in missing) {
+            val section = sectionFor(save)
+            if (section != currentSection) {
+                appendSectionCommentIfNeeded(d, root, section)
+                currentSection = section
+            }
+
+            val value = save.defaultValue()
+            val em = d.createElement(save.label())
+            em.setAttribute(VALUE_ATTRIBUTE, value)
+            root.appendChild(em)
+            root.appendChild(d.createTextNode("\n"))
+
+            element.getValues()!!.add(save.label()!!, value!!)
+        }
+    }
+
+    private fun ensureDefaultSectionComments(d: Document, root: Element?, element: XMLPrefsRoot): Boolean {
+        if (root == null || hasAnyComment(root)) {
+            return false
+        }
+
+        val existing: MutableMap<String, Node> = HashMap()
+        val children = root.childNodes
+        for (index in 0..<children.length) {
+            val node = children.item(index)
+            if (node.nodeType != Node.ELEMENT_NODE) {
+                continue
+            }
+            existing[node.nodeName] = node.cloneNode(true)
+        }
+
+        if (existing.isEmpty()) {
+            return false
+        }
+
+        while (root.hasChildNodes()) {
+            root.removeChild(root.firstChild)
+        }
+
+        root.appendChild(d.createTextNode("\n"))
+        var currentSection: String? = null
+        var addedAny = false
+        for (save in element.enums) {
+            val label = save.label() ?: continue
+            val node = existing[label] ?: continue
+            val section = sectionFor(save)
+            if (section != currentSection) {
+                if (addedAny) {
+                    root.appendChild(d.createTextNode("\n"))
+                }
+                root.appendChild(d.createComment(" #$section "))
+                root.appendChild(d.createTextNode("\n"))
+                currentSection = section
+            }
+
+            root.appendChild(node)
+            root.appendChild(d.createTextNode("\n"))
+            addedAny = true
+        }
+
+        return addedAny
+    }
+
+    private fun hasAnyComment(root: Element): Boolean {
+        val children = root.childNodes
+        for (index in 0..<children.length) {
+            val node = children.item(index)
+            if (node.nodeType == Node.COMMENT_NODE) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun hasSectionComment(root: Element): Boolean {
+        val children = root.childNodes
+        for (index in 0..<children.length) {
+            val node = children.item(index)
+            if (node.nodeType != Node.COMMENT_NODE) {
+                continue
+            }
+
+
+            if (node.nodeValue.trim().startsWith("#")) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun appendSectionCommentIfNeeded(d: Document, root: Element, section: String) {
+        if (lastSectionComment(root) == section.trim().lowercase(Locale.US)) {
+            return
+        }
+        if (root.hasChildNodes()) {
+            root.appendChild(d.createTextNode("\n"))
+        }
+        root.appendChild(d.createComment(" #$section "))
+        root.appendChild(d.createTextNode("\n"))
+    }
+
+    private fun lastSectionComment(root: Element): String? {
+        val children = root.childNodes
+        for (index in children.length - 1 downTo 0) {
+            val node = children.item(index)
+            if (node.nodeType == Node.COMMENT_NODE) {
+                val label = node.nodeValue.trim()
+                if (label.startsWith("#")) {
+                    return label.removePrefix("#").trim().lowercase(Locale.US)
+                }
+            }
+        }
+        return null
+    }
+
+    fun sectionFor(save: XMLPrefsSave): String {
+        val label = save.label() ?: return "General"
+        return when (save) {
+            is Theme -> themeSection(label)
+            is Ui -> uiSection(label)
+            is Behavior -> behaviorSection(label)
+            is Suggestions -> suggestionsSection(label)
+            is Toolbar -> if (label.startsWith("shortcut_button")) "Custom Shortcuts" else "Visibility"
+            is Notifications -> notificationSection(label)
+            is Apps -> if (label.startsWith("default_app_n")) "Default App Suggestions" else "App Drawer"
+            is Rss -> rssSection(label)
+            is Cmd -> "Commands"
+            else -> "General"
+        }
+    }
+
+    private fun themeSection(label: String): String = when {
+        label == "background_color" || label == "wallpaper_overlay_color" -> "Launcher"
+        label.contains("_status_") || label.startsWith("battery_text_") ||
+            label in arrayOf(
+                "device_text_color",
+                "ascii_text_color",
+                "time_text_color",
+                "storage_text_color",
+                "ram_text_color",
+                "network_info_text_color",
+                "weather_text_color",
+                "unlock_counter_text_color"
+            ) -> "Status Lines"
+        label.contains("background_color") || label.contains("border_color") || label.contains("shadow_color") -> "Terminal Surfaces"
+        label.contains("module") || label.startsWith("terminal_") -> "Modules And Panels"
+        label.contains("icon_color") || label == "cursor_color" -> "Terminal Controls"
+        else -> "Content Text"
+    }
+
+    private fun uiSection(label: String): String = when {
+        label.startsWith("show_") && (label.contains("ram") || label.contains("battery") || label.contains("time") ||
+            label.contains("storage") || label.contains("network") || label.contains("notes") || label.contains("weather") ||
+            label.contains("unlock") || label.contains("ascii") || label.contains("device")) -> "Status Lines"
+        label.endsWith("_size") || label.endsWith("_index") || label.endsWith("_alignment") -> "Status Lines"
+        label.contains("font") || label == "input_output_size" -> "Text And Font"
+        label.contains("margin") || label.contains("duo") || label.contains("fullscreen") || label.contains("wallpaper") -> "Layout"
+        label.contains("notes") -> "Notes"
+        label.contains("weather") || label.contains("unlock") -> "Weather And Unlock"
+        label.contains("dashed") || label.contains("corner_radius") || label.contains("header") || label.contains("shadow") -> "Chrome"
+        else -> "General"
+    }
+
+    private fun behaviorSection(label: String): String = when {
+        label.contains("notification") -> "Notifications"
+        label.contains("weather") || label.contains("location") -> "Weather"
+        label.contains("unlock") -> "Unlock Counter"
+        label.contains("music") || label.contains("module") || label.contains("pomodoro") || label.contains("events") -> "Modules"
+        label.contains("format") || label.contains("separator") || label == "not_available_text" -> "Formats"
+        label.contains("alias") || label.contains("cmd") || label.contains("command") || label.contains("shell") -> "Commands"
+        label.contains("path") || label.contains("storage") || label.contains("backend") -> "Files And Paths"
+        label.contains("click") || label.contains("tap") || label.contains("keyboard") || label.contains("swipe") || label.contains("button") -> "Input"
+        else -> "Terminal Behavior"
+    }
+
+    private fun suggestionsSection(label: String): String = when {
+        label.contains("_text_color") || label.contains("_background_color") -> {
+            if (label.startsWith("default_")) "Default Styling" else "Category Styling"
+        }
+        label.contains("order") -> "Ordering"
+        label.contains("algorithm") || label.contains("deadline") || label.contains("quickcompare") ||
+            label.contains("per_category") || label.contains("min_command_priority") -> "Performance"
+        else -> "Display"
+    }
+
+    private fun notificationSection(label: String): String = when {
+        label.contains("format") || label.contains("color") -> "Display"
+        label.contains("popup") || label.contains("click") -> "Actions"
+        else -> "Enablement"
+    }
+
+    private fun rssSection(label: String): String = when {
+        label.contains("download") -> "Download Messages"
+        label.contains("hidden") || label.contains("include") -> "Filtering"
+        label.contains("click") -> "Actions"
+        else -> "Item Display"
     }
 
     private fun migrateRenamedUiValue(
@@ -912,7 +1272,54 @@ object XMLPrefsManager {
     enum class XMLPrefsRoot(en: Array<out XMLPrefsSave>) : XMLPrefsElement {
         THEME(Theme.entries.toTypedArray()) {
             override fun delete(): Array<String?>? {
-                return arrayOf<String?>()
+                return arrayOf<String?>(
+                    "input_color",
+                    "output_color",
+                    "bg_color",
+                    "device_color",
+                    "ascii_color",
+                    "time_color",
+                    "storage_color",
+                    "ram_color",
+                    "network_info_color",
+                    "toolbar_bg",
+                    "toolbar_color",
+                    "enter_color",
+                    "overlay_color",
+                    "alias_content_color",
+                    "app_installed_color",
+                    "app_uninstalled_color",
+                    "mark_color",
+                    "notes_color",
+                    "notes_locked_color",
+                    "link_color",
+                    "restart_message_color",
+                    "weather_color",
+                    "unlock_counter_color",
+                    "session_info_color",
+                    "input_bg",
+                    "output_bg",
+                    "suggestions_bg",
+                    "input_shadow_color",
+                    "output_shadow_color",
+                    "apps_drawer_color",
+                    "dashed_border_color",
+                    "module_button_bg_color",
+                    "module_name_text_color",
+                    "window_terminal_bg",
+                    "terminal_header_bg",
+                    "statusbar_color",
+                    "navigationbar_color",
+                    "hint_color",
+                    "status_lines_bgrectcolor",
+                    "input_bgrectcolor",
+                    "output_bgrectcolor",
+                    "toolbar_bgrectcolor",
+                    "suggestions_bgrectcolor",
+                    "status_lines_bg",
+                    "status_lines_shadow_color",
+                    "module_button_border_color"
+                )
             }
         },
         CMD(Cmd.values()) {
@@ -927,12 +1334,24 @@ object XMLPrefsManager {
         },
         UI(Ui.entries.toTypedArray()) {
             override fun delete(): Array<String?>? {
-                return arrayOf<String?>()
+                return arrayOf<String?>(
+                    "status_lines_alignment",
+                    "ignore_bar_color",
+                    "bgrect_params"
+                )
             }
         },
         BEHAVIOR(Behavior.entries.toTypedArray()) {
             override fun delete(): Array<String?>? {
-                return arrayOf<String?>()
+                return arrayOf<String?>(
+                    "time_format",
+                    "show_hints",
+                    "enable_app_launch",
+                    "network_info_update_ms",
+                    "htmlextractor_notfound_message",
+                    "tui_notification_time_color",
+                    "tui_notification_input_color"
+                )
             }
         },
         SUGGESTIONS(Suggestions.entries.toTypedArray()) {
@@ -941,13 +1360,20 @@ object XMLPrefsManager {
                     "app_suggestions_minrate",
                     "contact_suggestions_minrate",
                     "song_suggestions_minrate",
-                    "file_suggestions_minrate"
+                    "file_suggestions_minrate",
+                    "default_bg_color",
+                    "apps_bg_color",
+                    "alias_bg_color",
+                    "cmd_bg_color",
+                    "song_bg_color",
+                    "contact_bg_color",
+                    "file_bg_color"
                 )
             }
         },
         NOTIFICATIONS(Notifications.values()) {
             override fun delete(): Array<String?>? {
-                return arrayOf<String?>()
+                return arrayOf<String?>("default_notification_color")
             }
         },
         APPS(Apps.values()) {
@@ -957,7 +1383,10 @@ object XMLPrefsManager {
         },
         RSS(Rss.values()) {
             override fun delete(): Array<String?>? {
-                return arrayOf<String?>()
+                return arrayOf<String?>(
+                    "rss_default_color",
+                    "rss_download_message_color"
+                )
             }
         }; //        notifications
         //        apps
@@ -1030,13 +1459,13 @@ object XMLPrefsManager {
     //        return map;
     //    }
     //    static final SimpleMutableEntry[] OLD = {
-    //            new SimpleMutableEntry("deviceColor", Theme.device_color),
-    //            new SimpleMutableEntry("inputColor", Theme.input_color),
-    //            new SimpleMutableEntry("outputColor", Theme.output_color),
-    //            new SimpleMutableEntry("backgroundColor", Theme.bg_color),
+    //            new SimpleMutableEntry("deviceColor", Theme.device_text_color),
+    //            new SimpleMutableEntry("inputColor", Theme.input_text_color),
+    //            new SimpleMutableEntry("outputColor", Theme.output_text_color),
+    //            new SimpleMutableEntry("backgroundColor", Theme.background_color),
     //            new SimpleMutableEntry("useSystemFont", Ui.system_font),
     //            new SimpleMutableEntry("fontSize", Ui.font_size),
-    //            new SimpleMutableEntry("ramColor", Theme.ram_color),
+    //            new SimpleMutableEntry("ramColor", Theme.ram_text_color),
     //            new SimpleMutableEntry("username", Ui.username),
     //            new SimpleMutableEntry("showSubmit", Ui.show_enter_button),
     //            new SimpleMutableEntry("deviceName", Ui.deviceName),
@@ -1046,13 +1475,13 @@ object XMLPrefsManager {
     //
     //            new SimpleMutableEntry("suggestionTextColor", Suggestions.default_text_color),
     //            new SimpleMutableEntry("transparentSuggestions", Suggestions.transparent),
-    //            new SimpleMutableEntry("aliasSuggestionBg", Suggestions.alias_bg_color),
-    //            new SimpleMutableEntry("appSuggestionBg", Suggestions.apps_bg_color),
-    //            new SimpleMutableEntry("commandSuggestionsBg", Suggestions.cmd_bg_color),
-    //            new SimpleMutableEntry("songSuggestionBg", Suggestions.song_bg_color),
-    //            new SimpleMutableEntry("contactSuggestionBg", Suggestions.contact_bg_color),
-    //            new SimpleMutableEntry("fileSuggestionBg", Suggestions.file_bg_color),
-    //            new SimpleMutableEntry("defaultSuggestionBg", Suggestions.default_bg_color),
+    //            new SimpleMutableEntry("aliasSuggestionBg", Suggestions.alias_background_color),
+    //            new SimpleMutableEntry("appSuggestionBg", Suggestions.apps_background_color),
+    //            new SimpleMutableEntry("commandSuggestionsBg", Suggestions.cmd_background_color),
+    //            new SimpleMutableEntry("songSuggestionBg", Suggestions.song_background_color),
+    //            new SimpleMutableEntry("contactSuggestionBg", Suggestions.contact_background_color),
+    //            new SimpleMutableEntry("fileSuggestionBg", Suggestions.file_background_color),
+    //            new SimpleMutableEntry("defaultSuggestionBg", Suggestions.default_background_color),
     //
     //            new SimpleMutableEntry("useSystemWallpaper", Ui.system_wallpaper),
     //            new SimpleMutableEntry("fullscreen", Ui.fullscreen),

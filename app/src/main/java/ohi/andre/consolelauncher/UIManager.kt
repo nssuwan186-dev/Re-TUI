@@ -721,7 +721,8 @@ class UIManager(
             margins[OUTPUT_MARGINS_INDEX]!!,
             Tuils.dpToPx(mContext, outputCornerRadius()),
             useDashed,
-            terminalBorderColor()
+            terminalBorderColor(),
+            true
         )
         terminalView!!.setBackgroundColor(Color.TRANSPARENT)
         terminalView!!.addTextChangedListener(object : TextWatcher {
@@ -772,7 +773,8 @@ class UIManager(
             margins[INPUTAREA_MARGINS_INDEX]!!,
             genericBorderCornerRadius,
             useDashed,
-            terminalBorderColor()
+            terminalBorderColor(),
+            false
         )
         Companion.applyShadow(
             inputView,
@@ -826,7 +828,8 @@ class UIManager(
                 margins[TOOLBAR_MARGINS_INDEX]!!,
                 genericBorderCornerRadius,
                 useDashed,
-                terminalBorderColor()
+                terminalBorderColor(),
+                false
             )
 
             if (appDrawerView != null) {
@@ -890,7 +893,8 @@ class UIManager(
                     margins[SUGGESTIONS_MARGINS_INDEX]!!,
                     genericBorderCornerRadius,
                     useDashed,
-                    terminalBorderColor()
+                    terminalBorderColor(),
+                    true
                 )
 
                 val suggestionsView =
@@ -939,7 +943,7 @@ class UIManager(
             button.setBackgroundColor(0)
             button.setImageResource(slot.iconRes)
             button.setColorFilter(
-                XMLPrefsManager.getColor(Theme.toolbar_color),
+                XMLPrefsManager.getColor(Theme.toolbar_icon_color),
                 PorterDuff.Mode.SRC_IN
             )
             styleToolbarButtonChrome(button)
@@ -2443,18 +2447,19 @@ class UIManager(
             scroll.addView(content)
 
             if (!TextUtils.isEmpty(result.error)) {
-                addLuaText(content, "Lua error: " + result.error)
+                addLuaText(content, "Lua error: " + result.error, module)
                 if (!TextUtils.isEmpty(result.errorStage)) {
-                    addLuaText(content, "Stage: " + result.errorStage)
+                    addLuaText(content, "Stage: " + result.errorStage, module)
                 }
             } else if (!TextUtils.isEmpty(result.layoutJson)
                 && renderLuaLayout(content, module, result.layoutJson)
             ) {
                 // The declarative layout rendered itself.
             } else {
-                addLuaText(
+                addLuaBodyText(
                     content,
-                    if (TextUtils.isEmpty(result.body)) "No widget output yet." else result.body
+                    if (TextUtils.isEmpty(result.body)) "No widget output yet." else result.body,
+                    module
                 )
             }
             addLuaResultActions(content, module, widgetId, result)
@@ -2462,7 +2467,7 @@ class UIManager(
             body.setText(if (TextUtils.isEmpty(result.body)) "No widget output yet." else result.body)
             body.setTextColor(notificationWidgetTextColor())
             body.setTextSize(moduleBodyTextSize().toFloat())
-            applyModuleBodyTypeface(body)
+            applyModuleBodyTypeface(body, module)
         }
 
         decorateWidget(
@@ -2476,14 +2481,27 @@ class UIManager(
         styleModuleClose(close)
     }
 
-    private fun addLuaText(parent: LinearLayout, text: String?) {
+    private fun addLuaBodyText(parent: LinearLayout, text: String?, module: String? = null) {
+        if (TextUtils.isEmpty(text)) {
+            addLuaText(parent, "", module)
+            return
+        }
+        addLuaText(parent, text, module)
+    }
+
+    private fun addLuaText(
+        parent: LinearLayout,
+        text: String?,
+        module: String? = null,
+        fontMode: String? = null
+    ) {
         val view = TextView(mContext)
         view.setText(text)
         view.setTextColor(notificationWidgetTextColor())
         view.setTextSize(moduleBodyTextSize().toFloat())
         view.setIncludeFontPadding(true)
         view.setLineSpacing(Tuils.dpToPx(mContext, 2).toFloat(), 1f)
-        view.setTypeface(Typeface.MONOSPACE)
+        applyModuleBodyTypeface(view, module, fontMode)
         view.setLayoutParams(
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -2637,7 +2655,7 @@ class UIManager(
             }
             return true
         } catch (e: Exception) {
-            addLuaText(parent, "Layout error: " + e.message)
+            addLuaText(parent, "Layout error: " + e.message, module)
             return true
         }
     }
@@ -2650,7 +2668,7 @@ class UIManager(
             } else if (item is JSONArray) {
                 renderLuaLayoutCompact(parent, module, item)
             } else if (item != null) {
-                addLuaText(parent, item.toString())
+                addLuaText(parent, item.toString(), module)
             }
         }
     }
@@ -2728,11 +2746,15 @@ class UIManager(
             return
         }
         if ("progress" == type) {
-            addLuaText(parent, formatLuaLayoutProgress(obj))
+            addLuaText(parent, formatLuaLayoutProgress(obj), module, MODULE_TEXT_FONT_MONO)
             return
         }
         if ("divider" == type) {
-            addLuaText(parent, "----------------")
+            addLuaText(parent, "----------------", module, MODULE_TEXT_FONT_MONO)
+            return
+        }
+        if ("pre" == type || "ascii" == type || "code" == type) {
+            addLuaText(parent, obj.optString("text", obj.optString("label", "")), module, MODULE_TEXT_FONT_MONO)
             return
         }
         if ("spacer" == type) {
@@ -2746,7 +2768,8 @@ class UIManager(
             parent.addView(spacer)
             return
         }
-        addLuaText(parent, obj.optString("text", obj.optString("label", "")))
+        val text = obj.optString("text", obj.optString("label", ""))
+        addLuaText(parent, text, module)
     }
 
     private fun renderLuaLayoutChildren(parent: LinearLayout, module: String?, children: JSONArray?) {
@@ -2807,11 +2830,17 @@ class UIManager(
         if (label != null) {
             label.setText(ModuleManager.displayTitle(mContext, module))
         }
-        if (body != null) {
+        if (ModuleManager.CALENDAR == ModuleManager.normalize(module) && scroll != null) {
+            scroll.removeAllViews()
+            body?.setVisibility(View.GONE)
+            scroll.addView(buildCalendarModuleView())
+        } else if (shouldRenderScriptSegments(module) && body != null && scroll != null) {
+            renderScriptModuleSegments(module, text, body, scroll)
+        } else if (body != null) {
             body.setText(text)
             body.setTextColor(notificationWidgetTextColor())
             body.setTextSize(moduleBodyTextSize().toFloat())
-            applyModuleBodyTypeface(body)
+            applyModuleBodyTypeface(body, module)
             constrainEventModuleScroll(module, scroll, body)
         }
         if (close != null) {
@@ -2830,6 +2859,66 @@ class UIManager(
             moduleNameTextColor()
         )
         styleModuleClose(close)
+    }
+
+    private fun shouldRenderScriptSegments(module: String?): Boolean {
+        return ModuleManager.isTermuxSource(ModuleManager.getModuleSource(mContext, module))
+    }
+
+    private fun renderScriptModuleSegments(
+        module: String?,
+        fallbackText: String?,
+        body: TextView,
+        scroll: ScrollView
+    ) {
+        val segments = ModuleManager.getScriptSegments(mContext, module)
+        if (segments.isEmpty() && !TextUtils.isEmpty(fallbackText)) {
+            segments.add(ModuleManager.ModuleTextSegment(fallbackText!!, false))
+        }
+
+        scroll.removeAllViews()
+        body.setVisibility(View.GONE)
+
+        val content = LinearLayout(mContext)
+        content.setOrientation(LinearLayout.VERTICAL)
+        content.setLayoutParams(
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+        scroll.addView(content)
+
+        for (segment in segments) {
+            addScriptModuleSegmentText(
+                content,
+                segment.text,
+                module,
+                if (segment.mono) MODULE_TEXT_FONT_MONO else MODULE_TEXT_FONT_THEME
+            )
+        }
+    }
+
+    private fun addScriptModuleSegmentText(
+        parent: LinearLayout,
+        text: String?,
+        module: String?,
+        fontMode: String
+    ) {
+        val view = TextView(mContext)
+        view.setText(text)
+        view.setTextColor(notificationWidgetTextColor())
+        view.setTextSize(moduleBodyTextSize().toFloat())
+        view.setIncludeFontPadding(true)
+        view.setLineSpacing(Tuils.dpToPx(mContext, 2).toFloat(), 1f)
+        applyModuleBodyTypeface(view, module, fontMode)
+        view.setLayoutParams(
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+        parent.addView(view)
     }
 
     private fun constrainEventModuleScroll(module: String?, scroll: ScrollView?, body: TextView?) {
@@ -2866,11 +2955,163 @@ class UIManager(
             })
     }
 
-    private fun applyModuleBodyTypeface(body: TextView?) {
+    private fun applyModuleBodyTypeface(
+        body: TextView?,
+        module: String? = null,
+        fontMode: String? = null
+    ) {
         if (body == null) {
             return
         }
-        body.setTypeface(Typeface.MONOSPACE)
+        val useThemeTypeface = if (MODULE_TEXT_FONT_MONO == fontMode) {
+            false
+        } else if (MODULE_TEXT_FONT_THEME == fontMode) {
+            true
+        } else {
+            moduleBodyUsesThemeTypeface(module)
+        }
+        body.setTag(
+            R.id.module_text_font_mode,
+            if (useThemeTypeface) MODULE_TEXT_FONT_THEME else MODULE_TEXT_FONT_MONO
+        )
+        val style = if (body.getTypeface() != null) body.getTypeface().getStyle() else Typeface.NORMAL
+        if (useThemeTypeface) {
+            body.setTypeface(Tuils.getTypeface(mContext), style)
+        } else {
+            body.setTypeface(Typeface.MONOSPACE, style)
+        }
+    }
+
+    private fun buildCalendarModuleView(): View {
+        val calendar = Calendar.getInstance()
+        val today = Calendar.getInstance()
+        val months = arrayOf(
+            "JAN",
+            "FEB",
+            "MAR",
+            "APR",
+            "MAY",
+            "JUN",
+            "JUL",
+            "AUG",
+            "SEP",
+            "OCT",
+            "NOV",
+            "DEC"
+        )
+        val weekdays = arrayOf("SU", "MO", "TU", "WE", "TH", "FR", "SA")
+        val month = calendar.get(Calendar.MONTH)
+        val year = calendar.get(Calendar.YEAR)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        val firstDay = calendar.get(Calendar.DAY_OF_WEEK)
+        val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val currentDay =
+            if (today.get(Calendar.MONTH) == month && today.get(Calendar.YEAR) == year) today.get(Calendar.DAY_OF_MONTH) else -1
+
+        val content = LinearLayout(mContext)
+        content.setOrientation(LinearLayout.VERTICAL)
+        val calendarInset = Tuils.dpToPx(mContext, 2)
+        content.setPadding(calendarInset, 0, calendarInset, 0)
+        content.setLayoutParams(
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val title = calendarTextView(months[month] + " " + year, true, false)
+        title.setGravity(Gravity.START or Gravity.CENTER_VERTICAL)
+        title.setPadding(0, 0, 0, 0)
+        content.addView(title)
+
+        val header = calendarRow()
+        for (weekday in weekdays) {
+            header.addView(calendarCell(weekday, true, false))
+        }
+        content.addView(header)
+
+        var day = 1
+        for (week in 0 until 6) {
+            val row = calendarRow()
+            for (dow in Calendar.SUNDAY..Calendar.SATURDAY) {
+                if ((week == 0 && dow < firstDay) || day > daysInMonth) {
+                    row.addView(calendarCell("", false, false))
+                } else {
+                    row.addView(
+                        calendarCell(
+                            String.format(Locale.US, "%02d", day),
+                            false,
+                            day == currentDay
+                        )
+                    )
+                    day += 1
+                }
+            }
+            content.addView(row)
+            if (day > daysInMonth) {
+                break
+            }
+        }
+        return content
+    }
+
+    private fun calendarRow(): LinearLayout {
+        val row = LinearLayout(mContext)
+        row.setOrientation(LinearLayout.HORIZONTAL)
+        row.setBaselineAligned(false)
+        row.setLayoutParams(
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+        return row
+    }
+
+    private fun calendarCell(text: String, bold: Boolean, today: Boolean): TextView {
+        val cell = calendarTextView(if (today) "[$text]" else text, bold || today, today)
+        cell.setGravity(Gravity.CENTER)
+        cell.setMinHeight(0)
+        cell.setPadding(0, 0, 0, 0)
+        val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        cell.setLayoutParams(lp)
+        return cell
+    }
+
+    private fun calendarTextView(text: String, bold: Boolean, highlight: Boolean): TextView {
+        val view = TextView(mContext)
+        view.setText(text)
+        view.setSingleLine(true)
+        view.setIncludeFontPadding(false)
+        view.setTextSize(moduleBodyTextSize().toFloat())
+        view.setTextColor(if (highlight) moduleNameTextColor() else notificationWidgetTextColor())
+        view.setTag(R.id.module_text_font_mode, MODULE_TEXT_FONT_THEME)
+        view.setTypeface(
+            Tuils.getTypeface(mContext),
+            if (bold) Typeface.BOLD else Typeface.NORMAL
+        )
+        return view
+    }
+
+    private fun moduleBodyUsesThemeTypeface(module: String?): Boolean {
+        val id = ModuleManager.normalize(module)
+        if (ModuleManager.TIMER == id
+            || ModuleManager.CALENDAR == id
+            || ModuleManager.REMINDER == id
+            || ModuleManager.EVENTS == id
+            || ModuleManager.NOTES == id
+            || ModuleManager.RSS == id
+            || "focus_sprint" == id
+        ) {
+            return true
+        }
+
+        val source = ModuleManager.getModuleSource(mContext, id)
+        if (ModuleManager.isLuaSource(source)) {
+            val widgetId = ModuleManager.luaWidgetId(source)
+            return LuaWidgetManager.SYSTEM_TIMER_WIDGET_ID == widgetId || "focus_sprint" == widgetId
+        }
+        return false
     }
 
     private fun calculateCalendarTextHeight(body: TextView): Int {
@@ -3957,17 +4198,17 @@ class UIManager(
         if (cyberdeckMode()) {
             val bgColor =
                 if (!XMLPrefsManager.getBoolean(Ui.system_wallpaper) || !canApplyTheme)
-                    getColor(Theme.bg_color)
-                else getColor(Theme.overlay_color)
+                    getColor(Theme.background_color)
+                else getColor(Theme.wallpaper_overlay_color)
             rootView.background = CyberpunkBackdropDrawable(
                 bgColor,
                 terminalBorderColor(),
-                getColor(Theme.device_color)
+                getColor(Theme.device_text_color)
             )
         } else if (!XMLPrefsManager.getBoolean(Ui.system_wallpaper) || !canApplyTheme) {
-            rootView.setBackgroundColor(getColor(Theme.bg_color))
+            rootView.setBackgroundColor(getColor(Theme.background_color))
         } else {
-            rootView.setBackgroundColor(getColor(Theme.overlay_color))
+            rootView.setBackgroundColor(getColor(Theme.wallpaper_overlay_color))
         }
 
         styleHackOverlay(rootView)
@@ -4178,35 +4419,62 @@ class UIManager(
         indexes[Label.ascii.ordinal] =
             if (show[Label.ascii.ordinal]) XMLPrefsManager.getFloat(Ui.ascii_index) else Int.Companion.MAX_VALUE.toFloat()
 
-        val statusLineAlignments = XMLPrefsManager.getListOfIntValues(
-            XMLPrefsManager.get(Ui.status_lines_alignment),
-            10,
-            -1
+        val statusLineAlignments = intArrayOf(
+            getInt(Ui.ram_status_alignment),
+            getInt(Ui.device_status_alignment),
+            getInt(Ui.time_status_alignment),
+            getInt(Ui.battery_status_alignment),
+            getInt(Ui.storage_status_alignment),
+            getInt(Ui.network_status_alignment),
+            getInt(Ui.notes_status_alignment),
+            getInt(Ui.weather_status_alignment),
+            getInt(Ui.unlock_status_alignment),
+            getInt(Ui.ascii_status_alignment)
         )
 
-        val statusLineBgColors = XMLPrefsManager.getListOfStringValues(
-            XMLPrefsManager.get(Theme.status_lines_bg),
-            10,
-            "#00000000"
+        fun themeColor(theme: Theme): String = String.format(
+            Locale.US,
+            "#%08X",
+            XMLPrefsManager.getColor(theme)
+        )
+
+        val statusLineBgColors = arrayOf<String?>(
+            themeColor(Theme.ram_status_background_color),
+            themeColor(Theme.device_status_background_color),
+            themeColor(Theme.time_status_background_color),
+            themeColor(Theme.battery_status_background_color),
+            themeColor(Theme.storage_status_background_color),
+            themeColor(Theme.network_status_background_color),
+            themeColor(Theme.notes_status_background_color),
+            themeColor(Theme.weather_status_background_color),
+            themeColor(Theme.unlock_status_background_color),
+            themeColor(Theme.ascii_status_background_color)
         )
         val otherBgColors = arrayOf<String?>(
-            XMLPrefsManager.get(Theme.input_bg),
-            XMLPrefsManager.get(Theme.output_bg),
-            XMLPrefsManager.get(Theme.suggestions_bg),
-            XMLPrefsManager.get(Theme.toolbar_bg)
+            themeColor(Theme.input_background_color),
+            themeColor(Theme.output_background_color),
+            themeColor(Theme.suggestions_background_color),
+            themeColor(Theme.toolbar_background_color)
         )
         bgColors = arrayOfNulls<String>(statusLineBgColors.size + otherBgColors.size)
         System.arraycopy(statusLineBgColors, 0, bgColors, 0, statusLineBgColors.size)
         System.arraycopy(otherBgColors, 0, bgColors, statusLineBgColors.size, otherBgColors.size)
 
-        val statusLineOutlineColors = XMLPrefsManager.getListOfStringValues(
-            XMLPrefsManager.get(
-                Theme.status_lines_shadow_color
-            ), 10, "#00000000"
+        val statusLineOutlineColors = arrayOf<String?>(
+            themeColor(Theme.ram_status_text_shadow_color),
+            themeColor(Theme.device_status_text_shadow_color),
+            themeColor(Theme.time_status_text_shadow_color),
+            themeColor(Theme.battery_status_text_shadow_color),
+            themeColor(Theme.storage_status_text_shadow_color),
+            themeColor(Theme.network_status_text_shadow_color),
+            themeColor(Theme.notes_status_text_shadow_color),
+            themeColor(Theme.weather_status_text_shadow_color),
+            themeColor(Theme.unlock_status_text_shadow_color),
+            themeColor(Theme.ascii_status_text_shadow_color)
         )
         val otherOutlineColors = arrayOf<String?>(
-            XMLPrefsManager.get(Theme.input_shadow_color),
-            XMLPrefsManager.get(Theme.output_shadow_color),
+            themeColor(Theme.input_text_shadow_color),
+            themeColor(Theme.output_text_shadow_color),
         )
         outlineColors = arrayOfNulls<String>(statusLineOutlineColors.size + otherOutlineColors.size)
         System.arraycopy(statusLineOutlineColors, 0, outlineColors, 0, statusLineOutlineColors.size)
@@ -4242,7 +4510,7 @@ class UIManager(
         val sequence = AllowEqualsSequence(indexes, Label.entries.toTypedArray())
 
         if (show[Label.ascii.ordinal]) {
-            asciiColor = XMLPrefsManager.getColor(Theme.ascii_color)
+            asciiColor = XMLPrefsManager.getColor(Theme.ascii_text_color)
             val asciiFile = File(Tuils.getFolder(), "ascii.txt")
             if (!asciiFile.exists()) {
                 try {
@@ -4323,7 +4591,8 @@ class UIManager(
                     margins[0]!!,
                     Tuils.dpToPx(mContext, moduleCornerRadius()),
                     useDashed,
-                    terminalBorderColor()
+                    terminalBorderColor(),
+                    false
                 )
                 Companion.applyShadow(
                     labelViews[count]!!,
@@ -4379,7 +4648,7 @@ class UIManager(
             updateText(
                 Label.device, Tuils.span(
                     mContext, deviceFormat, XMLPrefsManager.getColor(
-                        Theme.device_color
+                        Theme.device_text_color
                     ), labelSizes[Label.device.ordinal]
                 )
             )
@@ -4459,7 +4728,7 @@ class UIManager(
         }
 
         if (show[Label.weather.ordinal]) {
-            weatherColor = XMLPrefsManager.getColor(Theme.weather_color)
+            weatherColor = XMLPrefsManager.getColor(Theme.weather_text_color)
             weatherDelay = XMLPrefsManager.getInt(Behavior.weather_update_time) * 1000
 
             weatherManager = WeatherManager(
@@ -4492,7 +4761,7 @@ class UIManager(
 
             try {
                 asciiContent = Tuils.NEWLINE + Tuils.inputStreamToString(FileInputStream(asciiFile))
-                asciiColor = XMLPrefsManager.getColor(Theme.ascii_color)
+                asciiColor = XMLPrefsManager.getColor(Theme.ascii_text_color)
 
                 updateText(
                     Label.ascii,
@@ -6502,7 +6771,7 @@ class UIManager(
 
         if (type == SessionType.FINISHED) {
             title.setText("MISSION ACCOMPLISHED")
-            title.setTextColor(XMLPrefsManager.getColor(Theme.input_color))
+            title.setTextColor(XMLPrefsManager.getColor(Theme.input_text_color))
             taskDisplay.setText("Good job! You did great!")
             countdown.setVisibility(View.GONE)
             terminateBtn.setText("EXIT SESSION")
@@ -6511,7 +6780,7 @@ class UIManager(
             terminateBtn.setText("TERMINATE SESSION")
             if (type == SessionType.BREAK) {
                 title.setText("TAKE A BREAK")
-                title.setTextColor(XMLPrefsManager.getColor(Theme.input_color))
+                title.setTextColor(XMLPrefsManager.getColor(Theme.input_text_color))
             } else {
                 title.setText("FOCUS MODE ACTIVE")
                 title.setTextColor(Color.RED)
@@ -6527,13 +6796,13 @@ class UIManager(
         val taskDisplay = overlay.findViewById<TextView>(R.id.pomodoro_task_display)
         val terminateBtn = overlay.findViewById<Button>(R.id.pomodoro_terminate)
 
-        val color = XMLPrefsManager.getColor(Theme.input_color)
+        val color = XMLPrefsManager.getColor(Theme.input_text_color)
         val bgColor: Int
         val textBgColor = ColorUtils.setAlphaComponent(Color.BLACK, 160)
         if (XMLPrefsManager.getBoolean(Ui.system_wallpaper)) {
-            bgColor = XMLPrefsManager.getColor(Theme.overlay_color)
+            bgColor = XMLPrefsManager.getColor(Theme.wallpaper_overlay_color)
         } else {
-            bgColor = XMLPrefsManager.getColor(Theme.bg_color)
+            bgColor = XMLPrefsManager.getColor(Theme.background_color)
         }
         overlay.setBackgroundColor(bgColor)
 
@@ -7159,7 +7428,7 @@ class UIManager(
         val mainPack = mTerminalAdapter!!.mainPack
         if (mainPack == null || mainPack.appsManager == null) return
 
-        val drawerColor = XMLPrefsManager.getColor(Theme.apps_drawer_color)
+        val drawerColor = XMLPrefsManager.getColor(Theme.apps_drawer_text_color)
         val borderColor = terminalBorderColor()
         val widgetBgColor = terminalWindowBackground()
         val headerBgColor = terminalHeaderTabBackground()
@@ -7483,7 +7752,7 @@ class UIManager(
         }
 
         selectedAppsDrawerAlpha = letter
-        val drawerColor = XMLPrefsManager.getColor(Theme.apps_drawer_color)
+        val drawerColor = XMLPrefsManager.getColor(Theme.apps_drawer_text_color)
         val borderColor = terminalBorderColor()
         val widgetBgColor = terminalWindowBackground()
         for (entry in appsDrawerAlphaViews.entries) {
@@ -7880,7 +8149,12 @@ class UIManager(
             val textView = view
             val current = textView.getTypeface()
             val style = if (current != null) current.getStyle() else Typeface.NORMAL
-            if (textView.getId() == R.id.module_text_body) {
+            val fontMode = textView.getTag(R.id.module_text_font_mode)
+            if (MODULE_TEXT_FONT_MONO == fontMode) {
+                textView.setTypeface(Typeface.MONOSPACE, style)
+            } else if (MODULE_TEXT_FONT_THEME == fontMode) {
+                textView.setTypeface(typeface, style)
+            } else if (textView.getId() == R.id.module_text_body) {
                 textView.setTypeface(Typeface.MONOSPACE, style)
             } else {
                 textView.setTypeface(typeface, style)
@@ -8017,6 +8291,8 @@ class UIManager(
         private const val OUTPUT_HEADER_MODE_NORMAL = "normal"
         private const val OUTPUT_HEADER_MODE_ARROWS = "arrows"
         private const val OUTPUT_HEADER_MODE_NONE = "none"
+        private const val MODULE_TEXT_FONT_THEME = "theme"
+        private const val MODULE_TEXT_FONT_MONO = "mono"
         private const val EVENTS_REFRESH_GRACE_MS: Long = 1000
         private val EVENTS_REFRESH_FALLBACK_MS = (60 * 1000).toLong()
         private val LABEL_INDEX_UNMAPPED = -1f
@@ -8065,7 +8341,8 @@ class UIManager(
             spaces: IntArray,
             cornerRadius: Int,
             dashed: Boolean,
-            borderColor: Int
+            borderColor: Int,
+            cyberdeckNotch: Boolean
         ) {
             try {
                 applyMargins(v, spaces)
@@ -8086,7 +8363,8 @@ class UIManager(
                         borderColor,
                         1.5f,
                         cornerRadius.toFloat(),
-                        dashed
+                        dashed,
+                        cyberdeckNotch
                     )
                 )
             } catch (e: Exception) {

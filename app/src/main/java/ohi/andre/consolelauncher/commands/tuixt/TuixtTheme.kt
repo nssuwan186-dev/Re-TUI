@@ -2,6 +2,7 @@ package ohi.andre.consolelauncher.commands.tuixt
 
 import android.content.Context
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -12,6 +13,7 @@ import kotlin.math.max
 import ohi.andre.consolelauncher.managers.settings.AppearanceSettings
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings
 import ohi.andre.consolelauncher.managers.xml.options.Theme
+import ohi.andre.consolelauncher.tuils.TerminalBorderDrawable
 import ohi.andre.consolelauncher.tuils.Tuils
 
 object TuixtTheme {
@@ -19,16 +21,16 @@ object TuixtTheme {
     fun borderColor(): Int = AppearanceSettings.terminalBorderColor()
 
     @JvmStatic
-    fun accentColor(): Int = LauncherSettings.getColor(Theme.apps_drawer_color)
+    fun accentColor(): Int = LauncherSettings.getColor(Theme.apps_drawer_text_color)
 
     @JvmStatic
-    fun textColor(): Int = LauncherSettings.getColor(Theme.output_color)
+    fun textColor(): Int = LauncherSettings.getColor(Theme.output_text_color)
 
     @JvmStatic
     fun surfaceColor(): Int = AppearanceSettings.terminalHeaderBackground()
 
     @JvmStatic
-    fun overlayColor(): Int = LauncherSettings.getColor(Theme.overlay_color)
+    fun overlayColor(): Int = LauncherSettings.getColor(Theme.wallpaper_overlay_color)
 
     @JvmStatic
     fun stylePanel(context: Context, view: View) {
@@ -97,11 +99,25 @@ object TuixtTheme {
     }
 
     @JvmStatic
-    fun rect(context: Context, fill: Int, stroke: Int, strokeDp: Float): GradientDrawable =
+    fun rect(context: Context, fill: Int, stroke: Int, strokeDp: Float): Drawable =
         rect(context, fill, stroke, strokeDp, AppearanceSettings.dashedBorderCornerRadius())
 
     @JvmStatic
-    fun rect(context: Context, fill: Int, stroke: Int, strokeDp: Float, radiusDp: Int): GradientDrawable {
+    fun rect(context: Context, fill: Int, stroke: Int, strokeDp: Float, radiusDp: Int): Drawable {
+        if (AppearanceSettings.cyberdeckMode()) {
+            return TerminalBorderDrawable(
+                fill,
+                stroke,
+                max(1, dp(context, strokeDp)),
+                0f,
+                false,
+                0f,
+                0f,
+                true,
+                false
+            )
+        }
+
         val drawable = GradientDrawable()
         drawable.shape = GradientDrawable.RECTANGLE
         drawable.cornerRadius = dp(context, radiusDp.toFloat()).toFloat()

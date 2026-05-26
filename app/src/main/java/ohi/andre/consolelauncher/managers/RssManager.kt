@@ -269,7 +269,7 @@ class RssManager(context: Context, client: OkHttpClient) : XMLPrefsElement {
                 defaultFormat =
                     XMLPrefsManager.get(ohi.andre.consolelauncher.managers.xml.options.Rss.rss_default_format)
                 defaultColor =
-                    XMLPrefsManager.getColor(ohi.andre.consolelauncher.managers.xml.options.Rss.rss_default_color)
+                    XMLPrefsManager.getColor(ohi.andre.consolelauncher.managers.xml.options.Rss.rss_item_text_color)
                 includeRssDefault =
                     XMLPrefsManager.getBoolean(ohi.andre.consolelauncher.managers.xml.options.Rss.include_rss_default)
                 timeFormat =
@@ -290,7 +290,7 @@ class RssManager(context: Context, client: OkHttpClient) : XMLPrefsElement {
                     bPattern = Pattern.compile(size + "b", Pattern.CASE_INSENSITIVE)
 
                     downloadMessageColor =
-                        XMLPrefsManager.getColor(ohi.andre.consolelauncher.managers.xml.options.Rss.rss_download_message_color)
+                        XMLPrefsManager.getColor(ohi.andre.consolelauncher.managers.xml.options.Rss.rss_download_message_text_color)
                 }
 
                 val hiddenTags =

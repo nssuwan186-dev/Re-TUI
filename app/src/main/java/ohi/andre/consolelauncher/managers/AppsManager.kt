@@ -153,8 +153,8 @@ class AppsManager(context: Context) : XMLPrefsElement {
             pp = Pattern.compile("%p", Pattern.CASE_INSENSITIVE)
             pl = Pattern.compile("%l", Pattern.CASE_INSENSITIVE)
 
-            appInstalledColor = XMLPrefsManager.getColor(Theme.app_installed_color)
-            appUninstalledColor = XMLPrefsManager.getColor(Theme.app_uninstalled_color)
+            appInstalledColor = XMLPrefsManager.getColor(Theme.app_installed_text_color)
+            appUninstalledColor = XMLPrefsManager.getColor(Theme.app_uninstalled_text_color)
         } else {
             pp = null
             pl = null

@@ -47,7 +47,7 @@ class TimeManager(context: Context) {
             try {
                 formats[c] = Tuils.patternNewline.matcher(formats[c]).replaceAll(Tuils.NEWLINE)
 
-                var color = XMLPrefsManager.getColor(Theme.time_color)
+                var color = XMLPrefsManager.getColor(Theme.time_text_color)
                 val m: Matcher = COLOR_PATTERN.matcher(formats[c])
                 if (m.find()) {
                     color = Color.parseColor(m.group())

@@ -148,9 +148,9 @@ object ModuleVariableManager {
 
     private fun themeJson(): String {
         return ("{"
-                + "\"bg\":\"" + color(Theme.bg_color) + "\","
-                + "\"output\":\"" + color(Theme.output_color) + "\","
-                + "\"input\":\"" + color(Theme.input_color) + "\""
+                + "\"bg\":\"" + color(Theme.background_color) + "\","
+                + "\"output\":\"" + color(Theme.output_text_color) + "\","
+                + "\"input\":\"" + color(Theme.input_text_color) + "\""
                 + "}\n")
     }
 

@@ -92,7 +92,7 @@ class NetworkManager(
     override fun update() {
         if (format == null) {
             format = XMLPrefsManager.get(Behavior.network_info_format)
-            color = XMLPrefsManager.getColor(Theme.network_info_color)
+            color = XMLPrefsManager.getColor(Theme.network_info_text_color)
             maxDepth = XMLPrefsManager.getInt(Behavior.max_optional_depth)
 
             optionalValueSeparator = XMLPrefsManager.get(Behavior.optional_values_separator)

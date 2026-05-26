@@ -50,7 +50,15 @@ module -refresh server
 module -show server
 ```
 
-Simple stdout becomes the module body.
+Simple stdout becomes the module body and uses the active launcher font. When a script needs fixed-width alignment, it must opt in explicitly:
+
+```sh
+echo "::ascii"
+curl -s 'wttr.in/Chennai?0T'
+echo "::end"
+```
+
+`::pre`, `::ascii`, and `::code` start a monospace block. `::end` closes it. One-line forms are also valid: `::pre text`, `::ascii text`, and `::code text`.
 
 ## Lua Modules
 
@@ -162,6 +170,7 @@ Script modules can emit structured lines:
 ```text
 ::title Server
 ::body prod-api ONLINE
+::pre CPU  [####....] 50%
 ::suggest refresh | command | module -refresh server
 ::suggest logs | command | termux -run logs
 ```
@@ -171,6 +180,8 @@ Current behavior:
 - `::title` sets the module label.
 - `::body` adds a body line.
 - normal stdout becomes body text.
+- `::pre`, `::ascii`, and `::code` mark monospace blocks for terminal art, tables, and code; `::end` returns to normal themed text.
+- `::pre text`, `::ascii text`, and `::code text` add one monospace line without opening a longer block.
 - `::suggest label | command | command text` adds suggestion chips while the module is active and input is empty.
 - `termux-run` and `callback` are reserved modes; only `command` suggestions execute today.
 

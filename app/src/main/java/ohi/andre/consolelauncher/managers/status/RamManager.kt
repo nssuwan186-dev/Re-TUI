@@ -33,7 +33,7 @@ class RamManager(
     override fun update() {
         if (ramFormat == null) {
             ramFormat = XMLPrefsManager.get(Behavior.ram_format)
-            color = XMLPrefsManager.getColor(Theme.ram_color)
+            color = XMLPrefsManager.getColor(Theme.ram_text_color)
         }
 
         if (ramPatterns == null) {

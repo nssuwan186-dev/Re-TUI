@@ -199,22 +199,34 @@ object AutoColorManager {
 
     private fun resolveThemeColor(theme: Theme, palette: Palette, fallbackColor: Int): Int {
         when (theme) {
-            Theme.bg_color, Theme.statusbar_color, Theme.navigationbar_color -> return palette.background
-            Theme.overlay_color -> return palette.overlay
-            Theme.window_terminal_bg, Theme.terminal_header_bg, Theme.toolbar_bg -> return palette.surface
-            Theme.input_bg, Theme.output_bg, Theme.suggestions_bg -> return ColorUtils.setAlphaComponent(
+            Theme.background_color -> return palette.background
+            Theme.wallpaper_overlay_color -> return palette.overlay
+            Theme.terminal_window_background_color, Theme.terminal_header_background_color, Theme.toolbar_background_color -> return palette.surface
+            Theme.input_background_color, Theme.output_background_color, Theme.suggestions_background_color,
+            Theme.ram_status_background_color, Theme.device_status_background_color, Theme.time_status_background_color,
+            Theme.battery_status_background_color, Theme.storage_status_background_color, Theme.network_status_background_color,
+            Theme.notes_status_background_color, Theme.weather_status_background_color, Theme.unlock_status_background_color,
+            Theme.ascii_status_background_color -> return ColorUtils.setAlphaComponent(palette.surface, 208)
+
+            Theme.input_text_color, Theme.device_text_color, Theme.ascii_text_color, Theme.time_text_color,
+            Theme.storage_text_color, Theme.ram_text_color, Theme.network_info_text_color, Theme.alias_content_text_color,
+            Theme.notes_text_color, Theme.locked_notes_text_color, Theme.weather_text_color, Theme.unlock_counter_text_color,
+            Theme.terminal_border_color, Theme.terminal_header_border_color, Theme.module_text_color -> return palette.accent
+            Theme.module_button_background_color -> return ColorUtils.setAlphaComponent(
                 palette.surface,
                 208
             )
 
-            Theme.input_color, Theme.device_color, Theme.ascii_color, Theme.time_color, Theme.storage_color, Theme.ram_color, Theme.network_info_color, Theme.alias_content_color, Theme.hint_color, Theme.notes_color, Theme.notes_locked_color, Theme.weather_color, Theme.unlock_counter_color, Theme.dashed_border_color, Theme.terminal_header_border_color, Theme.module_name_text_color -> return palette.accent
-            Theme.module_button_bg_color -> return ColorUtils.setAlphaComponent(
-                palette.surface,
-                208
-            )
-
-            Theme.output_color, Theme.toolbar_color, Theme.enter_color, Theme.cursor_color, Theme.restart_message_color, Theme.session_info_color, Theme.link_color, Theme.mark_color, Theme.app_installed_color, Theme.app_uninstalled_color, Theme.apps_drawer_color -> return palette.text
-            Theme.battery_text_high, Theme.battery_text_medium, Theme.battery_text_low, Theme.status_lines_bgrectcolor, Theme.status_lines_bg, Theme.status_lines_shadow_color, Theme.input_shadow_color, Theme.output_shadow_color, Theme.input_bgrectcolor, Theme.output_bgrectcolor, Theme.toolbar_bgrectcolor, Theme.suggestions_bgrectcolor, Theme.module_button_border_color -> return fallbackColor
+            Theme.output_text_color, Theme.toolbar_icon_color, Theme.enter_icon_color, Theme.cursor_color,
+            Theme.restart_message_text_color, Theme.session_info_text_color, Theme.link_text_color,
+            Theme.app_installed_text_color, Theme.app_uninstalled_text_color, Theme.apps_drawer_text_color -> return palette.text
+            Theme.regex_match_background_color -> return palette.accent
+            Theme.battery_text_high, Theme.battery_text_medium, Theme.battery_text_low,
+            Theme.ram_status_text_shadow_color, Theme.device_status_text_shadow_color, Theme.time_status_text_shadow_color,
+            Theme.battery_status_text_shadow_color, Theme.storage_status_text_shadow_color,
+            Theme.network_status_text_shadow_color, Theme.notes_status_text_shadow_color,
+            Theme.weather_status_text_shadow_color, Theme.unlock_status_text_shadow_color,
+            Theme.ascii_status_text_shadow_color, Theme.input_text_shadow_color, Theme.output_text_shadow_color -> return fallbackColor
             else -> return fallbackColor
         }
     }
@@ -232,13 +244,13 @@ object AutoColorManager {
             Suggestions.song_text_color -> return palette.songSuggestionStyle.text
             Suggestions.contact_text_color -> return palette.contactSuggestionStyle.text
             Suggestions.file_text_color -> return palette.fileSuggestionStyle.text
-            Suggestions.default_bg_color -> return palette.defaultSuggestionStyle.background
-            Suggestions.apps_bg_color -> return palette.appSuggestionStyle.background
-            Suggestions.alias_bg_color -> return palette.aliasSuggestionStyle.background
-            Suggestions.cmd_bg_color -> return palette.commandSuggestionStyle.background
-            Suggestions.song_bg_color -> return palette.songSuggestionStyle.background
-            Suggestions.contact_bg_color -> return palette.contactSuggestionStyle.background
-            Suggestions.file_bg_color -> return palette.fileSuggestionStyle.background
+            Suggestions.default_background_color -> return palette.defaultSuggestionStyle.background
+            Suggestions.apps_background_color -> return palette.appSuggestionStyle.background
+            Suggestions.alias_background_color -> return palette.aliasSuggestionStyle.background
+            Suggestions.cmd_background_color -> return palette.commandSuggestionStyle.background
+            Suggestions.song_background_color -> return palette.songSuggestionStyle.background
+            Suggestions.contact_background_color -> return palette.contactSuggestionStyle.background
+            Suggestions.file_background_color -> return palette.fileSuggestionStyle.background
             else -> return fallbackColor
         }
     }

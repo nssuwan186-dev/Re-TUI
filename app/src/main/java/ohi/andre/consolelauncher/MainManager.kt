@@ -301,7 +301,7 @@ class MainManager(private val mContext: LauncherActivity) {
 
         showAliasValue = XMLPrefsManager.getBoolean(Behavior.show_alias_content)
         showAppHistory = XMLPrefsManager.getBoolean(Behavior.show_launch_history)
-        aliasContentColor = XMLPrefsManager.getColor(Theme.alias_content_color)
+        aliasContentColor = XMLPrefsManager.getColor(Theme.alias_content_text_color)
 
         multipleCmdSeparator = XMLPrefsManager.get(Behavior.multiple_cmd_separator)
 
@@ -438,7 +438,7 @@ class MainManager(private val mContext: LauncherActivity) {
 
         if (showAppHistory) {
             appFormat = XMLPrefsManager.get(Behavior.app_launch_format)
-            outputColor = XMLPrefsManager.getColor(Theme.output_color)
+            outputColor = XMLPrefsManager.getColor(Theme.output_text_color)
 
             var a = appFormat!!
             var className = ""

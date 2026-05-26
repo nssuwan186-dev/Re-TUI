@@ -162,8 +162,8 @@ class NotesManager(var mContext: Context, noteView: TextView?) {
         val optional = "%\\(([^" + optionalSeparator + "]*)" + optionalSeparator + "([^)]*)\\)"
         optionalPattern = Pattern.compile(optional, Pattern.CASE_INSENSITIVE)
 
-        color = XMLPrefsManager.getColor(Theme.notes_color)
-        lockedColor = XMLPrefsManager.getColor(Theme.notes_locked_color)
+        color = XMLPrefsManager.getColor(Theme.notes_text_color)
+        lockedColor = XMLPrefsManager.getColor(Theme.locked_notes_text_color)
 
         footer = XMLPrefsManager.get(Ui.notes_footer)
         header = XMLPrefsManager.get(Ui.notes_header)
@@ -173,7 +173,7 @@ class NotesManager(var mContext: Context, noteView: TextView?) {
         allowLink = XMLPrefsManager.getBoolean(Behavior.notes_allow_link)
         if (allowLink && noteView != null) {
             noteView.setMovementMethod(LinkMovementMethod())
-            linkColor = XMLPrefsManager.getColor(Theme.link_color)
+            linkColor = XMLPrefsManager.getColor(Theme.link_text_color)
         }
 
         Note.Companion.sorting = XMLPrefsManager.getInt(Behavior.notes_sorting)

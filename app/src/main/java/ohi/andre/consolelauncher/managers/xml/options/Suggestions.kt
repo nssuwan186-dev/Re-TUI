@@ -43,7 +43,7 @@ enum class Suggestions : XMLPrefsSave {
             return "The default text color"
         }
     },
-    default_bg_color {
+    default_background_color {
         override fun defaultValue(): String? {
             return "#ffffff"
         }
@@ -61,7 +61,7 @@ enum class Suggestions : XMLPrefsSave {
             return "Apps suggestions text color"
         }
     },
-    apps_bg_color {
+    apps_background_color {
         override fun defaultValue(): String? {
             return "#00897B"
         }
@@ -79,7 +79,7 @@ enum class Suggestions : XMLPrefsSave {
             return "Aliases suggestions text color"
         }
     },
-    alias_bg_color {
+    alias_background_color {
         override fun defaultValue(): String? {
             return "#FF5722"
         }
@@ -97,7 +97,7 @@ enum class Suggestions : XMLPrefsSave {
             return "Commands suggestions text color"
         }
     },
-    cmd_bg_color {
+    cmd_background_color {
         override fun defaultValue(): String? {
             return "#76FF03"
         }
@@ -115,7 +115,7 @@ enum class Suggestions : XMLPrefsSave {
             return "Songs suggestions text color"
         }
     },
-    song_bg_color {
+    song_background_color {
         override fun defaultValue(): String? {
             return "#EEFF41"
         }
@@ -133,7 +133,7 @@ enum class Suggestions : XMLPrefsSave {
             return "Contacts suggestions text color"
         }
     },
-    contact_bg_color {
+    contact_background_color {
         override fun defaultValue(): String? {
             return "#64FFDA"
         }
@@ -151,7 +151,7 @@ enum class Suggestions : XMLPrefsSave {
             return "Files suggestions text color"
         }
     },
-    file_bg_color {
+    file_background_color {
         override fun defaultValue(): String? {
             return "#03A9F4"
         }

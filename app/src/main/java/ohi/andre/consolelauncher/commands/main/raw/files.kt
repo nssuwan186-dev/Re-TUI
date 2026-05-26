@@ -39,8 +39,8 @@ class files : CommandAbstraction {
         val terminalHeaderColor = AppearanceSettings.terminalHeaderBackground()
         val terminalBorderColor = AppearanceSettings.terminalBorderColor()
 
-        intent.putExtra("theme_bg", XMLPrefsManager.getColor(Theme.bg_color))
-        intent.putExtra("theme_text", XMLPrefsManager.getColor(Theme.output_color))
+        intent.putExtra("theme_bg", XMLPrefsManager.getColor(Theme.background_color))
+        intent.putExtra("theme_text", XMLPrefsManager.getColor(Theme.output_text_color))
         intent.putExtra("theme_border", terminalBorderColor)
         intent.putExtra("terminal_bg", terminalSurfaceColor)
         intent.putExtra("module_bg_color", terminalSurfaceColor)
@@ -49,12 +49,15 @@ class files : CommandAbstraction {
         intent.putExtra("module_header_bg_color", terminalHeaderColor)
         intent.putExtra("module_header_text_color", AppearanceSettings.moduleNameTextColor())
         intent.putExtra("module_button_bg_color", AppearanceSettings.moduleButtonBackgroundColor())
+        intent.putExtra("module_button_background_color", AppearanceSettings.moduleButtonBackgroundColor())
         intent.putExtra("module_button_text_color", AppearanceSettings.moduleNameTextColor())
         intent.putExtra("module_button_border_color", terminalBorderColor)
-        intent.putExtra("input_bg_color", XMLPrefsManager.getColor(Theme.input_bg))
-        intent.putExtra("input_text_color", XMLPrefsManager.getColor(Theme.input_color))
-        intent.putExtra("output_bg_color", XMLPrefsManager.getColor(Theme.output_bg))
-        intent.putExtra("output_text_color", XMLPrefsManager.getColor(Theme.output_color))
+        intent.putExtra("input_bg_color", XMLPrefsManager.getColor(Theme.input_background_color))
+        intent.putExtra("input_background_color", XMLPrefsManager.getColor(Theme.input_background_color))
+        intent.putExtra("input_text_color", XMLPrefsManager.getColor(Theme.input_text_color))
+        intent.putExtra("output_bg_color", XMLPrefsManager.getColor(Theme.output_background_color))
+        intent.putExtra("output_background_color", XMLPrefsManager.getColor(Theme.output_background_color))
+        intent.putExtra("output_text_color", XMLPrefsManager.getColor(Theme.output_text_color))
         intent.putExtra("output_border_color", terminalBorderColor)
         intent.putExtra("top_margin", 18)
         intent.putExtra("input_font_size", XMLPrefsManager.getInt(Ui.input_output_size))
@@ -92,7 +95,7 @@ class files : CommandAbstraction {
         if (Color.alpha(terminalBg) > 0) {
             return terminalBg
         }
-        val outputBg = XMLPrefsManager.getColor(Theme.output_bg)
+        val outputBg = XMLPrefsManager.getColor(Theme.output_background_color)
         return if (Color.alpha(outputBg) > 0) outputBg else terminalBg
     }
 

@@ -42,13 +42,16 @@ import android.content.Intent
 import java.util.ArrayList
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings
 import ohi.andre.consolelauncher.tuils.LauncherSystemUi
+import javax.xml.parsers.DocumentBuilderFactory
+import org.w3c.dom.Element
+import org.w3c.dom.Node
 
 class TuixtActivity : Activity() {
     private var file: File? = null
     private var recyclerView: RecyclerView? = null
     private var adapter: TuixtAdapter? = null
     private var xmlRoot: XMLPrefsRoot? = null
-    private var originalItems: MutableList<XMLPrefsSave>? = null
+    private var originalRows: MutableList<TuixtAdapter.SettingsRow>? = null
     private var plainTextEditor: EditText? = null
     private var originalRawText: String? = null
 
@@ -170,9 +173,8 @@ class TuixtActivity : Activity() {
         }
 
         if (xmlRoot != null) {
-            originalItems = ArrayList<XMLPrefsSave>(xmlRoot!!.enums)
-            originalItems!!.remove(Behavior.toggle_output_state)
-            adapter = TuixtAdapter(originalItems!!.toMutableList(), file)
+            originalRows = buildRows(xmlRoot!!, file!!)
+            adapter = TuixtAdapter(originalRows!!.toMutableList(), file)
             recyclerView!!.setAdapter(adapter)
 
             searchBox.addTextChangedListener(object : TextWatcher {
@@ -234,17 +236,122 @@ class TuixtActivity : Activity() {
     }
 
     private fun filter(query: String) {
-        val filtered: MutableList<XMLPrefsSave> = ArrayList()
-        for (item in originalItems!!) {
-            if (item.label()!!.lowercase(Locale.getDefault())
-                    .contains(query.lowercase(Locale.getDefault())) ||
-                item.info()!!.lowercase(Locale.getDefault())
-                    .contains(query.lowercase(Locale.getDefault()))
-            ) {
-                filtered.add(item)
+        val rows = originalRows ?: return
+        if (query.trim().isEmpty()) {
+            adapter!!.updateRows(rows.toMutableList())
+            return
+        }
+
+        val filtered: MutableList<TuixtAdapter.SettingsRow> = ArrayList()
+        var pendingSection: TuixtAdapter.SettingsRow? = null
+        val lower = query.lowercase(Locale.getDefault())
+        for (row in rows) {
+            if (row.sectionHeader) {
+                pendingSection = row
+                continue
+            }
+
+            val item = row.item ?: continue
+            val label = item.label()!!.lowercase(Locale.getDefault())
+            val info = item.info()!!.lowercase(Locale.getDefault())
+            if (label.contains(lower) || info.contains(lower)) {
+                if (pendingSection != null && (filtered.isEmpty() || filtered.last().section != pendingSection.section)) {
+                    filtered.add(pendingSection)
+                }
+                filtered.add(row)
             }
         }
-        adapter!!.updateList(filtered)
+        adapter!!.updateRows(filtered)
+    }
+
+    private fun buildRows(root: XMLPrefsRoot, source: File): MutableList<TuixtAdapter.SettingsRow> {
+        val remaining: LinkedHashMap<String, XMLPrefsSave> = LinkedHashMap<String, XMLPrefsSave>()
+        for (save in root.enums) {
+            if (save === Behavior.toggle_output_state) {
+                continue
+            }
+            remaining[save.label()!!] = save
+        }
+
+        val rows: MutableList<TuixtAdapter.SettingsRow> = ArrayList()
+        try {
+            val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(source)
+            val xmlRoot = doc.documentElement
+            val children = xmlRoot.childNodes
+            if (!hasSectionComments(children)) {
+                addDefaultSectionRows(rows, remaining)
+                return rows
+            }
+
+            var activeSection: String? = null
+            for (index in 0..<children.length) {
+                val node = children.item(index)
+                if (node.nodeType == Node.COMMENT_NODE) {
+                    val section = parseSectionComment(node.nodeValue)
+                    if (section != null) {
+                        addSection(rows, section)
+                        activeSection = section
+                    }
+                } else if (node.nodeType == Node.ELEMENT_NODE) {
+                    val element = node as Element
+                    val save = remaining.remove(element.nodeName) ?: continue
+                    val section = activeSection ?: XMLPrefsManager.sectionFor(save)
+                    if (activeSection == null) {
+                        addSection(rows, section)
+                    }
+                    rows.add(TuixtAdapter.SettingsRow.setting(save, section))
+                }
+            }
+        } catch (ignored: Exception) {
+        }
+
+        for (save in remaining.values) {
+            val section = XMLPrefsManager.sectionFor(save)
+            addSection(rows, section)
+            rows.add(TuixtAdapter.SettingsRow.setting(save, section))
+        }
+
+        return rows
+    }
+
+    private fun addDefaultSectionRows(
+        rows: MutableList<TuixtAdapter.SettingsRow>,
+        remaining: LinkedHashMap<String, XMLPrefsSave>
+    ) {
+        val iterator = remaining.entries.iterator()
+        while (iterator.hasNext()) {
+            val save = iterator.next().value
+            val section = XMLPrefsManager.sectionFor(save)
+            addSection(rows, section)
+            rows.add(TuixtAdapter.SettingsRow.setting(save, section))
+            iterator.remove()
+        }
+    }
+
+    private fun hasSectionComments(children: org.w3c.dom.NodeList): Boolean {
+        for (index in 0..<children.length) {
+            val node = children.item(index)
+            if (node.nodeType == Node.COMMENT_NODE && parseSectionComment(node.nodeValue) != null) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun parseSectionComment(raw: String?): String? {
+        val value = raw?.trim() ?: return null
+        if (!value.startsWith("#")) {
+            return null
+        }
+        val label = value.removePrefix("#").trim()
+        return if (label.isEmpty()) null else label
+    }
+
+    private fun addSection(rows: MutableList<TuixtAdapter.SettingsRow>, section: String) {
+        if (rows.isNotEmpty() && rows.last().section == section) {
+            return
+        }
+        rows.add(TuixtAdapter.SettingsRow.section(section))
     }
 
     @SuppressLint("GestureBackNavigation")

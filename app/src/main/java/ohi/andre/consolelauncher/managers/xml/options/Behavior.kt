@@ -115,19 +115,6 @@ enum class Behavior : XMLPrefsSave {
             return XMLPrefsSave.BOOLEAN
         }
     },
-    show_hints {
-        override fun defaultValue(): String? {
-            return "false"
-        }
-
-        override fun info(): String? {
-            return "If true, Re:T-UI will tell you some useful hints sometime"
-        }
-
-        override fun type(): String? {
-            return XMLPrefsSave.BOOLEAN
-        }
-    },
     show_alias_content {
         override fun defaultValue(): String? {
             return "false"
@@ -217,19 +204,6 @@ enum class Behavior : XMLPrefsSave {
 
         override fun type(): String? {
             return XMLPrefsSave.INTEGER
-        }
-    },
-    time_format {
-        override fun defaultValue(): String? {
-            return "d MMM yyyy HH:mm:ss@HH:mm:ss"
-        }
-
-        override fun info(): String? {
-            return "Deprecated. Use status_time_format and output_time_format instead."
-        }
-
-        override fun type(): String? {
-            return XMLPrefsSave.TEXT
         }
     },
     status_time_format {
@@ -440,19 +414,6 @@ enum class Behavior : XMLPrefsSave {
             return XMLPrefsSave.TEXT
         }
     },
-    enable_app_launch {
-        override fun defaultValue(): String? {
-            return "true"
-        }
-
-        override fun info(): String? {
-            return "If false, you won't be able to launch apps from Re:T-UI, unless you use \"apps -frc\""
-        }
-
-        override fun type(): String? {
-            return XMLPrefsSave.BOOLEAN
-        }
-    },
     app_launch_format {
         override fun defaultValue(): String? {
             return "--> %a"
@@ -661,19 +622,6 @@ enum class Behavior : XMLPrefsSave {
 
         override fun info(): String? {
             return "A value which is used to tell how deep Re:T-UI can go in a nested optional value"
-        }
-
-        override fun type(): String? {
-            return XMLPrefsSave.INTEGER
-        }
-    },
-    network_info_update_ms {
-        override fun defaultValue(): String? {
-            return "3500"
-        }
-
-        override fun info(): String? {
-            return "The time between two network info updates"
         }
 
         override fun type(): String? {
@@ -914,22 +862,9 @@ enum class Behavior : XMLPrefsSave {
             return XMLPrefsSave.TEXT
         }
     },
-    htmlextractor_notfound_message {
+    tui_notification_time_text_color {
         override fun defaultValue(): String? {
-            return "Not found"
-        }
-
-        override fun info(): String? {
-            return "The message printed when there are no result inside your htmlextract query"
-        }
-
-        override fun type(): String? {
-            return XMLPrefsSave.TEXT
-        }
-    },
-    tui_notification_time_color {
-        override fun defaultValue(): String? {
-            return Theme.time_color.defaultValue()
+            return Theme.time_text_color.defaultValue()
         }
 
         override fun info(): String? {
@@ -940,9 +875,9 @@ enum class Behavior : XMLPrefsSave {
             return XMLPrefsSave.COLOR
         }
     },
-    tui_notification_input_color {
+    tui_notification_input_text_color {
         override fun defaultValue(): String? {
-            return Theme.input_color.defaultValue()
+            return Theme.input_text_color.defaultValue()
         }
 
         override fun info(): String? {

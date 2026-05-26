@@ -40,18 +40,22 @@ import java.util.HashMap
 import java.util.Map
 import ohi.andre.consolelauncher.managers.settings.LauncherSettings
 
-class TuixtAdapter(items: MutableList<XMLPrefsSave>, private val file: File?) :
-    RecyclerView.Adapter<TuixtAdapter.ViewHolder>() {
-    private var items: MutableList<XMLPrefsSave>
+class TuixtAdapter(rows: MutableList<SettingsRow>, private val file: File?) :
+    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    private var rows: MutableList<SettingsRow>
+    private val visibleRows: MutableList<SettingsRow> = ArrayList<SettingsRow>()
+    private val collapsedSections: MutableSet<String> = HashSet<String>()
     private val pendingChanges: MutableMap<XMLPrefsSave?, String?> =
         HashMap<XMLPrefsSave?, String?>()
 
     init {
-        this.items = ArrayList<XMLPrefsSave>(items)
+        this.rows = ArrayList<SettingsRow>(rows)
+        rebuildVisibleRows()
     }
 
-    fun updateList(newList: MutableList<XMLPrefsSave>) {
-        this.items = ArrayList<XMLPrefsSave>(newList)
+    fun updateRows(newRows: MutableList<SettingsRow>) {
+        this.rows = ArrayList<SettingsRow>(newRows)
+        rebuildVisibleRows()
         notifyDataSetChanged()
     }
 
@@ -69,75 +73,95 @@ class TuixtAdapter(items: MutableList<XMLPrefsSave>, private val file: File?) :
         return !pendingChanges.isEmpty()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun getItemViewType(position: Int): Int =
+        if (visibleRows[position].sectionHeader) VIEW_TYPE_SECTION else VIEW_TYPE_SETTING
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        if (viewType == VIEW_TYPE_SECTION) {
+            val title = TextView(parent.context)
+            title.setGravity(Gravity.CENTER_VERTICAL)
+            title.setPadding(dp(parent.context, 14f), dp(parent.context, 10f), dp(parent.context, 14f), dp(parent.context, 10f))
+            title.setTypeface(Tuils.getTypeface(parent.context), Typeface.BOLD)
+            title.setTextColor(accentColor())
+            title.setBackground(rect(parent.context, surfaceColor(), borderColor(), 1.25f))
+            return SectionHolder(title)
+        }
+
         val view =
             LayoutInflater.from(parent.getContext()).inflate(R.layout.tuixt_row, parent, false)
         return ViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = items.get(position)
-        holder.title.setText(item.label())
-        holder.description.setText(item.info())
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val row = visibleRows.get(position)
+        if (holder is SectionHolder) {
+            bindSection(holder, row)
+            return
+        }
+
+        val settingHolder = holder as ViewHolder
+        val item = row.item ?: return
+        settingHolder.title.setText(item.label())
+        settingHolder.description.setText(item.info())
 
         val currentValue = getCurrentValue(item)
 
-        holder.input.removeTextChangedListener(holder.textWatcher)
-        holder.toggle.setOnClickListener(null)
-        holder.colorPreview.setOnClickListener(null)
-        holder.options.removeAllViews()
-        holder.options.setVisibility(View.GONE)
-        holder.itemView.setBackground(
+        settingHolder.input.removeTextChangedListener(settingHolder.textWatcher)
+        settingHolder.toggle.setOnClickListener(null)
+        settingHolder.colorPreview.setOnClickListener(null)
+        settingHolder.options.removeAllViews()
+        settingHolder.options.setVisibility(View.GONE)
+        settingHolder.itemView.setBackground(
             rect(
-                holder.itemView.getContext(),
+                settingHolder.itemView.getContext(),
                 surfaceColor(),
                 borderColor(),
                 1.25f
             )
         )
-        holder.title.setTextColor(accentColor())
-        holder.description.setTextColor(textColor())
-        styleInput(holder.itemView.getContext(), holder.input)
+        settingHolder.title.setTextColor(accentColor())
+        settingHolder.description.setTextColor(textColor())
+        styleInput(settingHolder.itemView.getContext(), settingHolder.input)
 
         if (item === Behavior.output_tray_mode) {
-            holder.toggle.setVisibility(View.GONE)
-            holder.colorPreview.setVisibility(View.GONE)
-            holder.input.setVisibility(View.GONE)
-            holder.options.setVisibility(View.VISIBLE)
-            bindOptionSwitch(holder, item, arrayOf<String>("native", "auto", "toggled"))
+            settingHolder.toggle.setVisibility(View.GONE)
+            settingHolder.colorPreview.setVisibility(View.GONE)
+            settingHolder.input.setVisibility(View.GONE)
+            settingHolder.options.setVisibility(View.VISIBLE)
+            bindOptionSwitch(settingHolder, item, arrayOf<String>("native", "auto", "toggled"))
         } else if (item === Behavior.output_header_mode) {
-            holder.toggle.setVisibility(View.GONE)
-            holder.colorPreview.setVisibility(View.GONE)
-            holder.input.setVisibility(View.GONE)
-            holder.options.setVisibility(View.VISIBLE)
-            bindOptionSwitch(holder, item, arrayOf<String>("normal", "arrows", "none"))
+            settingHolder.toggle.setVisibility(View.GONE)
+            settingHolder.colorPreview.setVisibility(View.GONE)
+            settingHolder.input.setVisibility(View.GONE)
+            settingHolder.options.setVisibility(View.VISIBLE)
+            bindOptionSwitch(settingHolder, item, arrayOf<String>("normal", "arrows", "none"))
         } else if (XMLPrefsSave.BOOLEAN == item.type()) {
-            holder.toggle.setVisibility(View.VISIBLE)
-            holder.colorPreview.setVisibility(View.GONE)
-            holder.input.setVisibility(View.GONE)
+            settingHolder.toggle.setVisibility(View.VISIBLE)
+            settingHolder.colorPreview.setVisibility(View.GONE)
+            settingHolder.input.setVisibility(View.GONE)
             val checked = currentValue.toBoolean()
-            styleToggle(holder.itemView.getContext(), holder.toggle, checked)
-            holder.toggle.setOnClickListener(View.OnClickListener { v: View? ->
+            styleToggle(settingHolder.itemView.getContext(), settingHolder.toggle, checked)
+            settingHolder.toggle.setOnClickListener(View.OnClickListener { v: View? ->
                 val next = !getCurrentValue(item).toBoolean()
                 pendingChanges.put(item, next.toString())
-                styleToggle(holder.itemView.getContext(), holder.toggle, next)
+                styleToggle(settingHolder.itemView.getContext(), settingHolder.toggle, next)
             })
         } else if (XMLPrefsSave.COLOR == item.type()) {
-            holder.toggle.setVisibility(View.GONE)
-            holder.colorPreview.setVisibility(View.VISIBLE)
-            holder.input.setVisibility(View.VISIBLE)
-            holder.input.setText(currentValue)
-            updateColorPreview(holder.colorPreview, currentValue)
+            settingHolder.toggle.setVisibility(View.GONE)
+            settingHolder.colorPreview.setVisibility(View.VISIBLE)
+            settingHolder.input.setVisibility(View.VISIBLE)
+            settingHolder.input.setText(currentValue)
+            updateColorPreview(settingHolder.colorPreview, currentValue)
 
-            holder.colorPreview.setOnClickListener(View.OnClickListener { v: View? ->
+            settingHolder.colorPreview.setOnClickListener(View.OnClickListener { v: View? ->
                 showColorPicker(
-                    holder,
+                    settingHolder,
                     item,
-                    holder.input.getText().toString()
+                    settingHolder.input.getText().toString()
                 )
             })
 
-            holder.textWatcher = object : TextWatcher {
+            settingHolder.textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence?,
                     start: Int,
@@ -150,18 +174,18 @@ class TuixtAdapter(items: MutableList<XMLPrefsSave>, private val file: File?) :
                 override fun afterTextChanged(s: Editable) {
                     val `val` = s.toString()
                     if (`val`.matches("^#[0-9A-Fa-f]{6,8}$".toRegex())) {
-                        updateColorPreview(holder.colorPreview, `val`)
+                        updateColorPreview(settingHolder.colorPreview, `val`)
                         pendingChanges.put(item, `val`)
                     }
                 }
             }
-            holder.input.addTextChangedListener(holder.textWatcher)
+            settingHolder.input.addTextChangedListener(settingHolder.textWatcher)
         } else {
-            holder.toggle.setVisibility(View.GONE)
-            holder.colorPreview.setVisibility(View.GONE)
-            holder.input.setVisibility(View.VISIBLE)
-            holder.input.setText(currentValue)
-            holder.textWatcher = object : TextWatcher {
+            settingHolder.toggle.setVisibility(View.GONE)
+            settingHolder.colorPreview.setVisibility(View.GONE)
+            settingHolder.input.setVisibility(View.VISIBLE)
+            settingHolder.input.setText(currentValue)
+            settingHolder.textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence?,
                     start: Int,
@@ -175,7 +199,36 @@ class TuixtAdapter(items: MutableList<XMLPrefsSave>, private val file: File?) :
                     pendingChanges.put(item, s.toString())
                 }
             }
-            holder.input.addTextChangedListener(holder.textWatcher)
+            settingHolder.input.addTextChangedListener(settingHolder.textWatcher)
+        }
+    }
+
+    private fun bindSection(holder: SectionHolder, row: SettingsRow) {
+        val title = row.section ?: "Unsectioned"
+        val collapsed = collapsedSections.contains(title)
+        holder.title.text = (if (collapsed) "[+] " else "[-] ") + title.uppercase()
+        holder.title.setTextColor(accentColor())
+        holder.title.setOnClickListener {
+            if (collapsed) {
+                collapsedSections.remove(title)
+            } else {
+                collapsedSections.add(title)
+            }
+            rebuildVisibleRows()
+            notifyDataSetChanged()
+        }
+    }
+
+    private fun rebuildVisibleRows() {
+        visibleRows.clear()
+        var hidden = false
+        for (row in rows) {
+            if (row.sectionHeader) {
+                hidden = collapsedSections.contains(row.section)
+                visibleRows.add(row)
+            } else if (!hidden) {
+                visibleRows.add(row)
+            }
         }
     }
 
@@ -348,7 +401,11 @@ class TuixtAdapter(items: MutableList<XMLPrefsSave>, private val file: File?) :
     }
 
     override fun getItemCount(): Int {
-        return items.size
+        return visibleRows.size
+    }
+
+    class SectionHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val title: TextView = itemView as TextView
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -368,5 +425,22 @@ class TuixtAdapter(items: MutableList<XMLPrefsSave>, private val file: File?) :
             colorPreview = itemView.findViewById<View>(R.id.setting_color_preview)
             input = itemView.findViewById<EditText>(R.id.setting_input)
         }
+    }
+
+    data class SettingsRow(
+        val item: XMLPrefsSave?,
+        val section: String?,
+        val sectionHeader: Boolean
+    ) {
+        companion object {
+            fun section(title: String): SettingsRow = SettingsRow(null, title, true)
+
+            fun setting(item: XMLPrefsSave, section: String): SettingsRow = SettingsRow(item, section, false)
+        }
+    }
+
+    companion object {
+        private const val VIEW_TYPE_SECTION = 0
+        private const val VIEW_TYPE_SETTING = 1
     }
 }

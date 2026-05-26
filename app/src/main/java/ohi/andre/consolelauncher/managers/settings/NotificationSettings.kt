@@ -15,10 +15,10 @@ object NotificationSettings {
     fun format(): String? = LauncherSettings.get(Notifications.notification_format)
 
     @JvmStatic
-    fun defaultColor(): Int = LauncherSettings.getColor(Notifications.default_notification_color)
+    fun defaultColor(): Int = LauncherSettings.getColor(Notifications.notification_text_color)
 
     @JvmStatic
-    fun defaultColorRaw(): String? = LauncherSettings.get(Notifications.default_notification_color)
+    fun defaultColorRaw(): String? = LauncherSettings.get(Notifications.notification_text_color)
 
     @JvmStatic
     fun appNotificationsEnabledByDefault(): Boolean = LauncherSettings.getBoolean(Notifications.app_notification_enabled_default)

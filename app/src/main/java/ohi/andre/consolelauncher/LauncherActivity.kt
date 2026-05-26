@@ -374,7 +374,7 @@ class LauncherActivity : AppCompatActivity(), Reloadable {
             if (s != null) out.onOutput(
                 Tuils.span(
                     s,
-                    XMLPrefsManager.getColor(Theme.restart_message_color)
+                    XMLPrefsManager.getColor(Theme.restart_message_text_color)
                 )
             )
         }

@@ -4,539 +4,93 @@ import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager
 import ohi.andre.consolelauncher.managers.xml.classes.XMLPrefsElement
 import ohi.andre.consolelauncher.managers.xml.classes.XMLPrefsSave
 
-/**
- * Created by francescoandreuzzi on 24/09/2017.
- */
-enum class Theme : XMLPrefsSave {
-    input_color {
-        override fun defaultValue(): String? {
-            return "#ff00ff00"
-        }
-
-        override fun info(): String? {
-            return "Input color"
-        }
-    },
-    output_color {
-        override fun defaultValue(): String? {
-            return "#ffffffff"
-        }
-
-        override fun info(): String? {
-            return "Output color"
-        }
-    },
-    bg_color {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "Background color"
-        }
-    },
-    device_color {
-        override fun defaultValue(): String? {
-            return "#ffff9800"
-        }
-
-        override fun info(): String? {
-            return "Device label color"
-        }
-    },
-    battery_text_high {
-        override fun defaultValue(): String? {
-            return "#4CAF50"
-        }
-
-        override fun info(): String? {
-            return "Battery text color when the battery level is high"
-        }
-    },
-    battery_text_medium {
-        override fun defaultValue(): String? {
-            return "#FFEB3B"
-        }
-
-        override fun info(): String? {
-            return "Battery text color when the battery level is medium"
-        }
-    },
-    battery_text_low {
-        override fun defaultValue(): String? {
-            return "#FF5722"
-        }
-
-        override fun info(): String? {
-            return "Battery text color when the battery level is low"
-        }
-    },
-    ascii_color {
-        override fun defaultValue(): String? {
-            return "#00FF00"
-        }
-
-        override fun info(): String? {
-            return "Color of the ASCII art (requires show_ascii true in ui.xml)"
-        }
-    },
-    time_color {
-        override fun defaultValue(): String? {
-            return "#03A9F4"
-        }
-
-        override fun info(): String? {
-            return "Time label color"
-        }
-    },
-    storage_color {
-        override fun defaultValue(): String? {
-            return "#9C27B0"
-        }
-
-        override fun info(): String? {
-            return "Storage label color"
-        }
-    },
-    ram_color {
-        override fun defaultValue(): String? {
-            return "#fff44336"
-        }
-
-        override fun info(): String? {
-            return "RAM label color"
-        }
-    },
-    network_info_color {
-        override fun defaultValue(): String? {
-            return "#FFCA28"
-        }
-
-        override fun info(): String? {
-            return "The color of the network info label"
-        }
-    },
-    toolbar_bg {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "Toolbar background color"
-        }
-    },
-    toolbar_color {
-        override fun defaultValue(): String? {
-            return "#ffffff"
-        }
-
-        override fun info(): String? {
-            return "Toolbar icons color"
-        }
-    },
-    enter_color {
-        override fun defaultValue(): String? {
-            return "#ffffffff"
-        }
-
-        override fun info(): String? {
-            return "Enter icon color"
-        }
-    },
-    cursor_color {
-        override fun defaultValue(): String? {
-            return "#ffffff"
-        }
-
-        override fun info(): String? {
-            return "The color of the cursor"
-        }
-    },
-    overlay_color {
-        override fun defaultValue(): String? {
-            return "#80000000"
-        }
-
-        override fun info(): String? {
-            return "The overlay that overlaps to the background (only when system_wallpaper is true)"
-        }
-    },
-    alias_content_color {
-        override fun defaultValue(): String? {
-            return "#1DE9B6"
-        }
-
-        override fun info(): String? {
-            return "Alias content color"
-        }
-    },
-    statusbar_color {
-        override fun defaultValue(): String? {
-            return "#000000"
-        }
-
-        override fun info(): String? {
-            return "Status Bar color (5.0+)"
-        }
-    },
-    navigationbar_color {
-        override fun defaultValue(): String? {
-            return "#000000"
-        }
-
-        override fun info(): String? {
-            return "Navigation Bar color (5.0+)"
-        }
-    },
-    app_installed_color {
-        override fun defaultValue(): String? {
-            return "#FF7043"
-        }
-
-        override fun info(): String? {
-            return "App installed message color"
-        }
-    },
-    app_uninstalled_color {
-        override fun defaultValue(): String? {
-            return "#FF7043"
-        }
-
-        override fun info(): String? {
-            return "App uninstalled message color"
-        }
-    },
-    hint_color {
-        override fun defaultValue(): String? {
-            return "#4CAF50"
-        }
-
-        override fun info(): String? {
-            return "Hint color"
-        }
-    },
-    mark_color {
-        override fun defaultValue(): String? {
-            return "#CDDC39"
-        }
-
-        override fun info(): String? {
-            return "The background color that will be used as marker"
-        }
-    },
-    notes_color {
-        override fun defaultValue(): String? {
-            return "#8BC34A"
-        }
-
-        override fun info(): String? {
-            return "The default color of your notes"
-        }
-    },
-    notes_locked_color {
-        override fun defaultValue(): String? {
-            return "#3D5AFE"
-        }
-
-        override fun info(): String? {
-            return "The color of your locked notes"
-        }
-    },
-    link_color {
-        override fun defaultValue(): String? {
-            return "#0000EE"
-        }
-
-        override fun info(): String? {
-            return "The color of the links"
-        }
-    },
-    restart_message_color {
-        override fun defaultValue(): String? {
-            return Theme.output_color.defaultValue()
-        }
-
-        override fun info(): String? {
-            return "The color of the restart message"
-        }
-    },
-    weather_color {
-        override fun defaultValue(): String? {
-            return Theme.ram_color.defaultValue()
-        }
-
-        override fun info(): String? {
-            return "The color of the weather label"
-        }
-    },
-    unlock_counter_color {
-        override fun defaultValue(): String? {
-            return Theme.device_color.defaultValue()
-        }
-
-        override fun info(): String? {
-            return "The color of the unlock counter"
-        }
-    },
-    session_info_color {
-        override fun defaultValue(): String? {
-            return "#888888"
-        }
-
-        override fun info(): String? {
-            return "The color of the session info"
-        }
-    },
-    status_lines_bgrectcolor {
-        override fun defaultValue(): String? {
-            return "#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000"
-        }
-
-        override fun info(): String? {
-            return "Deprecated: dashed_border_color controls status line borders; use status_lines_bg for fill"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000")
-        }
-    },
-    input_bgrectcolor {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "Deprecated: dashed_border_color controls the input border; use input_bg for fill"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    output_bgrectcolor {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "Deprecated: dashed_border_color controls the output border; use output_bg for fill"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    toolbar_bgrectcolor {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "Deprecated: dashed_border_color controls the toolbar border; use toolbar_bg for fill"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    suggestions_bgrectcolor {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "Deprecated: dashed_border_color controls the suggestions border; use suggestions_bg for fill"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    status_lines_bg {
-        override fun defaultValue(): String? {
-            return "#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000"
-        }
-
-        override fun info(): String? {
-            return "The bg color of the nth line"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000")
-        }
-    },
-    input_bg {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "The background color of the input field"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    output_bg {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "The background color of the output field"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    suggestions_bg {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "The background color of the suggestions area"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    status_lines_shadow_color {
-        override fun defaultValue(): String? {
-            return "#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000,#00000000"
-        }
-
-        override fun info(): String? {
-            return "The outline color of the nth line"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000,#ff000000")
-        }
-    },
-    input_shadow_color {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "The outline color of the input field"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    output_shadow_color {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "The outline color of the output field"
-        }
-
-        override fun invalidValues(): Array<String?>? {
-            return arrayOf<String?>("#ff000000")
-        }
-    },
-    apps_drawer_color {
-        override fun defaultValue(): String? {
-            return "#A5D6A7"
-        }
-
-        override fun info(): String? {
-            return "The color of the apps drawer"
-        }
-    },
-    dashed_border_color {
-        override fun defaultValue(): String? {
-            return "#ffffffff"
-        }
-
-        override fun info(): String? {
-            return "The shared border color for terminal chrome, headers, panels, and dashed rect outlines"
-        }
-    },
-    module_button_bg_color {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "The background color of module buttons"
-        }
-    },
-    module_name_text_color {
-        override fun defaultValue(): String? {
-            return "#ffffffff"
-        }
-
-        override fun info(): String? {
-            return "The text color of module names"
-        }
-    },
-    module_button_border_color {
-        override fun defaultValue(): String? {
-            return "#ffffffff"
-        }
-
-        override fun info(): String? {
-            return "Deprecated: use dashed_border_color for terminal and module borders"
-        }
-    },
-    window_terminal_bg {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "The background color of the terminal windows (music, apps drawer, etc.)"
-        }
-    },
-    terminal_header_bg {
-        override fun defaultValue(): String? {
-            return "#00000000"
-        }
-
-        override fun info(): String? {
-            return "The background color of terminal header tabs such as OUTPUT and module titles"
-        }
-    },
-    terminal_header_border_color {
-        override fun defaultValue(): String? {
-            return "#ffffffff"
-        }
-
-        override fun info(): String? {
-            return "The border color of terminal header tabs such as OUTPUT and module titles"
-        }
-    };
-
-    override fun parent(): XMLPrefsElement? {
-        return XMLPrefsManager.XMLPrefsRoot.THEME
-    }
-
-    override fun label(): String? {
-        return name
-    }
-
-    override fun type(): String? {
-        return XMLPrefsSave.COLOR
-    }
-
-    override fun invalidValues(): Array<String?>? {
-        return null
-    }
-
-    override fun getLowercaseString(): String? {
-        return label()
-    }
-
-    override fun getString(): String? {
-        return label()
-    }
+private val TRANSPARENT_INVALID: Array<String?> = arrayOf("#ff000000")
+
+enum class Theme(
+    private val defaultValue: String,
+    private val info: String,
+    private val invalidValues: Array<String?>? = null
+) : XMLPrefsSave {
+    background_color("#00000000", "Launcher background color when system wallpaper is disabled"),
+    wallpaper_overlay_color("#80000000", "Overlay color applied over the system wallpaper"),
+
+    input_text_color("#ff00ff00", "Command input text color"),
+    output_text_color("#ffffffff", "Terminal output text color"),
+    cursor_color("#ffffff", "Input cursor color"),
+    enter_icon_color("#ffffffff", "Enter icon color"),
+    toolbar_icon_color("#ffffff", "Toolbar icon color"),
+    toolbar_background_color("#00000000", "Toolbar background color"),
+    restart_message_text_color("#ffffffff", "Restart message text color"),
+    session_info_text_color("#888888", "Session info text color"),
+
+    device_text_color("#ffff9800", "Device label text color"),
+    battery_text_high("#4CAF50", "Battery text color when the battery level is high"),
+    battery_text_medium("#FFEB3B", "Battery text color when the battery level is medium"),
+    battery_text_low("#FF5722", "Battery text color when the battery level is low"),
+    ascii_text_color("#00FF00", "ASCII art text color"),
+    time_text_color("#03A9F4", "Time label text color"),
+    storage_text_color("#9C27B0", "Storage label text color"),
+    ram_text_color("#fff44336", "RAM label text color"),
+    network_info_text_color("#FFCA28", "Network info label text color"),
+    weather_text_color("#fff44336", "Weather label text color"),
+    unlock_counter_text_color("#ffff9800", "Unlock counter text color"),
+
+    ram_status_background_color("#00000000", "RAM status line background color", TRANSPARENT_INVALID),
+    device_status_background_color("#00000000", "Device status line background color", TRANSPARENT_INVALID),
+    time_status_background_color("#00000000", "Time status line background color", TRANSPARENT_INVALID),
+    battery_status_background_color("#00000000", "Battery status line background color", TRANSPARENT_INVALID),
+    storage_status_background_color("#00000000", "Storage status line background color", TRANSPARENT_INVALID),
+    network_status_background_color("#00000000", "Network status line background color", TRANSPARENT_INVALID),
+    notes_status_background_color("#00000000", "Notes status line background color", TRANSPARENT_INVALID),
+    weather_status_background_color("#00000000", "Weather status line background color", TRANSPARENT_INVALID),
+    unlock_status_background_color("#00000000", "Unlock counter status line background color", TRANSPARENT_INVALID),
+    ascii_status_background_color("#00000000", "ASCII status line background color", TRANSPARENT_INVALID),
+
+    ram_status_text_shadow_color("#00000000", "RAM status line text shadow color", TRANSPARENT_INVALID),
+    device_status_text_shadow_color("#00000000", "Device status line text shadow color", TRANSPARENT_INVALID),
+    time_status_text_shadow_color("#00000000", "Time status line text shadow color", TRANSPARENT_INVALID),
+    battery_status_text_shadow_color("#00000000", "Battery status line text shadow color", TRANSPARENT_INVALID),
+    storage_status_text_shadow_color("#00000000", "Storage status line text shadow color", TRANSPARENT_INVALID),
+    network_status_text_shadow_color("#00000000", "Network status line text shadow color", TRANSPARENT_INVALID),
+    notes_status_text_shadow_color("#00000000", "Notes status line text shadow color", TRANSPARENT_INVALID),
+    weather_status_text_shadow_color("#00000000", "Weather status line text shadow color", TRANSPARENT_INVALID),
+    unlock_status_text_shadow_color("#00000000", "Unlock counter status line text shadow color", TRANSPARENT_INVALID),
+    ascii_status_text_shadow_color("#00000000", "ASCII status line text shadow color", TRANSPARENT_INVALID),
+
+    alias_content_text_color("#1DE9B6", "Alias content text color"),
+    app_installed_text_color("#FF7043", "App installed message text color"),
+    app_uninstalled_text_color("#FF7043", "App uninstalled message text color"),
+    regex_match_background_color("#CDDC39", "Regex match marker background color"),
+    notes_text_color("#8BC34A", "Notes text color"),
+    locked_notes_text_color("#3D5AFE", "Locked notes text color"),
+    link_text_color("#0000EE", "Link text color"),
+    apps_drawer_text_color("#A5D6A7", "Apps drawer text and accent color"),
+
+    input_background_color("#00000000", "Input field background color", TRANSPARENT_INVALID),
+    output_background_color("#00000000", "Output field background color", TRANSPARENT_INVALID),
+    suggestions_background_color("#00000000", "Suggestions area background color", TRANSPARENT_INVALID),
+    input_text_shadow_color("#00000000", "Input text shadow color", TRANSPARENT_INVALID),
+    output_text_shadow_color("#00000000", "Output text shadow color", TRANSPARENT_INVALID),
+    terminal_border_color("#ffffffff", "Shared border color for terminal chrome, headers, panels, and module outlines"),
+    module_button_background_color("#00000000", "Module button background color"),
+    module_text_color("#ffffffff", "Module label and control text color"),
+    terminal_window_background_color("#00000000", "Terminal window background color for modules, drawers, and panels"),
+    terminal_header_background_color("#00000000", "Terminal header tab background color"),
+    terminal_header_border_color("#ffffffff", "Terminal header tab border color");
+
+    override fun parent(): XMLPrefsElement = XMLPrefsManager.XMLPrefsRoot.THEME
+
+    override fun label(): String = name
+
+    override fun type(): String = XMLPrefsSave.COLOR
+
+    override fun defaultValue(): String = defaultValue
+
+    override fun info(): String = info
+
+    override fun invalidValues(): Array<String?>? = invalidValues
+
+    override fun getLowercaseString(): String = label()
+
+    override fun getString(): String = label()
 }

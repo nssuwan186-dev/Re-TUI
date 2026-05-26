@@ -110,7 +110,17 @@ module -rm server
 
 `module -rm` does not delete the Termux script file. It only removes Re:T-UI's registry entry.
 
-For simple modules, printing text to stdout is enough. Re:T-UI will use stdout as the module body after `module -refresh`.
+For simple modules, printing text to stdout is enough. Re:T-UI will use stdout as the module body after `module -refresh`, and that normal text follows the active launcher font.
+
+Use explicit preformatted markers when fixed-width alignment matters:
+
+```sh
+echo "::ascii"
+curl -s 'wttr.in/Chennai?0T'
+echo "::end"
+```
+
+`::pre`, `::ascii`, and `::code` start a monospace block. `::end` closes it. One-line forms such as `::pre CPU  [####....] 50%`, `::ascii ...`, and `::code echo ok` add one monospace line without opening a longer block.
 
 Re:T-UI can also resolve launcher-owned `%RETUI_*` variables before the script reaches Termux. This lets a normal editable Termux script consume safe launcher data without giving Termux broad Android-provider access.
 
@@ -210,6 +220,7 @@ For Termux-backed modules, the equivalent might be:
 ```text
 ::title Server
 ::body prod-api ONLINE
+::pre CPU  [####....] 50%
 ::suggest refresh | command | module -refresh server
 ::suggest logs | command | termux -run logs
 ```
@@ -221,6 +232,8 @@ Current implementation notes:
 - `::title` changes the module label.
 - `::body` adds a line to the rendered module body.
 - normal stdout lines also become module body text.
+- `::pre`, `::ascii`, and `::code` mark monospace blocks for terminal art, tables, and code; `::end` returns to normal themed text.
+- `::pre text`, `::ascii text`, and `::code text` add one monospace line.
 - `::suggest label | command | command text` adds an active suggestion when that module is selected and the input is empty.
 - `termux-run` and `callback` are reserved contract modes, but suggestion clicks currently execute `command` mode only.
 

@@ -88,13 +88,13 @@ class SuggestionRunnable(
 
         transparentSuggestions = XMLPrefsManager.getBoolean(Suggestions.transparent_suggestions)
         if (!transparentSuggestions) {
-            suggAppBg = XMLPrefsManager.getColor(Suggestions.apps_bg_color)
-            suggAliasBg = XMLPrefsManager.getColor(Suggestions.alias_bg_color)
-            suggCmdBg = XMLPrefsManager.getColor(Suggestions.cmd_bg_color)
-            suggContactBg = XMLPrefsManager.getColor(Suggestions.contact_bg_color)
-            suggFileBg = XMLPrefsManager.getColor(Suggestions.file_bg_color)
-            suggSongBg = XMLPrefsManager.getColor(Suggestions.song_bg_color)
-            suggDefaultBg = XMLPrefsManager.getColor(Suggestions.default_bg_color)
+            suggAppBg = XMLPrefsManager.getColor(Suggestions.apps_background_color)
+            suggAliasBg = XMLPrefsManager.getColor(Suggestions.alias_background_color)
+            suggCmdBg = XMLPrefsManager.getColor(Suggestions.cmd_background_color)
+            suggContactBg = XMLPrefsManager.getColor(Suggestions.contact_background_color)
+            suggFileBg = XMLPrefsManager.getColor(Suggestions.file_background_color)
+            suggSongBg = XMLPrefsManager.getColor(Suggestions.song_background_color)
+            suggDefaultBg = XMLPrefsManager.getColor(Suggestions.default_background_color)
         }
 
         suggAppText = XMLPrefsManager.getColor(Suggestions.apps_text_color)

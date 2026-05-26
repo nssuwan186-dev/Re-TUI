@@ -35,7 +35,7 @@ object AppearanceSettings {
     fun notificationWidgetTextColor(): Int = moduleNameTextColor()
 
     @JvmStatic
-    fun terminalWindowBackground(): Int = LauncherSettings.getColor(Theme.window_terminal_bg)
+    fun terminalWindowBackground(): Int = LauncherSettings.getColor(Theme.terminal_window_background_color)
 
     @JvmStatic
     fun terminalHeaderBackground(): Int {
@@ -44,7 +44,7 @@ object AppearanceSettings {
             return ColorUtils.setAlphaComponent(terminalBg, 255)
         }
 
-        val baseBg = LauncherSettings.getColor(Theme.bg_color)
+        val baseBg = LauncherSettings.getColor(Theme.background_color)
         if (Color.alpha(baseBg) > 0) {
             return ColorUtils.setAlphaComponent(baseBg, 255)
         }
@@ -53,7 +53,7 @@ object AppearanceSettings {
     }
 
     @JvmStatic
-    fun terminalHeaderTabBackground(): Int = LauncherSettings.getColor(Theme.terminal_header_bg)
+    fun terminalHeaderTabBackground(): Int = LauncherSettings.getColor(Theme.terminal_header_background_color)
 
     @JvmStatic
     fun terminalHeaderTabBorderColor(): Int = LauncherSettings.getColor(Theme.terminal_header_border_color)
@@ -62,16 +62,16 @@ object AppearanceSettings {
     fun dashedBorders(): Boolean = LauncherSettings.getBoolean(Ui.enable_dashed_border)
 
     @JvmStatic
-    fun dashedBorderColor(): Int = LauncherSettings.getColor(Theme.dashed_border_color)
+    fun dashedBorderColor(): Int = LauncherSettings.getColor(Theme.terminal_border_color)
 
     @JvmStatic
     fun terminalBorderColor(): Int = dashedBorderColor()
 
     @JvmStatic
-    fun moduleButtonBackgroundColor(): Int = LauncherSettings.getColor(Theme.module_button_bg_color)
+    fun moduleButtonBackgroundColor(): Int = LauncherSettings.getColor(Theme.module_button_background_color)
 
     @JvmStatic
-    fun moduleNameTextColor(): Int = LauncherSettings.getColor(Theme.module_name_text_color)
+    fun moduleNameTextColor(): Int = LauncherSettings.getColor(Theme.module_text_color)
 
     @JvmStatic
     fun moduleButtonBorderColor(): Int = terminalBorderColor()

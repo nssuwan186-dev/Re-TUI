@@ -200,7 +200,7 @@ class TerminalManager(
         if (output == null || output.length == 0) return
 
         if (color == NO_COLOR) {
-            color = XMLPrefsManager.getColor(Theme.output_color)
+            color = XMLPrefsManager.getColor(Theme.output_text_color)
         }
 
         val si = SpannableString(output)
@@ -259,8 +259,8 @@ class TerminalManager(
         inputFormat = XMLPrefsManager.get(Behavior.input_format)
         outputFormat = XMLPrefsManager.get(Behavior.output_format)
 
-        inputColor = XMLPrefsManager.getColor(Theme.input_color)
-        outputColor = XMLPrefsManager.getColor(Theme.output_color)
+        inputColor = XMLPrefsManager.getColor(Theme.input_text_color)
+        outputColor = XMLPrefsManager.getColor(Theme.output_text_color)
 
         prefix = XMLPrefsManager.get(Ui.input_prefix)
         suPrefix = XMLPrefsManager.get(Ui.input_root_prefix)
@@ -268,13 +268,13 @@ class TerminalManager(
         val ioSize = XMLPrefsManager.getInt(Ui.input_output_size)
 
         prefixView.setTypeface(Tuils.getTypeface(context))
-        prefixView.setTextColor(XMLPrefsManager.getColor(Theme.input_color))
+        prefixView.setTextColor(XMLPrefsManager.getColor(Theme.input_text_color))
         prefixView.setTextSize(ioSize.toFloat())
         prefixView.setText(if (prefix.endsWith(Tuils.SPACE)) prefix else prefix + Tuils.SPACE)
         this.mPrefix = prefixView
 
-        val toolbarColor = XMLPrefsManager.getColor(Theme.toolbar_color)
-        val enterColor = XMLPrefsManager.getColor(Theme.enter_color)
+        val toolbarColor = XMLPrefsManager.getColor(Theme.toolbar_icon_color)
+        val enterColor = XMLPrefsManager.getColor(Theme.enter_icon_color)
 
         if (submitView != null) {
             submitView.setColorFilter(enterColor, PorterDuff.Mode.SRC_IN)
@@ -318,7 +318,7 @@ class TerminalManager(
         this.mTerminalView!!.setMovementMethod(getInstance(XMLPrefsManager.getInt(Behavior.long_click_duration)))
         this.mTerminalView!!.setTextIsSelectable(true)
 
-        val hintColor = XMLPrefsManager.getColor(Theme.session_info_color)
+        val hintColor = XMLPrefsManager.getColor(Theme.session_info_text_color)
 
         val list = mTerminalView!!.getHintTextColors()
         try {
@@ -374,7 +374,7 @@ class TerminalManager(
 
         this.mInputView = inputView
         this.mInputView!!.setTextSize(ioSize.toFloat())
-        this.mInputView!!.setTextColor(XMLPrefsManager.getColor(Theme.input_color))
+        this.mInputView!!.setTextColor(XMLPrefsManager.getColor(Theme.input_text_color))
         this.mInputView!!.setTypeface(Tuils.getTypeface(context))
         this.mInputView!!.setHint(Tuils.getHint(mainPack.currentDirectory.getAbsolutePath()))
         this.mInputView!!.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)

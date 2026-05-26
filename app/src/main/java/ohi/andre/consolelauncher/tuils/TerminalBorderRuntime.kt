@@ -17,7 +17,8 @@ object TerminalBorderRuntime {
         borderColor: Int,
         strokeDp: Float,
         radiusDp: Int,
-        dashed: Boolean
+        dashed: Boolean,
+        cyberdeckNotch: Boolean = true
     ): TerminalBorderDrawable {
         return panelDrawablePx(
             context,
@@ -25,7 +26,8 @@ object TerminalBorderRuntime {
             borderColor,
             strokeDp,
             Tuils.dpToPx(context, radiusDp.toFloat()).toFloat(),
-            dashed
+            dashed,
+            cyberdeckNotch
         )
     }
 
@@ -35,7 +37,8 @@ object TerminalBorderRuntime {
         borderColor: Int,
         strokeDp: Float,
         radiusPx: Float,
-        dashed: Boolean
+        dashed: Boolean,
+        cyberdeckNotch: Boolean = true
     ): TerminalBorderDrawable {
         val cyberdeck = AppearanceSettings.cyberdeckMode()
         val stroke = if (cyberdeck) {
@@ -53,7 +56,8 @@ object TerminalBorderRuntime {
             dashed && !cyberdeck,
             Tuils.dpToPx(context, AppearanceSettings.dashLength().toFloat()).toFloat(),
             Tuils.dpToPx(context, AppearanceSettings.dashGap().toFloat()).toFloat(),
-            cyberdeck
+            cyberdeck,
+            cyberdeckNotch
         )
     }
 

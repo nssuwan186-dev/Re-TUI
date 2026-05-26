@@ -49,7 +49,7 @@ class UnlockManager(
 
     private fun init() {
         unlockTimes = preferences.getInt(UNLOCK_KEY, 0)
-        unlockColor = XMLPrefsManager.getColor(Theme.unlock_counter_color)
+        unlockColor = XMLPrefsManager.getColor(Theme.unlock_counter_text_color)
         unlockFormat = XMLPrefsManager.get(Behavior.unlock_counter_format)
         notAvailableText = XMLPrefsManager.get(Behavior.not_available_text)
         unlockTimeDivider = XMLPrefsManager.get(Behavior.unlock_time_divider)

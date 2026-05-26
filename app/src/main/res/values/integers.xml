@@ -2,6 +2,7 @@
 <resources>
 
     <item type="id" name="suggestion_id"/>
+    <item type="id" name="module_text_font_mode"/>
 
     <integer name="enter_view_weight">1</integer>
     <integer name="input_view_weight">7</integer>

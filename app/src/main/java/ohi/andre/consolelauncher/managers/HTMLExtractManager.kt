@@ -525,9 +525,9 @@ class HTMLExtractManager(context: Context, client: OkHttpClient) {
 
         this.client = client
 
-        linkColor = XMLPrefsManager.getColor(Theme.link_color)
-        outputColor = XMLPrefsManager.getColor(Theme.output_color)
-        weatherColor = XMLPrefsManager.getColor(Theme.weather_color)
+        linkColor = XMLPrefsManager.getColor(Theme.link_text_color)
+        outputColor = XMLPrefsManager.getColor(Theme.output_text_color)
+        weatherColor = XMLPrefsManager.getColor(Theme.weather_text_color)
         defaultFormat = XMLPrefsManager.get(Behavior.htmlextractor_default_format) ?: Tuils.EMPTYSTRING
         optionalValueSeparator = XMLPrefsManager.get(Behavior.optional_values_separator) ?: "|"
         weatherFormat = XMLPrefsManager.get(Behavior.weather_format) ?: Tuils.EMPTYSTRING
