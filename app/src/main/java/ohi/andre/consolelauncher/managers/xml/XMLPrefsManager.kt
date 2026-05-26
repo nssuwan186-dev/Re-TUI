@@ -367,21 +367,20 @@ object XMLPrefsManager {
         element: XMLPrefsRoot,
         missing: MutableList<XMLPrefsSave>
     ) {
-        var currentSection: String? = null
-        for (save in missing) {
-            val section = sectionFor(save)
-            if (section != currentSection) {
-                appendSectionCommentIfNeeded(d, root, section)
-                currentSection = section
+        val grouped = groupBySection(missing)
+        for (entry in grouped.entries) {
+            val section = entry.key
+            appendSectionCommentIfNeeded(d, root, section)
+
+            for (save in entry.value) {
+                val value = save.defaultValue()
+                val em = d.createElement(save.label())
+                em.setAttribute(VALUE_ATTRIBUTE, value)
+                root.appendChild(em)
+                root.appendChild(d.createTextNode("\n"))
+
+                element.getValues()!!.add(save.label()!!, value!!)
             }
-
-            val value = save.defaultValue()
-            val em = d.createElement(save.label())
-            em.setAttribute(VALUE_ATTRIBUTE, value)
-            root.appendChild(em)
-            root.appendChild(d.createTextNode("\n"))
-
-            element.getValues()!!.add(save.label()!!, value!!)
         }
     }
 
@@ -409,27 +408,49 @@ object XMLPrefsManager {
         }
 
         root.appendChild(d.createTextNode("\n"))
-        var currentSection: String? = null
         var addedAny = false
-        for (save in element.enums) {
-            val label = save.label() ?: continue
-            val node = existing[label] ?: continue
-            val section = sectionFor(save)
-            if (section != currentSection) {
-                if (addedAny) {
-                    root.appendChild(d.createTextNode("\n"))
-                }
-                root.appendChild(d.createComment(" #$section "))
-                root.appendChild(d.createTextNode("\n"))
-                currentSection = section
+        val grouped = groupBySection(element.enums.toMutableList())
+        for (entry in grouped.entries) {
+            val section = entry.key
+            val nodes: MutableList<Node> = ArrayList<Node>()
+            for (save in entry.value) {
+                val label = save.label() ?: continue
+                val node = existing[label] ?: continue
+                nodes.add(node)
+            }
+            if (nodes.isEmpty()) {
+                continue
             }
 
-            root.appendChild(node)
+            if (addedAny) {
+                root.appendChild(d.createTextNode("\n"))
+            }
+            root.appendChild(d.createComment(" #$section "))
             root.appendChild(d.createTextNode("\n"))
+
+            for (node in nodes) {
+                root.appendChild(node)
+                root.appendChild(d.createTextNode("\n"))
+            }
             addedAny = true
         }
 
         return addedAny
+    }
+
+    private fun groupBySection(saves: MutableList<XMLPrefsSave>): LinkedHashMap<String, MutableList<XMLPrefsSave>> {
+        val grouped: LinkedHashMap<String, MutableList<XMLPrefsSave>> =
+            LinkedHashMap<String, MutableList<XMLPrefsSave>>()
+        for (save in saves) {
+            val section = sectionFor(save)
+            var bucket = grouped[section]
+            if (bucket == null) {
+                bucket = ArrayList<XMLPrefsSave>()
+                grouped[section] = bucket
+            }
+            bucket.add(save)
+        }
+        return grouped
     }
 
     private fun hasAnyComment(root: Element): Boolean {

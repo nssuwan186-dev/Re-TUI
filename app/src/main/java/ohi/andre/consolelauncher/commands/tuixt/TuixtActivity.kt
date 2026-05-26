@@ -273,12 +273,14 @@ class TuixtActivity : Activity() {
             remaining[save.label()!!] = save
         }
 
-        val rows: MutableList<TuixtAdapter.SettingsRow> = ArrayList()
+        val groupedRows: LinkedHashMap<String, MutableList<XMLPrefsSave>> =
+            LinkedHashMap<String, MutableList<XMLPrefsSave>>()
         try {
             val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(source)
             val xmlRoot = doc.documentElement
             val children = xmlRoot.childNodes
             if (!hasSectionComments(children)) {
+                val rows: MutableList<TuixtAdapter.SettingsRow> = ArrayList()
                 addDefaultSectionRows(rows, remaining)
                 return rows
             }
@@ -289,17 +291,13 @@ class TuixtActivity : Activity() {
                 if (node.nodeType == Node.COMMENT_NODE) {
                     val section = parseSectionComment(node.nodeValue)
                     if (section != null) {
-                        addSection(rows, section)
                         activeSection = section
                     }
                 } else if (node.nodeType == Node.ELEMENT_NODE) {
                     val element = node as Element
                     val save = remaining.remove(element.nodeName) ?: continue
                     val section = activeSection ?: XMLPrefsManager.sectionFor(save)
-                    if (activeSection == null) {
-                        addSection(rows, section)
-                    }
-                    rows.add(TuixtAdapter.SettingsRow.setting(save, section))
+                    addGroupedRow(groupedRows, section, save)
                 }
             }
         } catch (ignored: Exception) {
@@ -307,25 +305,26 @@ class TuixtActivity : Activity() {
 
         for (save in remaining.values) {
             val section = XMLPrefsManager.sectionFor(save)
-            addSection(rows, section)
-            rows.add(TuixtAdapter.SettingsRow.setting(save, section))
+            addGroupedRow(groupedRows, section, save)
         }
 
-        return rows
+        return flattenGroupedRows(groupedRows)
     }
 
     private fun addDefaultSectionRows(
         rows: MutableList<TuixtAdapter.SettingsRow>,
         remaining: LinkedHashMap<String, XMLPrefsSave>
     ) {
+        val groupedRows: LinkedHashMap<String, MutableList<XMLPrefsSave>> =
+            LinkedHashMap<String, MutableList<XMLPrefsSave>>()
         val iterator = remaining.entries.iterator()
         while (iterator.hasNext()) {
             val save = iterator.next().value
             val section = XMLPrefsManager.sectionFor(save)
-            addSection(rows, section)
-            rows.add(TuixtAdapter.SettingsRow.setting(save, section))
+            addGroupedRow(groupedRows, section, save)
             iterator.remove()
         }
+        rows.addAll(flattenGroupedRows(groupedRows))
     }
 
     private fun hasSectionComments(children: org.w3c.dom.NodeList): Boolean {
@@ -352,6 +351,33 @@ class TuixtActivity : Activity() {
             return
         }
         rows.add(TuixtAdapter.SettingsRow.section(section))
+    }
+
+    private fun addGroupedRow(
+        rows: LinkedHashMap<String, MutableList<XMLPrefsSave>>,
+        section: String,
+        save: XMLPrefsSave
+    ) {
+        var bucket = rows[section]
+        if (bucket == null) {
+            bucket = ArrayList<XMLPrefsSave>()
+            rows[section] = bucket
+        }
+        bucket.add(save)
+    }
+
+    private fun flattenGroupedRows(
+        groupedRows: LinkedHashMap<String, MutableList<XMLPrefsSave>>
+    ): MutableList<TuixtAdapter.SettingsRow> {
+        val rows: MutableList<TuixtAdapter.SettingsRow> = ArrayList()
+        for (entry in groupedRows.entries) {
+            val section = entry.key
+            addSection(rows, section)
+            for (save in entry.value) {
+                rows.add(TuixtAdapter.SettingsRow.setting(save, section))
+            }
+        }
+        return rows
     }
 
     @SuppressLint("GestureBackNavigation")
