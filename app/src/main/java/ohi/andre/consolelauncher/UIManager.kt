@@ -311,6 +311,11 @@ class UIManager(
     private var termuxAppAcceptedSequence = 0
     private var termuxAppWatchUntilMs = 0L
     private var termuxAppLastFrameText: String? = null
+    private var luaAppId: String? = null
+    private var luaAppEngine: LuaWidgetEngine? = null
+    private var luaAppLastResult: LuaWidgetEngine.RenderResult? = null
+    private var luaAppLastStatus: String? = null
+    private var luaAppTickGeneration = 0
     private val termuxAnsiPattern = Pattern.compile("\\u001B\\[[0-?]*[ -/]*[@-~]")
     private var fileOverlay: View? = null
     private var fileOverlayBasePaddingLeft = 0
@@ -3846,6 +3851,7 @@ class UIManager(
         filter.addAction(ACTION_CLOCK_STATE)
         filter.addAction(ACTION_POMODORO_STATE)
         filter.addAction(ACTION_TERMUX_CONSOLE)
+        filter.addAction(ACTION_LUA_APP)
         filter.addAction(ACTION_FILE_CONSOLE)
         filter.addAction(ACTION_TERMUX_RESULT)
         filter.addAction(ACTION_MODULE_COMMAND)
@@ -3871,6 +3877,8 @@ class UIManager(
                     refreshActiveModuleIfNeeded()
                 } else if (action == ACTION_TERMUX_CONSOLE) {
                     openTermuxConsole(intent.getStringExtra(EXTRA_TERMUX_COMMAND))
+                } else if (action == ACTION_LUA_APP) {
+                    openLuaApp(intent.getStringExtra(EXTRA_LUA_APP_ID))
                 } else if (action == ACTION_FILE_CONSOLE) {
                     openFileConsole(intent.getStringExtra(EXTRA_FILE_COMMAND))
                 } else if (action == ACTION_TERMUX_RESULT) {
@@ -4972,17 +4980,21 @@ class UIManager(
 
     private fun updateTermuxConsoleLabels() {
         val app = termuxAppSession
+        val luaId = luaAppId
         if (termuxWindowLabel != null) {
-            termuxWindowLabel!!.text = if (app == null) "TERMUX" else app.title.uppercase(Locale.getDefault())
+            termuxWindowLabel!!.text = if (luaId != null)
+                luaAppTitle().uppercase(Locale.getDefault())
+            else
+                if (app == null) "TERMUX" else app.title.uppercase(Locale.getDefault())
         }
         if (termuxOutputLabel != null) {
-            termuxOutputLabel!!.text = if (app == null) "OUTPUT" else "SESSION"
+            termuxOutputLabel!!.text = if (luaId != null) "APP" else if (app == null) "OUTPUT" else "SESSION"
         }
         if (termuxPrefix != null) {
-            termuxPrefix!!.text = if (app == null) "\$" else ">"
+            termuxPrefix!!.text = if (app == null && luaId == null) "\$" else ">"
         }
         if (termuxInput != null) {
-            termuxInput!!.hint = if (app == null) "command" else "type input or :help"
+            termuxInput!!.hint = if (app == null && luaId == null) "command" else "type input or :help"
         }
         updateTermuxAppActions()
     }
@@ -4995,46 +5007,64 @@ class UIManager(
         }
 
         row.removeAllViews()
+        val luaId = luaAppId
+        if (luaId != null) {
+            val actions = luaAppSurfaceActions(luaAppLastResult)
+            if (actions.isEmpty()) {
+                scroll.visibility = View.GONE
+                return
+            }
+            scroll.visibility = View.VISIBLE
+            for (action in actions) {
+                row.addView(overlayActionButton(action.label, action.run))
+            }
+            return
+        }
+
         val app = termuxAppSession
         if (app == null || app.actions.isEmpty()) {
             scroll.visibility = View.GONE
             return
         }
 
+        scroll.visibility = View.VISIBLE
+
+        for (action in app.actions) {
+            row.addView(overlayActionButton(action.label, Runnable {
+                submitTermuxAppAction(action)
+            }))
+        }
+    }
+
+    private fun overlayActionButton(label: String?, action: Runnable): TextView {
         val textColor = notificationWidgetTextColor()
         val labelBg = terminalHeaderTabBackground()
         val margin = Tuils.dpToPx(mContext, 4)
         val minWidth = Tuils.dpToPx(mContext, 76)
-        scroll.visibility = View.VISIBLE
-
-        for (action in app.actions) {
-            val button = TextView(mContext!!)
-            button.text = action.label.uppercase(Locale.getDefault())
-            button.gravity = Gravity.CENTER
-            button.maxLines = 1
-            button.ellipsize = TextUtils.TruncateAt.END
-            button.minWidth = minWidth
-            button.setPadding(
-                Tuils.dpToPx(mContext, 10),
-                0,
-                Tuils.dpToPx(mContext, 10),
-                0
-            )
-            button.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
-            button.setTextColor(textColor)
-            button.setTextSize(10f)
-            button.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, labelBg))
-            button.setOnClickListener(View.OnClickListener {
-                submitTermuxAppAction(action)
-            })
-
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
-            params.setMarginEnd(margin)
-            row.addView(button, params)
-        }
+        val button = TextView(mContext!!)
+        button.text = (if (TextUtils.isEmpty(label)) "ACTION" else label!!).uppercase(Locale.getDefault())
+        button.gravity = Gravity.CENTER
+        button.maxLines = 1
+        button.ellipsize = TextUtils.TruncateAt.END
+        button.minWidth = minWidth
+        button.setPadding(
+            Tuils.dpToPx(mContext, 10),
+            0,
+            Tuils.dpToPx(mContext, 10),
+            0
+        )
+        button.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
+        button.setTextColor(textColor)
+        button.setTextSize(10f)
+        button.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, labelBg))
+        button.setOnClickListener(View.OnClickListener { action.run() })
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+        )
+        params.setMarginEnd(margin)
+        button.layoutParams = params
+        return button
     }
 
     private fun styleTermuxToolButton(button: TextView?, color: Int) {
@@ -5147,6 +5177,7 @@ class UIManager(
         }
 
         closeFileConsole(false)
+        closeLuaAppSession(true)
         termuxAppSession = null
         termuxAppLastStatus = null
         resetTermuxAppRuntimeState(true)
@@ -5169,6 +5200,52 @@ class UIManager(
             executeTermuxConsoleCommand(normalized)
         }
 
+        scheduleTermuxConsoleFocusCapture(true)
+    }
+
+    fun openLuaApp(appId: String?) {
+        if (termuxOverlay == null) {
+            return
+        }
+        val id = LuaWidgetManager.normalizeId(appId)
+        if (TextUtils.isEmpty(id) || !LuaWidgetManager.exists(id)) {
+            Toast.makeText(mContext, "Unknown Lua app: " + id, Toast.LENGTH_SHORT).show()
+            return
+        }
+        if ("app" != LuaWidgetManager.getScriptType(id)) {
+            Toast.makeText(mContext, "Script is not a Lua app: " + id, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        closeFileConsole(false)
+        closeLuaAppSession(true)
+        termuxAppSession = null
+        termuxAppLastStatus = null
+        resetTermuxAppRuntimeState(true)
+
+        luaAppId = id
+        luaAppLastStatus = "opening"
+        luaAppEngine = LuaWidgetEngine(
+            mContext,
+            id,
+            LuaWidgetManager.readScript(id),
+            LuaWidgetManager.version(id),
+            UpdateListener { updatedWidgetId: String?, result: LuaWidgetEngine.RenderResult ->
+                if (TextUtils.equals(LuaWidgetManager.normalizeId(updatedWidgetId), luaAppId)
+                    && this.isTermuxConsoleVisible
+                ) {
+                    renderLuaAppResult(result, "updated")
+                }
+            })
+
+        styleTermuxConsole()
+        termuxOverlay!!.setVisibility(View.VISIBLE)
+        termuxOverlay!!.bringToFront()
+        hideHomeSuggestionsForTermux()
+        renderLuaAppFrame(null, "opening " + luaAppTitle() + "...")
+
+        val result = luaAppEngine!!.open()
+        renderLuaAppResult(result, "open")
         scheduleTermuxConsoleFocusCapture(true)
     }
 
@@ -5372,6 +5449,7 @@ class UIManager(
         if (termuxOverlay != null) {
             termuxOverlay!!.setVisibility(View.GONE)
         }
+        closeLuaAppSession(true)
         termuxAppSession = null
         termuxAppLastStatus = null
         resetTermuxAppRuntimeState(true)
@@ -5644,6 +5722,13 @@ class UIManager(
     }
 
     private fun submitTermuxConsoleCommand(rawCommand: String?) {
+        if (luaAppId != null) {
+            submitLuaAppInput(rawCommand)
+            if (this.isTermuxConsoleVisible) {
+                scheduleTermuxConsoleFocusCapture(true)
+            }
+            return
+        }
         if (termuxAppSession != null) {
             submitTermuxAppInput(rawCommand)
             if (this.isTermuxConsoleVisible) {
@@ -5665,6 +5750,205 @@ class UIManager(
             return
         }
         scheduleTermuxConsoleFocusCapture(true)
+    }
+
+    private fun submitLuaAppInput(rawCommand: String?) {
+        val command = if (rawCommand == null) Tuils.EMPTYSTRING else rawCommand.trim { it <= ' ' }
+        if (command.startsWith(":")) {
+            handleLuaAppLocalCommand(command.substring(1).trim { it <= ' ' }.lowercase(Locale.getDefault()))
+            return
+        }
+        val engine = luaAppEngine ?: return
+        luaAppLastStatus = if (command.length == 0) "sent enter" else "input: " + command
+        renderLuaAppResult(engine.input(command), luaAppLastStatus)
+    }
+
+    private fun handleLuaAppLocalCommand(command: String) {
+        val id = luaAppId ?: return
+        if ("help" == command || command.length == 0) {
+            renderLuaAppFrame(
+                luaAppLastResult,
+                ":help, :refresh, :restart, :config, :edit, :clear, :close. Other input is sent to the app."
+            )
+        } else if ("refresh" == command || "r" == command) {
+            renderLuaAppResult(luaAppEngine!!.render(true), "refreshed")
+        } else if ("restart" == command || "reload" == command) {
+            luaAppEngine = LuaWidgetEngine(
+                mContext,
+                id,
+                LuaWidgetManager.readScript(id),
+                LuaWidgetManager.version(id),
+                UpdateListener { updatedWidgetId: String?, result: LuaWidgetEngine.RenderResult ->
+                    if (TextUtils.equals(LuaWidgetManager.normalizeId(updatedWidgetId), luaAppId)
+                        && this.isTermuxConsoleVisible
+                    ) {
+                        renderLuaAppResult(result, "updated")
+                    }
+                })
+            renderLuaAppResult(luaAppEngine!!.open(), "restarted")
+        } else if ("config" == command || "prefs" == command) {
+            if (LuaWidgetManager.hasConfig(id)) {
+                executeLuaWidgetCommand("lua -config " + id)
+            } else {
+                renderLuaAppFrame(luaAppLastResult, "No config surface: " + luaAppTitle())
+            }
+        } else if ("edit" == command) {
+            executeLuaWidgetCommand("lua -edit " + id)
+        } else if ("clear" == command) {
+            termuxBuffer.setLength(0)
+            updateTermuxOutput()
+        } else if ("close" == command || "exit" == command || "detach" == command) {
+            closeTermuxConsole()
+        } else {
+            renderLuaAppFrame(luaAppLastResult, "Unknown app command: :" + command)
+        }
+    }
+
+    private fun renderLuaAppResult(result: LuaWidgetEngine.RenderResult?, status: String?) {
+        luaAppLastResult = result
+        luaAppLastStatus = status
+        renderLuaAppFrame(result, status)
+        updateTermuxAppActions()
+        scheduleLuaAppTickIfNeeded(result)
+    }
+
+    private fun renderLuaAppFrame(result: LuaWidgetEngine.RenderResult?, status: String?) {
+        val id = luaAppId ?: return
+        val out = StringBuilder()
+        out.append("Re:T-UI Lua app: ").append(luaAppTitle()).append('\n')
+        out.append("script: ").append(id).append('\n')
+        out.append("local commands: :help :refresh :restart :config :edit :clear :close").append('\n')
+        if (!TextUtils.isEmpty(status)) {
+            out.append("status: ").append(status).append('\n')
+        }
+        out.append("----")
+        if (result == null) {
+            out.append("\nLoading...")
+        } else if (!TextUtils.isEmpty(result.error)) {
+            out.append("\nLua error: ").append(result.error)
+            if (!TextUtils.isEmpty(result.errorStage)) {
+                out.append("\nStage: ").append(result.errorStage)
+            }
+        } else if (!TextUtils.isEmpty(result.body)) {
+            out.append('\n').append(result.body!!.trimEnd { it <= ' ' })
+        } else if (!TextUtils.isEmpty(result.layoutJson)) {
+            out.append("\nLayout output is available in module panels; use ui:show_text for app body text.")
+        } else {
+            out.append("\nNo Lua app output yet.")
+        }
+        termuxBuffer.setLength(0)
+        termuxBuffer.append(out.toString().trimEnd { it <= ' ' })
+        updateTermuxOutput()
+    }
+
+    private fun luaAppTitle(): String {
+        val result = luaAppLastResult
+        if (result != null && !TextUtils.isEmpty(result.title)) {
+            return result.title!!
+        }
+        val id = luaAppId
+        return if (TextUtils.isEmpty(id)) "Lua App" else LuaWidgetManager.getName(id) ?: "Lua App"
+    }
+
+    private fun luaAppSurfaceActions(result: LuaWidgetEngine.RenderResult?): MutableList<LuaSurfaceAction> {
+        val actions = ArrayList<LuaSurfaceAction>()
+        if (result == null || !TextUtils.isEmpty(result.error)) {
+            return actions
+        }
+        var index = 1
+        for (button in result.buttons) {
+            val actionIndex = index
+            if (!TextUtils.isEmpty(button)) {
+                actions.add(LuaSurfaceAction(button!!) { clickLuaApp(actionIndex) })
+            }
+            index += 1
+        }
+        for (action in result.valueActions) {
+            if (action == null || TextUtils.isEmpty(action.label)) continue
+            actions.add(LuaSurfaceAction(action.label!!) { actionLuaApp(action.value) })
+        }
+        if (result.dialogOpen) {
+            var dialogIndex = 1
+            for (item in result.dialogItems) {
+                val choiceIndex = dialogIndex
+                if (!TextUtils.isEmpty(item)) {
+                    val label = if (choiceIndex == result.dialogSelected) "* " + item else item
+                    actions.add(LuaSurfaceAction(label!!) { dialogLuaApp(choiceIndex) })
+                }
+                dialogIndex += 1
+            }
+            actions.add(LuaSurfaceAction("cancel") { dialogLuaApp(-1) })
+        }
+        for (action in result.commands) {
+            if (action == null || TextUtils.isEmpty(action.label) || TextUtils.isEmpty(action.command)) {
+                continue
+            }
+            actions.add(LuaSurfaceAction(action.label!!) { executeLuaWidgetCommand(action.command) })
+        }
+        if (result.expandable) {
+            val expanded = result.expanded
+            actions.add(
+                LuaSurfaceAction(if (expanded) "collapse" else "expand") {
+                    setLuaAppExpanded(!expanded)
+                }
+            )
+        }
+        return actions
+    }
+
+    private fun clickLuaApp(index: Int) {
+        val engine = luaAppEngine ?: return
+        renderLuaAppResult(engine.click(index), "button " + index)
+    }
+
+    private fun actionLuaApp(value: String?) {
+        val engine = luaAppEngine ?: return
+        renderLuaAppResult(engine.action(value), if (TextUtils.isEmpty(value)) "action" else "action: " + value)
+    }
+
+    private fun dialogLuaApp(index: Int) {
+        val engine = luaAppEngine ?: return
+        renderLuaAppResult(engine.dialog(index), if (index < 0) "dialog canceled" else "dialog: " + index)
+    }
+
+    private fun setLuaAppExpanded(expanded: Boolean) {
+        val engine = luaAppEngine ?: return
+        renderLuaAppResult(engine.setExpanded(expanded), if (expanded) "expanded" else "collapsed")
+    }
+
+    private fun scheduleLuaAppTickIfNeeded(result: LuaWidgetEngine.RenderResult?) {
+        luaAppTickGeneration++
+        val interval = result?.tickIntervalMs ?: -1L
+        if (interval <= 0L) {
+            return
+        }
+        val generation = luaAppTickGeneration
+        val id = luaAppId
+        handler?.postDelayed(Runnable {
+            if (generation == luaAppTickGeneration
+                && id == luaAppId
+                && this.isTermuxConsoleVisible
+            ) {
+                val engine = luaAppEngine ?: return@Runnable
+                renderLuaAppResult(engine.tick(), "tick")
+            }
+        }, interval)
+    }
+
+    private fun closeLuaAppSession(notifyScript: Boolean) {
+        val engine = luaAppEngine
+        if (notifyScript && engine != null) {
+            try {
+                engine.close()
+            } catch (e: Exception) {
+                Tuils.log(e)
+            }
+        }
+        luaAppTickGeneration++
+        luaAppId = null
+        luaAppEngine = null
+        luaAppLastResult = null
+        luaAppLastStatus = null
     }
 
     private fun resetTermuxAppRuntimeState(clearFrame: Boolean) {
@@ -5937,6 +6221,7 @@ class UIManager(
             return
         }
         closeFileConsole(false)
+        closeLuaAppSession(true)
         termuxAppSession = app
         termuxAppLastStatus = "starting"
         resetTermuxAppRuntimeState(true)
@@ -9000,6 +9285,8 @@ class UIManager(
         val ACTION_POMODORO_STATE: String = PomodoroManager.ACTION_POMODORO_STATE
         val ACTION_TERMUX_CONSOLE: String = BuildConfig.APPLICATION_ID + ".ui_termux_console"
         const val EXTRA_TERMUX_COMMAND: String = "termux_command"
+        val ACTION_LUA_APP: String = BuildConfig.APPLICATION_ID + ".ui_lua_app"
+        const val EXTRA_LUA_APP_ID: String = "lua_app_id"
         val ACTION_FILE_CONSOLE: String = BuildConfig.APPLICATION_ID + ".ui_file_console"
         const val EXTRA_FILE_COMMAND: String = "file_command"
         val ACTION_MODULE_COMMAND: String = BuildConfig.APPLICATION_ID + ".ui_module_command"

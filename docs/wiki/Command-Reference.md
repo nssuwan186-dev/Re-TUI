@@ -355,6 +355,26 @@ See also: [Modules](./Modules.md).
 
 TBridge is no longer positioned as the file manager backend. Use `files` for file navigation.
 
+### `lua`
+
+Create and open launcher-native Lua apps. Lua apps use the same sandboxed runtime as Lua modules, but open in a focused terminal-styled surface with typed input.
+
+Useful forms:
+
+- `lua -apps`
+- `lua -new app habit`
+- `lua -app habit`
+- `lua -edit habit`
+- `lua -config habit`
+- `lua -check habit`
+- `lua -info habit`
+- `lua -approve habit`
+- `lua -export habit`
+- `lua -disable habit`
+- `lua -enable habit`
+
+Inside a Lua app, normal input is delivered to `on_input(text)`. Local commands use a colon prefix: `:help`, `:refresh`, `:restart`, `:config`, `:edit`, `:clear`, and `:close`.
+
 ### `widget`
 
 Legacy aliases for Lua module package management. Prefer `module` for new work.

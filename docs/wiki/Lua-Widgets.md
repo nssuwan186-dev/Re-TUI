@@ -6,6 +6,8 @@ Lua modules live under Re:TUI's local `widgets/<id>/` storage folder for compati
 
 Lua files can also be suggestion scripts with `-- type = "suggest"`. These are installed locally like Lua modules, but they do not appear in the module dock. They contribute suggestion chips while the user types.
 
+Lua files can also be focused apps with `-- type = "app"`. Lua apps use the same local storage, permissions, editor, and sandbox as Lua modules, but they open in a terminal-styled app surface instead of the module dock.
+
 ## Commands
 
 ```text
@@ -34,6 +36,52 @@ Changing the document name in the editor updates the module title. If the name c
 `module -export <id>` copies a shareable JSON package to the clipboard. Re:TUI does not auto-install clipboard packages; pasted Lua should go through the editor so the user sees and names what they are adding.
 
 `module -check <id>` loads and renders the script once, returning Lua errors without opening it as the active module. `module -info <id>` shows metadata parsed from the script header.
+
+## Lua Apps
+
+Lua apps are launcher-native, not Termux-backed. Use them when a script needs a larger focused surface, typed input, and step-by-step state rather than a glanceable dock panel.
+
+```text
+lua -apps
+lua -new app habit
+lua -app habit
+lua -edit habit
+lua -config habit
+lua -check habit
+lua -info habit
+lua -approve habit
+lua -export habit
+```
+
+Inside a Lua app, plain input is delivered to `on_input(text)`. Colon-prefixed input is handled by Re:T-UI: `:help`, `:refresh`, `:restart`, `:config`, `:edit`, `:clear`, and `:close`.
+
+```lua
+-- name = "Scratch"
+-- type = "app"
+-- retui = "1"
+
+local prefs = require "prefs"
+
+local function render()
+    ui:set_title("Scratch")
+    ui:show_text(prefs.last or "Type something below.")
+    ui:show_action("Clear", "clear")
+end
+
+function on_open()
+    render()
+end
+
+function on_input(text)
+    prefs.last = text
+    render()
+end
+
+function on_action(action)
+    if action == "clear" then prefs.last = "" end
+    render()
+end
+```
 
 Scripts that use sensitive Re:TUI Lua capabilities must declare them before they run:
 
@@ -76,7 +124,10 @@ end
 ## Lifecycle
 
 - `on_load()` runs once when the Lua engine loads the script.
+- `on_open()` runs when a `-- type = "app"` script opens in the focused Lua app surface.
 - `on_resume()` runs when the Lua module is rendered, including when the module is shown.
+- `on_input(text)` runs when the user submits plain input inside a focused Lua app.
+- `on_close()` runs when a focused Lua app session is closed.
 - `on_alarm()` runs on the first render, then no more than once every 30 minutes unless the user runs `module -refresh` or taps the module title to force a refresh.
 - `on_tick(n)` runs only while the Lua module is the active open module and only after the script opts in with `ui:set_tick_interval(seconds)`. Intervals are clamped between 1 and 60 seconds.
 - `on_click(index)` runs when a module button is tapped.

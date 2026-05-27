@@ -197,7 +197,7 @@ object LuaWidgetManager {
 
     fun isDockableScript(script: kotlin.String?): Boolean {
         val type = getScriptTypeFromScript(script)
-        return "suggest" != type && "command" != type
+        return "suggest" != type && "command" != type && "app" != type
     }
 
     fun isDockable(id: kotlin.String?): Boolean {
@@ -419,6 +419,62 @@ object LuaWidgetManager {
                 + "function on_action(action)\n"
                 + "    if action == \"increase\" then count = count + 1 end\n"
                 + "    if action == \"reset\" then count = 0 end\n"
+                + "    render()\n"
+                + "end\n")
+    }
+
+    fun newAppTemplate(id: kotlin.String?): kotlin.String {
+        val normalized = normalizeId(id)
+        val title = displayName(normalized)
+        return ("-- name = \"" + title + "\"\n"
+                + "-- type = \"app\"\n"
+                + "-- retui = \"1\"\n"
+                + "\n"
+                + "local prefs = require \"prefs\"\n"
+                + "\n"
+                + "local function ensure()\n"
+                + "    if prefs.items == nil then prefs.items = {} end\n"
+                + "end\n"
+                + "\n"
+                + "local function trim(value)\n"
+                + "    return (value or \"\"):gsub(\"^%s+\", \"\"):gsub(\"%s+$\", \"\")\n"
+                + "end\n"
+                + "\n"
+                + "local function render(status)\n"
+                + "    ensure()\n"
+                + "    ui:set_title(\"" + title + "\")\n"
+                + "    local lines = {}\n"
+                + "    if status ~= nil and status ~= \"\" then table.insert(lines, status) end\n"
+                + "    if #prefs.items == 0 then\n"
+                + "        table.insert(lines, \"Type a line below and press enter.\")\n"
+                + "    else\n"
+                + "        for i, item in ipairs(prefs.items) do\n"
+                + "            table.insert(lines, i .. \". \" .. item)\n"
+                + "        end\n"
+                + "    end\n"
+                + "    ui:show_lines(lines)\n"
+                + "    ui:show_action(\"Clear\", \"clear\")\n"
+                + "end\n"
+                + "\n"
+                + "function on_open()\n"
+                + "    render()\n"
+                + "end\n"
+                + "\n"
+                + "function on_resume()\n"
+                + "    render()\n"
+                + "end\n"
+                + "\n"
+                + "function on_input(text)\n"
+                + "    local value = trim(text)\n"
+                + "    if value ~= \"\" then\n"
+                + "        ensure()\n"
+                + "        table.insert(prefs.items, value)\n"
+                + "    end\n"
+                + "    render(\"input: \" .. value)\n"
+                + "end\n"
+                + "\n"
+                + "function on_action(action)\n"
+                + "    if action == \"clear\" then prefs.items = {} end\n"
                 + "    render()\n"
                 + "end\n")
     }

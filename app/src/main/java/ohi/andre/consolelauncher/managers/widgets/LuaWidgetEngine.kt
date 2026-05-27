@@ -136,6 +136,23 @@ class LuaWidgetEngine(
         }
     }
 
+    fun open(): RenderResult {
+        synchronized(this) {
+            try {
+                ensureLoaded()
+                val result = newResult()
+                if (!callIfPresent("on_open") && !callIfPresent("on_resume")) {
+                    result.body = "No on_open handler in " + id + "."
+                }
+                persistPrefs()
+                lastResult = result
+            } catch (e: Throwable) {
+                lastResult = errorResult(e)
+            }
+            return lastResult.copy()
+        }
+    }
+
     fun click(index: Int): RenderResult {
         synchronized(this) {
             try {
@@ -143,6 +160,28 @@ class LuaWidgetEngine(
                 val result = newResult()
                 if (!callIfPresent("on_click", LuaValue.valueOf(index))) {
                     result.body = "No on_click handler in " + id + "."
+                }
+                persistPrefs()
+                lastResult = result
+            } catch (e: Throwable) {
+                lastResult = errorResult(e)
+            }
+            return lastResult.copy()
+        }
+    }
+
+    fun input(value: String?): RenderResult {
+        synchronized(this) {
+            try {
+                ensureLoaded()
+                val result = newResult()
+                val payload: LuaValue? = LuaValue.valueOf(if (value == null) "" else value)
+                if (!callIfPresent("on_input", payload) && !callIfPresent(
+                        "on_submit",
+                        payload
+                    ) && !callIfPresent("on_command", payload)
+                ) {
+                    result.body = "No on_input handler in " + id + "."
                 }
                 persistPrefs()
                 lastResult = result
@@ -166,6 +205,21 @@ class LuaWidgetEngine(
                 ) {
                     result.body = "No on_action handler in " + id + "."
                 }
+                persistPrefs()
+                lastResult = result
+            } catch (e: Throwable) {
+                lastResult = errorResult(e)
+            }
+            return lastResult.copy()
+        }
+    }
+
+    fun close(): RenderResult {
+        synchronized(this) {
+            try {
+                ensureLoaded()
+                val result = newResult()
+                callIfPresent("on_close")
                 persistPrefs()
                 lastResult = result
             } catch (e: Throwable) {

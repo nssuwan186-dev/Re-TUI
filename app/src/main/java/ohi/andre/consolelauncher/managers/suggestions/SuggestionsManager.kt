@@ -1592,6 +1592,14 @@ class SuggestionsManager(
 
         suggestTermuxAppRoots(suggestions, lower)
 
+        if ("lua".startsWith(lower)) {
+            suggestions.add(Suggestion(null, "lua -apps", true, Suggestion.Companion.TYPE_PERMANENT))
+            suggestions.add(Suggestion(null, "lua -new app", false, Suggestion.Companion.TYPE_PERMANENT))
+            suggestions.add(Suggestion(null, "lua -app", false, Suggestion.Companion.TYPE_PERMANENT))
+            suggestions.add(Suggestion(null, "lua -edit", false, Suggestion.Companion.TYPE_PERMANENT))
+            suggestions.add(Suggestion(null, "lua -check", false, Suggestion.Companion.TYPE_PERMANENT))
+        }
+
         if ("tbridge".startsWith(lower)) {
             suggestions.add(
                 Suggestion(
@@ -2010,6 +2018,40 @@ class SuggestionsManager(
                     Suggestion.Companion.TYPE_COMMAND
                 )
             )
+        } else if ("lua" == normalized) {
+            for (option in arrayOf<String>(
+                "-apps",
+                "-new app",
+                "-app",
+                "-edit",
+                "-config",
+                "-check",
+                "-info",
+                "-approve",
+                "-export",
+                "-disable",
+                "-enable"
+            )) {
+                suggestions.add(
+                    Suggestion(
+                        beforeLastSpace,
+                        option,
+                        "-apps" == option,
+                        Suggestion.Companion.TYPE_COMMAND
+                    )
+                )
+            }
+        } else if ("lua -app" == normalized || "lua app" == normalized
+            || "lua -edit" == normalized || "lua edit" == normalized
+            || "lua -config" == normalized || "lua config" == normalized
+            || "lua -check" == normalized || "lua check" == normalized
+            || "lua -info" == normalized || "lua info" == normalized
+            || "lua -approve" == normalized || "lua approve" == normalized
+            || "lua -export" == normalized || "lua export" == normalized
+            || "lua -disable" == normalized || "lua disable" == normalized
+            || "lua -enable" == normalized || "lua enable" == normalized
+        ) {
+            suggestLuaAppIds(suggestions, afterLastSpace, beforeLastSpace)
         } else if ("termux -run" == normalized || "termux run" == normalized) {
             suggestScopedAliases(
                 pack.aliasManager,
@@ -2625,6 +2667,33 @@ class SuggestionsManager(
                     Suggestion(
                         beforeLastSpace,
                         app.id,
+                        true,
+                        Suggestion.Companion.TYPE_COMMAND
+                    )
+                )
+            }
+        }
+    }
+
+    private fun suggestLuaAppIds(
+        suggestions: MutableList<Suggestion?>,
+        lastWord: String?,
+        beforeLastSpace: String?
+    ) {
+        val filter =
+            if (lastWord == null) Tuils.EMPTYSTRING else LuaWidgetManager.normalizeId(lastWord)
+        for (id in LuaWidgetManager.listIds()) {
+            val appId = id ?: continue
+            if ("app" != LuaWidgetManager.getScriptType(appId)) {
+                continue
+            }
+            val label = LuaWidgetManager.getName(appId) ?: appId
+            val normalizedLabel = LuaWidgetManager.normalizeId(label)
+            if (filter.length == 0 || appId.startsWith(filter) || normalizedLabel.startsWith(filter)) {
+                suggestions.add(
+                    Suggestion(
+                        beforeLastSpace,
+                        appId,
                         true,
                         Suggestion.Companion.TYPE_COMMAND
                     )
