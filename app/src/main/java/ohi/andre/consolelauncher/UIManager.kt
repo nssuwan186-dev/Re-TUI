@@ -86,6 +86,7 @@ import ohi.andre.consolelauncher.managers.ToolbarShortcutManager.slot
 import ohi.andre.consolelauncher.managers.TuiLocationManager
 import ohi.andre.consolelauncher.managers.file.FileBackendManager
 import ohi.andre.consolelauncher.managers.modules.ModuleManager
+import ohi.andre.consolelauncher.managers.modules.ModuleDockButtonFactory
 import ohi.andre.consolelauncher.managers.modules.ModulePromptManager
 import ohi.andre.consolelauncher.managers.modules.ModuleVariableManager
 import ohi.andre.consolelauncher.managers.modules.ReminderManager
@@ -152,11 +153,13 @@ import ohi.andre.consolelauncher.managers.xml.options.Ui
 import ohi.andre.consolelauncher.tuils.AllowEqualsSequence
 import ohi.andre.consolelauncher.tuils.CyberpunkBackdropDrawable
 import ohi.andre.consolelauncher.tuils.CyberpunkIconFrameDrawable
+import ohi.andre.consolelauncher.tuils.DuoSwitchButtonFactory
 import ohi.andre.consolelauncher.tuils.MusicVisualizerView
 import ohi.andre.consolelauncher.tuils.OutlineEditText
 import ohi.andre.consolelauncher.tuils.OutlineTextView
 import ohi.andre.consolelauncher.tuils.StableHorizontalScrollView
 import ohi.andre.consolelauncher.tuils.TerminalBorderRuntime
+import ohi.andre.consolelauncher.tuils.TerminalTrayToggleView
 import ohi.andre.consolelauncher.tuils.TuiWidgetDecorator
 import ohi.andre.consolelauncher.tuils.TuiWidgetDecorator.decorateWidget
 import ohi.andre.consolelauncher.tuils.Tuils
@@ -1377,26 +1380,15 @@ class UIManager(
     }
 
     private fun createDuoSwitchButton(targetMode: String?, moveToLeft: Boolean): TextView {
-        val button = TextView(mContext)
-        button.setText(if (moveToLeft) "<<" else ">>")
-        button.setContentDescription("Move Re:T-UI to " + targetMode + " screen")
-        button.setGravity(Gravity.CENTER)
-        button.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
-        button.setTextSize(18f)
-        button.setTextColor(terminalBorderColor())
-        button.setBackground(createDuoSwitchBackground())
-        button.setOnClickListener(View.OnClickListener { v: View? -> setDuoLayoutMode(targetMode) })
-        return button
-    }
-
-    private fun createDuoSwitchBackground(): Drawable {
-        return TerminalBorderRuntime.panelDrawablePx(
-            mContext!!,
-            ColorUtils.setAlphaComponent(terminalHeaderBackground(), 224),
+        return DuoSwitchButtonFactory.create(
+            mContext,
+            targetMode,
+            moveToLeft,
             terminalBorderColor(),
-            1.5f,
-            max(genericBorderCornerRadius, Tuils.dpToPx(mContext, 6)).toFloat(),
-            useDashed
+            terminalHeaderBackground(),
+            max(genericBorderCornerRadius, Tuils.dpToPx(mContext, 6)),
+            useDashed,
+            onClick = { mode -> setDuoLayoutMode(mode) }
         )
     }
 
@@ -1716,52 +1708,21 @@ class UIManager(
     }
 
     private fun styleTerminalTrayToggle() {
-        if (terminalTrayToggle == null) {
-            return
-        }
-        if (this.isOutputHeaderNone) {
-            terminalTrayToggle!!.setVisibility(View.GONE)
-            terminalTrayToggle!!.setOnClickListener(null)
-            terminalTrayToggle!!.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                null,
-                null,
-                null,
-                null
-            )
-            return
-        }
-
-        terminalTrayToggle!!.setVisibility(View.VISIBLE)
-        val outputColor = moduleNameTextColor()
-        terminalTrayToggle!!.setTextColor(outputColor)
-        terminalTrayToggle!!.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
-        terminalTrayToggle!!.setTextSize(outputHeaderTextSize().toFloat())
-        if (this.isOutputHeaderArrowsOnly) {
-            terminalTrayToggle!!.setMinWidth(Tuils.dpToPx(mContext, 48))
-            terminalTrayToggle!!.setPadding(
-                Tuils.dpToPx(mContext, 9),
-                Tuils.dpToPx(mContext, 3),
-                Tuils.dpToPx(mContext, 9),
-                Tuils.dpToPx(mContext, 3)
-            )
-        } else {
-            terminalTrayToggle!!.setMinWidth(Tuils.dpToPx(mContext, 130))
-            terminalTrayToggle!!.setPadding(
-                Tuils.dpToPx(mContext, 12),
-                Tuils.dpToPx(mContext, 2),
-                Tuils.dpToPx(mContext, 12),
-                Tuils.dpToPx(mContext, 2)
-            )
-        }
-        terminalTrayToggle!!.setBackground(
-            TerminalBorderRuntime.tabDrawable(mContext!!, terminalHeaderTabBackground())
-        )
-        TerminalBorderRuntime.bind(terminalOutputBorder, terminalTrayToggle)
-        terminalTrayToggle!!.setOnClickListener(View.OnClickListener { v: View? ->
-            if (!landscapeLayoutActive && this.isOutputTrayToggledMode) {
-                setTerminalTrayExpanded(!terminalTrayExpanded)
+        TerminalTrayToggleView.style(
+            mContext,
+            terminalTrayToggle,
+            terminalOutputBorder,
+            this.isOutputHeaderNone,
+            this.isOutputHeaderArrowsOnly,
+            moduleNameTextColor(),
+            outputHeaderTextSize(),
+            terminalHeaderTabBackground(),
+            onClick = {
+                if (!landscapeLayoutActive && this.isOutputTrayToggledMode) {
+                    setTerminalTrayExpanded(!terminalTrayExpanded)
+                }
             }
-        })
+        )
         updateTerminalTrayToggleText()
     }
 
@@ -1876,65 +1837,17 @@ class UIManager(
     }
 
     private fun updateTerminalTrayToggleText() {
-        if (terminalTrayToggle != null) {
-            if (this.isOutputHeaderNone) {
-                terminalTrayToggle!!.setText("")
-                terminalTrayToggle!!.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                    null,
-                    null,
-                    null,
-                    null
-                )
-                terminalTrayToggle!!.setVisibility(View.GONE)
-                return
-            }
-            terminalTrayToggle!!.setVisibility(View.VISIBLE)
-
-            if (landscapeLayoutActive) {
-                terminalTrayToggle!!.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                    null,
-                    null,
-                    null,
-                    null
-                )
-                if (!TextUtils.equals(terminalTrayToggle!!.getText(), "OUTPUT")) {
-                    terminalTrayToggle!!.setText("OUTPUT")
-                }
-                return
-            }
-
-            val collapsed = !terminalTrayExpanded
-            if (this.isOutputHeaderArrowsOnly) {
-                terminalTrayToggle!!.setText("")
-                terminalTrayToggle!!.setCompoundDrawablePadding(0)
-                val arrow = outputHeaderArrow(collapsed)
-                terminalTrayToggle!!.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                    null,
-                    arrow,
-                    null,
-                    null
-                )
-                return
-            }
-
-            terminalTrayToggle!!.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                null,
-                null,
-                null,
-                null
-            )
-            val text: String?
-            if (this.isOutputTrayNativeMode) {
-                text = "OUTPUT"
-            } else if (this.isOutputTrayAutoMode) {
-                text = if (terminalTrayExpanded) "OUTPUT AUTO v" else "OUTPUT AUTO ^"
-            } else {
-                text = if (terminalTrayExpanded) "OUTPUT v" else "OUTPUT ^"
-            }
-            if (!TextUtils.equals(terminalTrayToggle!!.getText(), text)) {
-                terminalTrayToggle!!.setText(text)
-            }
-        }
+        TerminalTrayToggleView.updateText(
+            mContext,
+            terminalTrayToggle,
+            this.isOutputHeaderNone,
+            landscapeLayoutActive,
+            terminalTrayExpanded,
+            this.isOutputHeaderArrowsOnly,
+            this.isOutputTrayNativeMode,
+            this.isOutputTrayAutoMode,
+            moduleNameTextColor()
+        )
     }
 
     private val isOutputTrayNativeMode: Boolean
@@ -1954,21 +1867,6 @@ class UIManager(
 
     private fun outputHeaderMode(): String {
         return AppearanceSettings.outputHeaderMode()
-    }
-
-    private fun outputHeaderArrow(collapsed: Boolean): Drawable? {
-        var drawable = ContextCompat.getDrawable(
-            mContext!!,
-            if (collapsed) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
-        )
-        if (drawable == null) {
-            return null
-        }
-        drawable = DrawableCompat.wrap(drawable.mutate())
-        DrawableCompat.setTint(drawable, moduleNameTextColor())
-        val size = Tuils.dpToPx(mContext, 18)
-        drawable.setBounds(0, 0, size, size)
-        return drawable
     }
 
     private fun outputTrayMode(): String {
@@ -2098,57 +1996,33 @@ class UIManager(
     }
 
     private fun addModuleDockButton(module: String?) {
-        val button = TextView(mContext)
-        button.setText(if ("close" == module) "X" else ModuleManager.displayTitle(mContext, module))
-        button.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
-        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-        button.setSingleLine(true)
-        button.setGravity(Gravity.CENTER)
-        val padX = Tuils.dpToPx(mContext, if ("close" == module) 14 else 16)
-        val padY = Tuils.dpToPx(mContext, 7)
-        button.setPadding(padX, padY, padX, padY)
-
-        val lp = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        lp.setMargins(0, 0, Tuils.dpToPx(mContext, 8), 0)
-        button.setLayoutParams(lp)
-
-        button.setOnClickListener(View.OnClickListener { v: View? ->
-            if ("close" == module) closeHomeModule()
-            else showHomeModule(module)
-        })
-        button.setOnTouchListener(OnTouchListener { v: View?, event: MotionEvent? ->
-            if (event!!.getActionMasked() == MotionEvent.ACTION_DOWN) {
+        val button = ModuleDockButtonFactory.create(
+            mContext,
+            module,
+            onClick = { clickedModule ->
+                if ("close" == clickedModule) closeHomeModule()
+                else showHomeModule(clickedModule)
+            },
+            onTouchDown = {
                 val scrollX = preservedModuleDockScrollX()
                 pendingModuleDockScrollX = if (scrollX > 0) scrollX else lastModuleDockScrollX
             }
-            false
-        })
+        )
 
         moduleDock!!.addView(button)
         moduleDockButtons.put(module, button)
     }
 
     private fun styleModuleDockButton(button: TextView, selected: Boolean) {
-        val borderColor = moduleButtonBorderColor()
-        val textColor = moduleNameTextColor()
-        val bg = if (selected)
-            ColorUtils.blendARGB(moduleButtonBackgroundColor(), textColor, 0.25f)
-        else
-            moduleButtonBackgroundColor()
-
-        button.setTextColor(textColor)
-        button.setBackground(
-            TerminalBorderRuntime.panelDrawable(
-                mContext!!,
-                bg,
-                borderColor,
-                1.2f,
-                moduleCornerRadius(),
-                dashedBorders()
-            )
+        ModuleDockButtonFactory.style(
+            mContext,
+            button,
+            selected,
+            moduleButtonBackgroundColor(),
+            moduleButtonBorderColor(),
+            moduleNameTextColor(),
+            moduleCornerRadius(),
+            dashedBorders()
         )
     }
 
