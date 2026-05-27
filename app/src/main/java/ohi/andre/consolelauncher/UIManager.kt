@@ -202,6 +202,7 @@ import ohi.andre.consolelauncher.managers.settings.LauncherSettings
 import ohi.andre.consolelauncher.managers.settings.MusicSettings
 import ohi.andre.consolelauncher.managers.settings.NotificationSettings
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache
+import ohi.andre.consolelauncher.managers.termux.TermuxAppManager
 import ohi.andre.consolelauncher.managers.xml.options.Notifications
 import androidx.annotation.NonNull
 import ohi.andre.consolelauncher.tuils.interfaces.OnBatteryUpdate
@@ -293,11 +294,21 @@ class UIManager(
     private var termuxInputGroup: View? = null
     private var termuxOutputPanel: View? = null
     private var termuxOutputLabel: TextView? = null
+    private var termuxActionsScroll: HorizontalScrollView? = null
+    private var termuxActions: LinearLayout? = null
     private var termuxTools: View? = null
     private val termuxCommandHistory = ArrayList<String?>()
     private var termuxHistoryCursor = -1
     private var termuxHistoryDraft = ""
     private var termuxWorkingDirectory = TermuxBridgeManager.TERMUX_HOME
+    private var termuxAppSession: TermuxAppManager.TermuxApp? = null
+    private var termuxAppLastStatus: String? = null
+    private var termuxAppRefreshGeneration = 0
+    private var termuxAppDispatchSequence = 0
+    private var termuxAppAcceptedSequence = 0
+    private var termuxAppWatchUntilMs = 0L
+    private var termuxAppLastFrameText: String? = null
+    private val termuxAnsiPattern = Pattern.compile("\\u001B\\[[0-?]*[ -/]*[@-~]")
     private var fileOverlay: View? = null
     private var fileOverlayBasePaddingLeft = 0
     private var fileOverlayBasePaddingTop = 0
@@ -3770,6 +3781,8 @@ class UIManager(
         termuxInputGroup = rootView.findViewById<View?>(R.id.termux_input_group)
         termuxOutputPanel = rootView.findViewById<View?>(R.id.termux_output_panel)
         termuxOutputLabel = rootView.findViewById<TextView?>(R.id.termux_output_label)
+        termuxActionsScroll = rootView.findViewById<HorizontalScrollView?>(R.id.termux_actions_scroll)
+        termuxActions = rootView.findViewById<LinearLayout?>(R.id.termux_actions)
         termuxTools = rootView.findViewById<View?>(R.id.termux_tools)
         suggestionsContainer = rootView.findViewById<View?>(R.id.suggestions_container)
 
@@ -5080,6 +5093,74 @@ class UIManager(
             termuxTools!!.setBackgroundColor(Color.TRANSPARENT)
             styleTermuxToolButtons(termuxTools, textColor)
         }
+        updateTermuxConsoleLabels()
+    }
+
+    private fun updateTermuxConsoleLabels() {
+        val app = termuxAppSession
+        if (termuxWindowLabel != null) {
+            termuxWindowLabel!!.text = if (app == null) "TERMUX" else app.title.uppercase(Locale.getDefault())
+        }
+        if (termuxOutputLabel != null) {
+            termuxOutputLabel!!.text = if (app == null) "OUTPUT" else "SESSION"
+        }
+        if (termuxPrefix != null) {
+            termuxPrefix!!.text = if (app == null) "\$" else ">"
+        }
+        if (termuxInput != null) {
+            termuxInput!!.hint = if (app == null) "command" else "type input or :help"
+        }
+        updateTermuxAppActions()
+    }
+
+    private fun updateTermuxAppActions() {
+        val scroll = termuxActionsScroll
+        val row = termuxActions
+        if (scroll == null || row == null) {
+            return
+        }
+
+        row.removeAllViews()
+        val app = termuxAppSession
+        if (app == null || app.actions.isEmpty()) {
+            scroll.visibility = View.GONE
+            return
+        }
+
+        val textColor = notificationWidgetTextColor()
+        val labelBg = terminalHeaderTabBackground()
+        val margin = Tuils.dpToPx(mContext, 4)
+        val minWidth = Tuils.dpToPx(mContext, 76)
+        scroll.visibility = View.VISIBLE
+
+        for (action in app.actions) {
+            val button = TextView(mContext!!)
+            button.text = action.label.uppercase(Locale.getDefault())
+            button.gravity = Gravity.CENTER
+            button.maxLines = 1
+            button.ellipsize = TextUtils.TruncateAt.END
+            button.minWidth = minWidth
+            button.setPadding(
+                Tuils.dpToPx(mContext, 10),
+                0,
+                Tuils.dpToPx(mContext, 10),
+                0
+            )
+            button.setTypeface(Tuils.getTypeface(mContext), Typeface.BOLD)
+            button.setTextColor(textColor)
+            button.setTextSize(10f)
+            button.setBackground(TerminalBorderRuntime.tabDrawable(mContext!!, labelBg))
+            button.setOnClickListener(View.OnClickListener {
+                submitTermuxAppAction(action)
+            })
+
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            params.setMarginEnd(margin)
+            row.addView(button, params)
+        }
     }
 
     private fun styleTermuxToolButton(button: TextView?, color: Int) {
@@ -5192,6 +5273,9 @@ class UIManager(
         }
 
         closeFileConsole(false)
+        termuxAppSession = null
+        termuxAppLastStatus = null
+        resetTermuxAppRuntimeState(true)
         styleTermuxConsole()
         termuxOverlay!!.setVisibility(View.VISIBLE)
         termuxOverlay!!.bringToFront()
@@ -5414,6 +5498,10 @@ class UIManager(
         if (termuxOverlay != null) {
             termuxOverlay!!.setVisibility(View.GONE)
         }
+        termuxAppSession = null
+        termuxAppLastStatus = null
+        resetTermuxAppRuntimeState(true)
+        updateTermuxConsoleLabels()
         restoreHomeSuggestionsAfterTermux()
         if (termuxInput != null) {
             val manager =
@@ -5593,6 +5681,15 @@ class UIManager(
         }
         if (termuxInput!!.getText() != null && termuxInput!!.getText().length > 0) {
             termuxInput!!.setText(Tuils.EMPTYSTRING)
+            return
+        }
+        if (termuxAppSession != null) {
+            val app = termuxAppSession!!
+            termuxAppLastStatus = "sent interrupt"
+            renderTermuxAppFrame(null, termuxAppLastStatus)
+            dispatchTermuxAppScript("interrupt", buildTermuxAppControlScript(app, "C-c"), true)
+            scheduleTermuxAppRefreshBurst(app.id, TERMUX_APP_INPUT_WATCH_MS)
+            return
         }
         appendTermuxLine("^C")
     }
@@ -5673,6 +5770,14 @@ class UIManager(
     }
 
     private fun submitTermuxConsoleCommand(rawCommand: String?) {
+        if (termuxAppSession != null) {
+            submitTermuxAppInput(rawCommand)
+            if (this.isTermuxConsoleVisible) {
+                scheduleTermuxConsoleFocusCapture(true)
+            }
+            return
+        }
+
         val normalized = normalizeTermuxConsoleCommand(
             if (rawCommand == null)
                 Tuils.EMPTYSTRING
@@ -5686,6 +5791,16 @@ class UIManager(
             return
         }
         scheduleTermuxConsoleFocusCapture(true)
+    }
+
+    private fun resetTermuxAppRuntimeState(clearFrame: Boolean) {
+        termuxAppRefreshGeneration++
+        termuxAppDispatchSequence = 0
+        termuxAppAcceptedSequence = 0
+        termuxAppWatchUntilMs = 0L
+        if (clearFrame) {
+            termuxAppLastFrameText = null
+        }
     }
 
     private fun executeTermuxConsoleCommand(rawCommand: String?) {
@@ -5718,6 +5833,15 @@ class UIManager(
             appendTermuxLine("setup   -> show Termux bridge setup checklist")
             appendTermuxLine("open    -> launch Termux for interactive programs")
             appendTermuxLine("run <script|alias> [args...] -> dispatch a Termux script")
+            appendTermuxLine("apps    -> list Re:T-UI Termux apps")
+            appendTermuxLine("app <id> -> open a persistent tmux-backed app session")
+            appendTermuxLine("app-add <id> <command> -> register a custom Termux app")
+            appendTermuxLine("app-info <id> -> inspect a registered Termux app")
+            appendTermuxLine("app-sync <id> -> write its manifest into Termux")
+            appendTermuxLine("app-actions <id> -> list static app action chips")
+            appendTermuxLine("app-action <id> <label> [input] -> add an app action chip")
+            appendTermuxLine("app-action-rm <id> <label> -> remove a custom app action")
+            appendTermuxLine("app-rm <id> -> remove a custom Termux app")
             appendTermuxLine("clear   -> clear this console")
             appendTermuxLine("exit    -> close this console")
         } else if ("status" == lower) {
@@ -5728,11 +5852,706 @@ class UIManager(
             openTermuxApp()
         } else if ("run" == lower || lower.startsWith("run ")) {
             runTermuxCommand(command)
+        } else if ("apps" == lower || "app-ls" == lower || "app -ls" == lower) {
+            appendTermuxApps()
+        } else if ("app-info" == lower || lower.startsWith("app-info ")) {
+            appendTermuxAppInfo(command)
+        } else if ("app-sync" == lower || lower.startsWith("app-sync ")) {
+            syncTermuxCustomApp(command)
+        } else if ("app" == lower || lower.startsWith("app ")) {
+            openTermuxCustomApp(command)
+        } else if ("app-add" == lower || lower.startsWith("app-add ")) {
+            addTermuxCustomApp(command)
+        } else if ("app-actions" == lower || lower.startsWith("app-actions ")) {
+            appendTermuxAppActions(command)
+        } else if ("app-action-rm" == lower || lower.startsWith("app-action-rm ")) {
+            removeTermuxAppAction(command)
+        } else if ("app-action" == lower || lower.startsWith("app-action ")) {
+            addTermuxAppAction(command)
+        } else if ("app-rm" == lower || lower.startsWith("app-rm ")
+            || "app-remove" == lower || lower.startsWith("app-remove ")
+        ) {
+            removeTermuxCustomApp(command)
         } else if ("cd" == lower || lower.startsWith("cd ")) {
             changeTermuxDirectory(command)
         } else {
             runTermuxShellCommand(command)
         }
+    }
+
+    private fun appendTermuxApps() {
+        val apps = TermuxAppManager.list(mContext!!)
+        if (apps.isEmpty()) {
+            appendTermuxLine("No Termux apps registered.")
+            return
+        }
+        appendTermuxLine("Termux apps")
+        for (app in apps) {
+            val builtIn = if (TermuxAppManager.TERMINALPHONE_ID == app.id) " [built-in]" else ""
+            val actionInfo = if (app.actions.isEmpty()) "" else " [" + app.actions.size + " actions]"
+            appendTermuxLine(app.id + " -> " + app.title + builtIn + actionInfo)
+            appendTermuxLine("  home: " + app.homeDir)
+        }
+        appendTermuxLine("Open with: app <id>")
+    }
+
+    private fun appendTermuxAppActions(command: String?) {
+        val parts = Tuils.splitArgs(command)
+        if (parts.size < 2) {
+            appendTermuxLine("usage: app-actions <id>")
+            return
+        }
+        val app = TermuxAppManager.resolve(mContext!!, parts.get(1))
+        if (app == null) {
+            appendTermuxLine("Unknown Termux app: " + parts.get(1))
+            return
+        }
+        appendTermuxLine("Actions for " + app.id)
+        if (app.actions.isEmpty()) {
+            appendTermuxLine("No actions registered.")
+        } else {
+            for (action in app.actions) {
+                val sendLabel = if (action.send.isEmpty()) "[enter]" else action.send
+                appendTermuxLine(action.label + " -> " + sendLabel)
+            }
+        }
+        appendTermuxLine("Add with: app-action " + app.id + " \"label\" \"input\"")
+    }
+
+    private fun appendTermuxAppInfo(command: String?) {
+        val app = resolveTermuxAppFromCommand(command, "app-info <id>") ?: return
+        appendTermuxLine("Termux app: " + app.id)
+        appendTermuxLine("Title: " + app.title)
+        appendTermuxLine("Command: " + app.command)
+        appendTermuxLine("Workdir: " + app.workDir)
+        appendTermuxLine("Home: " + app.homeDir)
+        appendTermuxLine("Manifest: " + app.manifestPath)
+        appendTermuxLine("State: " + app.statePath)
+        appendTermuxLine("Memory: " + app.memoryDir)
+        appendTermuxLine("Logs: " + app.logsDir)
+        appendTermuxLine("Session: " + TermuxAppManager.tmuxSessionName(app.id))
+        appendTermuxLine("Actions: " + app.actions.size)
+    }
+
+    private fun syncTermuxCustomApp(command: String?) {
+        val app = resolveTermuxAppFromCommand(command, "app-sync <id>") ?: return
+        if (syncTermuxAppManifest(app, true)) {
+            appendTermuxLine("Manifest sync dispatched: " + app.manifestPath)
+        }
+    }
+
+    private fun resolveTermuxAppFromCommand(command: String?, usage: String): TermuxAppManager.TermuxApp? {
+        val parts = Tuils.splitArgs(command)
+        if (parts.size < 2) {
+            appendTermuxLine("usage: " + usage)
+            return null
+        }
+        val app = TermuxAppManager.resolve(mContext!!, parts.get(1))
+        if (app == null) {
+            appendTermuxLine("Unknown Termux app: " + parts.get(1))
+            return null
+        }
+        return app
+    }
+
+    private fun openTermuxCustomApp(command: String?) {
+        val parts = Tuils.splitArgs(command)
+        if (parts.size < 2) {
+            appendTermuxLine("usage: app <id>")
+            appendTermuxApps()
+            return
+        }
+        val app = TermuxAppManager.resolve(mContext!!, parts.get(1))
+        if (app == null) {
+            appendTermuxLine("Unknown Termux app: " + parts.get(1))
+            appendTermuxLine("Register one with: app-add <id> <command>")
+            return
+        }
+        openTermuxAppSession(app)
+    }
+
+    private fun addTermuxCustomApp(command: String?) {
+        val parts = Tuils.splitArgs(command)
+        if (parts.size < 3) {
+            appendTermuxLine("usage: app-add <id> <command>")
+            appendTermuxLine("example: app-add radio bash ~/retui/radio.sh")
+            return
+        }
+        val id = parts.get(1)
+        val appCommand = Tuils.toPlanString(parts.subList(2, parts.size), Tuils.SPACE)
+        if (TermuxAppManager.add(mContext!!, id, id, appCommand, termuxWorkingDirectory)) {
+            val normalized = TermuxAppManager.normalizeId(id)
+            val app = TermuxAppManager.resolve(mContext!!, normalized)
+            if (app != null) {
+                syncTermuxAppManifest(app, true)
+            }
+            appendTermuxLine("Termux app registered: " + normalized)
+            appendTermuxLine("Open with: app " + normalized)
+        } else {
+            appendTermuxLine("Unable to register Termux app.")
+        }
+    }
+
+    private fun addTermuxAppAction(command: String?) {
+        val parts = Tuils.splitArgs(command)
+        if (parts.size < 3) {
+            appendTermuxLine("usage: app-action <id> <label> [input]")
+            appendTermuxLine("example: app-action terminalphone \"start tor\" 8")
+            return
+        }
+        val id = parts.get(1)
+        val label = parts.get(2)
+        val send = if (parts.size > 3)
+            Tuils.toPlanString(parts.subList(3, parts.size), Tuils.SPACE)
+        else
+            Tuils.EMPTYSTRING
+        if (TermuxAppManager.addAction(mContext!!, id, label, send)) {
+            val app = TermuxAppManager.resolve(mContext!!, id)
+            if (app != null) {
+                syncTermuxAppManifest(app, true)
+                if (termuxAppSession != null && termuxAppSession!!.id == app.id) {
+                    termuxAppSession = app
+                    updateTermuxConsoleLabels()
+                }
+            }
+            appendTermuxLine("App action registered: " + TermuxAppManager.normalizeId(id) + " / " + label)
+        } else {
+            appendTermuxLine("Unable to register app action.")
+        }
+    }
+
+    private fun removeTermuxAppAction(command: String?) {
+        val parts = Tuils.splitArgs(command)
+        if (parts.size < 3) {
+            appendTermuxLine("usage: app-action-rm <id> <label>")
+            return
+        }
+        val id = parts.get(1)
+        val label = Tuils.toPlanString(parts.subList(2, parts.size), Tuils.SPACE)
+        if (TermuxAppManager.removeAction(mContext!!, id, label)) {
+            val app = TermuxAppManager.resolve(mContext!!, id)
+            if (app != null) {
+                syncTermuxAppManifest(app, true)
+                if (termuxAppSession != null && termuxAppSession!!.id == app.id) {
+                    termuxAppSession = app
+                    updateTermuxConsoleLabels()
+                }
+            }
+            appendTermuxLine("App action removed: " + TermuxAppManager.normalizeId(id) + " / " + label)
+        } else {
+            appendTermuxLine("App action not removed: " + label)
+        }
+    }
+
+    private fun removeTermuxCustomApp(command: String?) {
+        val parts = Tuils.splitArgs(command)
+        if (parts.size < 2) {
+            appendTermuxLine("usage: app-rm <id>")
+            return
+        }
+        val id = TermuxAppManager.normalizeId(parts.get(1))
+        if (TermuxAppManager.remove(mContext!!, id)) {
+            removeTermuxAppManifest(id)
+            appendTermuxLine("Termux app removed: " + id)
+        } else {
+            appendTermuxLine("Termux app not removed: " + id)
+        }
+    }
+
+    private fun openTermuxAppSession(app: TermuxAppManager.TermuxApp) {
+        if (termuxOverlay == null) {
+            return
+        }
+        closeFileConsole(false)
+        termuxAppSession = app
+        termuxAppLastStatus = "starting"
+        resetTermuxAppRuntimeState(true)
+        styleTermuxConsole()
+        updateTermuxConsoleLabels()
+        termuxOverlay!!.setVisibility(View.VISIBLE)
+        termuxOverlay!!.bringToFront()
+        hideHomeSuggestionsForTermux()
+        renderTermuxAppFrame(null, "starting " + app.title + "...")
+        syncTermuxAppManifest(app, false)
+        dispatchTermuxAppScript("start", buildTermuxAppStartScript(app), true)
+        scheduleTermuxAppRefreshBurst(app.id, TERMUX_APP_START_WATCH_MS)
+        scheduleTermuxConsoleFocusCapture(true)
+    }
+
+    private fun submitTermuxAppInput(rawCommand: String?) {
+        val app = termuxAppSession ?: return
+        val command = if (rawCommand == null) Tuils.EMPTYSTRING else rawCommand.trim { it <= ' ' }
+        if (command.startsWith(":")) {
+            handleTermuxAppLocalCommand(app, command.substring(1).trim { it <= ' ' }.lowercase(Locale.getDefault()))
+            return
+        }
+        termuxAppLastStatus = if (command.length == 0) "sent enter" else "sent: " + command
+        renderTermuxAppFrame(null, termuxAppLastStatus)
+        dispatchTermuxAppScript("send", buildTermuxAppSendScript(app, command), true)
+        scheduleTermuxAppRefreshBurst(app.id, TERMUX_APP_INPUT_WATCH_MS)
+    }
+
+    private fun submitTermuxAppAction(action: TermuxAppManager.TermuxAppAction) {
+        val app = termuxAppSession ?: return
+        termuxAppLastStatus = "action: " + action.label
+        renderTermuxAppFrame(null, termuxAppLastStatus)
+        dispatchTermuxAppScript("action", buildTermuxAppSendScript(app, action.send), true)
+        scheduleTermuxAppRefreshBurst(app.id, TERMUX_APP_INPUT_WATCH_MS)
+        scheduleTermuxConsoleFocusCapture(true)
+    }
+
+    private fun handleTermuxAppLocalCommand(app: TermuxAppManager.TermuxApp, command: String) {
+        if ("help" == command || command.length == 0) {
+            renderTermuxAppFrame(
+                null,
+                ":help, :refresh, :restart, :stop, :detach, :open, :clear. Other input is sent to the app."
+            )
+        } else if ("refresh" == command || "r" == command) {
+            refreshTermuxAppSession(true)
+            scheduleTermuxAppRefreshBurst(app.id, TERMUX_APP_MANUAL_REFRESH_WATCH_MS)
+        } else if ("restart" == command) {
+            termuxAppLastStatus = "restarting"
+            renderTermuxAppFrame(null, termuxAppLastStatus)
+            dispatchTermuxAppScript("restart", buildTermuxAppKillScript(app) + "\n" + buildTermuxAppStartScript(app), true)
+            scheduleTermuxAppRefreshBurst(app.id, TERMUX_APP_START_WATCH_MS)
+        } else if ("stop" == command || "kill" == command) {
+            termuxAppRefreshGeneration++
+            termuxAppLastStatus = "stopping"
+            renderTermuxAppFrame(null, termuxAppLastStatus)
+            dispatchTermuxAppScript("stop", buildTermuxAppKillScript(app), true)
+        } else if ("detach" == command || "exit" == command || "close" == command) {
+            closeTermuxConsole()
+        } else if ("open" == command) {
+            openTermuxApp()
+        } else if ("clear" == command) {
+            termuxBuffer.setLength(0)
+            updateTermuxOutput()
+        } else {
+            renderTermuxAppFrame(null, "Unknown app command: :" + command)
+        }
+    }
+
+    private fun refreshTermuxAppSession(announce: Boolean) {
+        val app = termuxAppSession ?: return
+        if (announce) {
+            termuxAppLastStatus = "refreshing"
+            renderTermuxAppFrame(null, termuxAppLastStatus)
+        }
+        dispatchTermuxAppScript("capture", buildTermuxAppCaptureScript(app), false)
+    }
+
+    private fun scheduleTermuxAppRefreshBurst(appId: String?, watchMs: Long) {
+        extendTermuxAppWatch(watchMs)
+        val generation = ++termuxAppRefreshGeneration
+        for (delay in TERMUX_APP_REFRESH_BURST_DELAYS_MS) {
+            handler?.postDelayed(Runnable {
+                val current = termuxAppSession
+                if (generation == termuxAppRefreshGeneration
+                    && current != null
+                    && current.id == appId
+                    && this.isTermuxConsoleVisible
+                ) {
+                    refreshTermuxAppSession(false)
+                }
+            }, delay.toLong())
+        }
+    }
+
+    private fun extendTermuxAppWatch(watchMs: Long) {
+        termuxAppWatchUntilMs = max(termuxAppWatchUntilMs, System.currentTimeMillis() + watchMs)
+    }
+
+    private fun shouldContinueTermuxAppWatch(): Boolean {
+        return System.currentTimeMillis() < termuxAppWatchUntilMs
+    }
+
+    private fun scheduleTermuxAppAdaptiveRefresh(appId: String?) {
+        val generation = termuxAppRefreshGeneration
+        handler?.postDelayed(Runnable {
+            val current = termuxAppSession
+            if (generation == termuxAppRefreshGeneration
+                && current != null
+                && current.id == appId
+                && this.isTermuxConsoleVisible
+                && shouldContinueTermuxAppWatch()
+            ) {
+                refreshTermuxAppSession(false)
+            }
+        }, TERMUX_APP_ADAPTIVE_REFRESH_INTERVAL_MS.toLong())
+    }
+
+    private fun dispatchTermuxAppScript(action: String, script: String, echoFailure: Boolean): Boolean {
+        val app = termuxAppSession ?: return false
+        if (!ensureTermuxBridgeReady(echoFailure)) {
+            if (!echoFailure) {
+                renderTermuxAppFrame(null, "Termux bridge is not ready.")
+            }
+            return false
+        }
+        try {
+            val sequence = ++termuxAppDispatchSequence
+            TermuxBridgeManager.startRunCommand(
+                mContext!!,
+                TermuxBridgeManager.TERMUX_SH,
+                app.workDir,
+                createResultPendingIntent(
+                    mContext,
+                    TERMUX_APP_RESULT_PREFIX + action + ":" + sequence + ":" + app.id,
+                    null
+                ),
+                arrayOf<String?>("-lc", script)
+            )
+            return true
+        } catch (e: SecurityException) {
+            renderTermuxAppFrame(null, "Termux rejected the app command: permission denied.")
+        } catch (e: Exception) {
+            renderTermuxAppFrame(null, "unable to dispatch app command: " + e.javaClass.getSimpleName())
+        }
+        return false
+    }
+
+    private fun syncTermuxAppManifest(app: TermuxAppManager.TermuxApp, echoToConsole: Boolean): Boolean {
+        val dispatched = dispatchTermuxAppSideEffectScript(
+            app,
+            buildTermuxAppPrepareScript(app, echoToConsole),
+            if (echoToConsole) TERMUX_APP_SYNC_RESULT_PREFIX + app.id else null
+        )
+        if (!dispatched && echoToConsole) {
+            appendTermuxLine("Manifest sync pending: Termux bridge is not ready.")
+        }
+        return dispatched
+    }
+
+    private fun removeTermuxAppManifest(id: String?): Boolean {
+        val normalized = TermuxAppManager.normalizeId(id)
+        if (normalized.length == 0) {
+            return false
+        }
+        val appHome = shellQuote(TermuxAppManager.appHomeDir(normalized))
+        return dispatchTermuxAppSideEffectScript(
+            null,
+            "rm -f " + appHome + "/app.json\n"
+                    + "printf '%s\\n' 'Re:T-UI app manifest removed; state directory kept.'",
+            null
+        )
+    }
+
+    private fun dispatchTermuxAppSideEffectScript(
+        app: TermuxAppManager.TermuxApp?,
+        script: String,
+        resultLabel: String?
+    ): Boolean {
+        val context = mContext ?: return false
+        val status = TermuxBridgeManager.status(context)
+        if (!status.termuxInstalled || !status.runCommandDeclared || !status.runCommandGranted) {
+            return false
+        }
+        try {
+            TermuxBridgeManager.startRunCommand(
+                context,
+                TermuxBridgeManager.TERMUX_SH,
+                app?.workDir ?: TermuxBridgeManager.TERMUX_HOME,
+                if (TextUtils.isEmpty(resultLabel)) null else createResultPendingIntent(context, resultLabel, null),
+                arrayOf<String?>("-lc", script)
+            )
+            return true
+        } catch (e: Exception) {
+            return false
+        }
+    }
+
+    private fun buildTermuxAppStartScript(app: TermuxAppManager.TermuxApp): String {
+        val session = shellQuote(TermuxAppManager.tmuxSessionName(app.id))
+        val workDir = shellQuote(app.workDir)
+        val command = shellQuote(app.command)
+        val sh = shellQuote(TermuxBridgeManager.TERMUX_SH)
+        val appId = shellQuote(app.id)
+        val appHome = shellQuote(app.homeDir)
+        val state = shellQuote(app.statePath)
+        val manifest = shellQuote(app.manifestPath)
+        return (buildTermuxAppPrepareScript(app, false) + "\n"
+                + "if ! command -v tmux >/dev/null 2>&1; then\n"
+                + "  printf '%s\\n' 'tmux missing: pkg install tmux'\n"
+                + "  exit 127\n"
+                + "fi\n"
+                + "if ! tmux has-session -t " + session + " 2>/dev/null; then\n"
+                + "  mkdir -p " + workDir + " 2>/dev/null || true\n"
+                + "  tmux new-session -d -s " + session + " -c " + workDir
+                + " env RETUI_APP_ID=" + appId
+                + " RETUI_APP_HOME=" + appHome
+                + " RETUI_APP_STATE=" + state
+                + " RETUI_APP_MANIFEST=" + manifest
+                + " " + sh + " -lc " + command + "\n"
+                + "  sleep 0.35\n"
+                + "fi\n"
+                + "tmux capture-pane -t " + session + " -p")
+    }
+
+    private fun buildTermuxAppPrepareScript(app: TermuxAppManager.TermuxApp, echo: Boolean): String {
+        val appHome = shellQuote(app.homeDir)
+        val memoryDir = shellQuote(app.memoryDir)
+        val logsDir = shellQuote(app.logsDir)
+        val manifest = shellQuote(app.manifestPath)
+        val state = shellQuote(app.statePath)
+        val json = shellQuote(TermuxAppManager.manifestJson(app))
+        val script = ("mkdir -p " + appHome + " " + memoryDir + " " + logsDir + "\n"
+                + "if [ ! -f " + state + " ]; then printf '%s\\n' '{}' > " + state + "; fi\n"
+                + "printf '%s\\n' " + json + " > " + manifest)
+        if (!echo) {
+            return script
+        }
+        return script + "\nprintf '%s\\n' 'manifest: " + app.manifestPath.replace("'", "'\"'\"'") + "'"
+    }
+
+    private fun buildTermuxAppSendScript(app: TermuxAppManager.TermuxApp, input: String): String {
+        val session = shellQuote(TermuxAppManager.tmuxSessionName(app.id))
+        val send = if (input.length == 0)
+            "tmux send-keys -t " + session + " C-m"
+        else
+            "tmux send-keys -t " + session + " -- " + shellQuote(input) + " C-m"
+        return buildTermuxAppEnsureScript(app) + "\n" + send + "\nsleep 0.25\n" +
+                buildTermuxAppPostInputCaptureScript(session)
+    }
+
+    private fun buildTermuxAppControlScript(app: TermuxAppManager.TermuxApp, key: String): String {
+        val session = shellQuote(TermuxAppManager.tmuxSessionName(app.id))
+        return buildTermuxAppEnsureScript(app) + "\n" +
+                "tmux send-keys -t " + session + " " + key + "\n" +
+                "sleep 0.25\n" +
+                buildTermuxAppPostInputCaptureScript(session)
+    }
+
+    private fun buildTermuxAppCaptureScript(app: TermuxAppManager.TermuxApp): String {
+        val session = shellQuote(TermuxAppManager.tmuxSessionName(app.id))
+        return buildTermuxAppEnsureScript(app) + "\ntmux capture-pane -t " + session + " -p"
+    }
+
+    private fun buildTermuxAppPostInputCaptureScript(session: String): String {
+        return ("if ! tmux has-session -t " + session + " 2>/dev/null; then\n"
+                + "  printf '%s\\n' 'session ended. Type :restart to start it.'\n"
+                + "  exit 0\n"
+                + "fi\n"
+                + "tmux capture-pane -t " + session + " -p")
+    }
+
+    private fun buildTermuxAppKillScript(app: TermuxAppManager.TermuxApp): String {
+        val session = shellQuote(TermuxAppManager.tmuxSessionName(app.id))
+        return ("if command -v tmux >/dev/null 2>&1; then\n"
+                + "  tmux kill-session -t " + session + " 2>/dev/null || true\n"
+                + "  printf '%s\\n' 'session stopped.'\n"
+                + "else\n"
+                + "  printf '%s\\n' 'tmux missing: pkg install tmux'\n"
+                + "fi")
+    }
+
+    private fun buildTermuxAppEnsureScript(app: TermuxAppManager.TermuxApp): String {
+        val session = shellQuote(TermuxAppManager.tmuxSessionName(app.id))
+        return ("if ! command -v tmux >/dev/null 2>&1; then\n"
+                + "  printf '%s\\n' 'tmux missing: pkg install tmux'\n"
+                + "  exit 127\n"
+                + "fi\n"
+                + "if ! tmux has-session -t " + session + " 2>/dev/null; then\n"
+                + "  printf '%s\\n' 'session not running. Type :restart to start it.'\n"
+                + "  exit 1\n"
+                + "fi")
+    }
+
+    private fun appendTermuxAppSyncResult(
+        label: String,
+        stdout: String?,
+        stderr: String?,
+        error: String?,
+        exitCode: Int,
+        debug: String?
+    ) {
+        val id = label.substring(TERMUX_APP_SYNC_RESULT_PREFIX.length)
+        if (exitCode == 0 && TextUtils.isEmpty(stderr) && TextUtils.isEmpty(error)) {
+            appendTermuxLine("Manifest synced: " + id)
+            if (!TextUtils.isEmpty(stdout)) {
+                appendTermuxLine(stdout!!.trim { it <= ' ' })
+            }
+            return
+        }
+
+        appendTermuxLine("Manifest sync failed: " + id)
+        if (exitCode != Int.Companion.MIN_VALUE) {
+            appendTermuxLine("exit: " + exitCode)
+        }
+        if (!TextUtils.isEmpty(stderr)) {
+            appendTermuxLine("stderr: " + stderr!!.trim { it <= ' ' })
+        }
+        if (!TextUtils.isEmpty(error)) {
+            appendTermuxLine("error: " + error!!.trim { it <= ' ' })
+        }
+        if (!TextUtils.isEmpty(debug)) {
+            appendTermuxLine("debug: " + debug!!.trim { it <= ' ' })
+        }
+    }
+
+    private fun appendTermuxAppResult(
+        label: String,
+        stdout: String?,
+        stderr: String?,
+        error: String?,
+        exitCode: Int,
+        debug: String?
+    ) {
+        val app = termuxAppSession
+        if (app == null || termuxAppResultId(label) != app.id) {
+            return
+        }
+        val sequence = termuxAppResultSequence(label)
+        if (sequence > 0 && sequence < termuxAppAcceptedSequence) {
+            return
+        }
+        if (sequence > 0) {
+            termuxAppAcceptedSequence = max(termuxAppAcceptedSequence, sequence)
+        }
+        val action = termuxAppResultAction(label)
+        if (isTermuxAppSessionEnded(stdout, stderr, error, exitCode)) {
+            termuxAppRefreshGeneration++
+            val alreadyEnded = "session ended" == termuxAppLastStatus
+            termuxAppLastStatus = "session ended"
+            if (!(alreadyEnded && "capture" == action)) {
+                renderTermuxAppFrame("session ended. Type :restart to start it.", termuxAppLastStatus)
+            }
+            return
+        }
+        val status: String?
+        val frame: String?
+        if (!TextUtils.isEmpty(stdout)) {
+            status = termuxAppLastStatus
+            frame = stdout
+        } else if (!TextUtils.isEmpty(stderr)) {
+            status = "stderr"
+            frame = stderr
+        } else if (!TextUtils.isEmpty(error)) {
+            status = "error: " + error!!.trim { it <= ' ' }
+            frame = null
+        } else if (!TextUtils.isEmpty(debug)) {
+            status = "debug: " + debug!!.trim { it <= ' ' }
+            frame = null
+        } else if (exitCode != Int.Companion.MIN_VALUE && exitCode != 0) {
+            status = "exit: " + exitCode
+            frame = null
+        } else {
+            status = termuxAppLastStatus
+            frame = null
+        }
+        val frameChanged = updateTermuxAppLastFrame(frame)
+        renderTermuxAppFrame(frame, status)
+        if (frameChanged && shouldContinueTermuxAppWatch()) {
+            scheduleTermuxAppAdaptiveRefresh(app.id)
+        }
+    }
+
+    private fun termuxAppResultAction(label: String): String {
+        if (!label.startsWith(TERMUX_APP_RESULT_PREFIX)) {
+            return Tuils.EMPTYSTRING
+        }
+        val rest = label.substring(TERMUX_APP_RESULT_PREFIX.length)
+        val separator = rest.indexOf(':')
+        if (separator <= 0) {
+            return rest
+        }
+        return rest.substring(0, separator)
+    }
+
+    private fun termuxAppResultSequence(label: String): Int {
+        if (!label.startsWith(TERMUX_APP_RESULT_PREFIX)) {
+            return -1
+        }
+        val rest = label.substring(TERMUX_APP_RESULT_PREFIX.length)
+        val first = rest.indexOf(':')
+        if (first <= 0) {
+            return -1
+        }
+        val second = rest.indexOf(':', first + 1)
+        if (second <= first + 1) {
+            return -1
+        }
+        return try {
+            rest.substring(first + 1, second).toInt()
+        } catch (e: Exception) {
+            -1
+        }
+    }
+
+    private fun termuxAppResultId(label: String): String {
+        if (!label.startsWith(TERMUX_APP_RESULT_PREFIX)) {
+            return Tuils.EMPTYSTRING
+        }
+        val rest = label.substring(TERMUX_APP_RESULT_PREFIX.length)
+        val first = rest.indexOf(':')
+        if (first < 0 || first == rest.length - 1) {
+            return Tuils.EMPTYSTRING
+        }
+        val second = rest.indexOf(':', first + 1)
+        return if (second > first) rest.substring(second + 1) else rest.substring(first + 1)
+    }
+
+    private fun updateTermuxAppLastFrame(frame: String?): Boolean {
+        val clean = stripTermuxAnsi(frame)?.trimEnd { it <= ' ' }
+        if (TextUtils.isEmpty(clean)) {
+            return false
+        }
+        val changed = clean != termuxAppLastFrameText
+        termuxAppLastFrameText = clean
+        return changed
+    }
+
+    private fun isTermuxAppSessionEnded(
+        stdout: String?,
+        stderr: String?,
+        error: String?,
+        exitCode: Int
+    ): Boolean {
+        val combined = StringBuilder()
+        if (!TextUtils.isEmpty(stdout)) {
+            combined.append(stdout).append('\n')
+        }
+        if (!TextUtils.isEmpty(stderr)) {
+            combined.append(stderr).append('\n')
+        }
+        if (!TextUtils.isEmpty(error)) {
+            combined.append(error).append('\n')
+        }
+        val text = combined.toString().lowercase(Locale.getDefault())
+        if (text.contains("session ended. type :restart")
+            || text.contains("session not running. type :restart")
+            || text.contains("no server running on")
+            || text.contains("can't find session")
+            || text.contains("can't find pane")
+        ) {
+            return true
+        }
+        return exitCode != 0 && text.contains("tmux") && text.contains("server")
+    }
+
+    private fun renderTermuxAppFrame(frame: String?, status: String?) {
+        val app = termuxAppSession ?: return
+        val out = StringBuilder()
+        out.append("Re:T-UI app: ").append(app.title).append('\n')
+        out.append("session: ").append(TermuxAppManager.tmuxSessionName(app.id)).append('\n')
+        out.append("local commands: :help :refresh :restart :stop :detach :open").append('\n')
+        if (!TextUtils.isEmpty(status)) {
+            out.append("status: ").append(status).append('\n')
+        }
+        out.append("----")
+        val cleanFrame = stripTermuxAnsi(frame)
+        if (!TextUtils.isEmpty(cleanFrame)) {
+            out.append('\n').append(cleanFrame!!.trimEnd { it <= ' ' })
+        }
+        termuxBuffer.setLength(0)
+        termuxBuffer.append(out.toString().trimEnd { it <= ' ' })
+        updateTermuxOutput()
+    }
+
+    private fun stripTermuxAnsi(text: String?): String? {
+        if (text == null) {
+            return null
+        }
+        return termuxAnsiPattern.matcher(text).replaceAll(Tuils.EMPTYSTRING)
     }
 
     private fun appendTermuxSetup() {
@@ -6140,6 +6959,14 @@ class UIManager(
             sendTermuxBridgeResult(path, stdout, stderr, error, exitCode, debug)
             return
         }
+        if (!TextUtils.isEmpty(path) && path!!.startsWith(TERMUX_APP_RESULT_PREFIX)) {
+            appendTermuxAppResult(path, stdout, stderr, error, exitCode, debug)
+            return
+        }
+        if (!TextUtils.isEmpty(path) && path!!.startsWith(TERMUX_APP_SYNC_RESULT_PREFIX)) {
+            appendTermuxAppSyncResult(path, stdout, stderr, error, exitCode, debug)
+            return
+        }
         if (!TextUtils.isEmpty(path) && path!!.startsWith(TERMUX_CONSOLE_RESULT_PREFIX)) {
             appendTermuxConsoleCommandResult(path, stdout, stderr, error, exitCode, debug)
             return
@@ -6343,6 +7170,7 @@ class UIManager(
                     ACTION_UPDATE_SUGGESTIONS
                 )
             )
+            return
         } else if (label.startsWith("files ") && exitCode == 0) {
             val target = label.substring(6)
             putFiles(target, stdout)
@@ -6352,6 +7180,7 @@ class UIManager(
                     ACTION_UPDATE_SUGGESTIONS
                 )
             )
+            return
         }
 
         val builder = StringBuilder()
@@ -6458,12 +7287,34 @@ class UIManager(
     }
 
     private fun updateTermuxOutput() {
+        val shouldKeepInputFocus = this.isTermuxConsoleVisible && termuxInput != null && termuxInput!!.hasFocus()
         if (termuxOutput != null) {
             termuxOutput!!.setText(termuxBuffer.toString())
         }
         if (termuxScroll != null) {
-            termuxScroll!!.post(Runnable { termuxScroll!!.fullScroll(View.FOCUS_DOWN) })
+            termuxScroll!!.post(Runnable {
+                if (termuxScroll == null) {
+                    return@Runnable
+                }
+                val scrollChild = termuxScroll!!.getChildAt(0)
+                if (scrollChild != null) {
+                    termuxScroll!!.scrollTo(0, scrollChild.getBottom())
+                }
+                restoreTermuxInputFocusAfterOutputUpdate(shouldKeepInputFocus)
+            })
+        } else {
+            restoreTermuxInputFocusAfterOutputUpdate(shouldKeepInputFocus)
         }
+    }
+
+    private fun restoreTermuxInputFocusAfterOutputUpdate(shouldKeepInputFocus: Boolean) {
+        if (!shouldKeepInputFocus || !this.isTermuxConsoleVisible || termuxInput == null || termuxInput!!.hasFocus()) {
+            return
+        }
+        termuxInput!!.setShowSoftInputOnFocus(true)
+        termuxInput!!.setCursorVisible(true)
+        termuxInput!!.requestFocusFromTouch()
+        termuxInput!!.requestFocus()
     }
 
     private fun styleClockOverlay(rootView: View) {
@@ -8283,7 +9134,14 @@ class UIManager(
         const val EXTRA_WIDGET_ACTION_INDEX: String = "widget_action_index"
         const val EXTRA_WIDGET_ACTION_VALUE: String = "widget_action_value"
         private val TERMUX_FOCUS_CAPTURE_DELAYS_MS = intArrayOf(0, 80, 180, 360)
+        private val TERMUX_APP_REFRESH_BURST_DELAYS_MS = intArrayOf(700, 1600, 3500, 8000, 15000, 30000)
+        private const val TERMUX_APP_ADAPTIVE_REFRESH_INTERVAL_MS = 3000
+        private const val TERMUX_APP_INPUT_WATCH_MS = 30000L
+        private const val TERMUX_APP_MANUAL_REFRESH_WATCH_MS = 15000L
+        private const val TERMUX_APP_START_WATCH_MS = 120000L
         private const val TERMUX_CONSOLE_RESULT_PREFIX = "retui-console:"
+        private const val TERMUX_APP_RESULT_PREFIX = "retui-app:"
+        private const val TERMUX_APP_SYNC_RESULT_PREFIX = "retui-app-sync:"
         private val TERMUX_CONSOLE_SHELL_RESULT_PREFIX: String =
             TERMUX_CONSOLE_RESULT_PREFIX + "shell:"
         private val TERMUX_CONSOLE_CD_RESULT_PREFIX: String = TERMUX_CONSOLE_RESULT_PREFIX + "cd:"

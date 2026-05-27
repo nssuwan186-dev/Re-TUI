@@ -197,7 +197,7 @@
     <string name="output_flashoff">Flashlight OFF</string>
     <string name="output_flashlightnotavailable">Your device doesn\'t support flashlight</string>
 
-    <string name="help_termux">Open the Re:T-UI Termux console.\n\nUsage:\ntermux\ntermux -status\ntermux -setup\ntermux -open\ntermux -run &lt;script_path&gt; [args...]\n\nInside the console:\nstatus, setup, open, run, help, clear, exit\n\nFor script modules:\nmodule -add server termux:/data/data/com.termux/files/home/retui/server-health.sh\nmodule -refresh server</string>
+    <string name="help_termux">Open the Re:T-UI Termux console.\n\nUsage:\ntermux\ntermux -status\ntermux -setup\ntermux -open\ntermux -run &lt;script_path&gt; [args...]\ntermux -apps\ntermux -app &lt;id&gt;\ntermux -app-add &lt;id&gt; &lt;command&gt;\ntermux -app-info &lt;id&gt;\ntermux -app-sync &lt;id&gt;\ntermux -app-actions &lt;id&gt;\ntermux -app-action &lt;id&gt; &lt;label&gt; [input]\ntermux -app-action-rm &lt;id&gt; &lt;label&gt;\n\nInside the console:\nstatus, setup, open, run, apps, app, app-add, app-info, app-sync, app-actions, app-action, app-action-rm, app-rm, help, clear, exit\n\nFor script modules:\nmodule -add server termux:/data/data/com.termux/files/home/retui/server-health.sh\nmodule -refresh server</string>
     <string name="help_files">Open Re:T-UI Files.
         \nUsage:
         \n$ files

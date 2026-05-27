@@ -170,6 +170,65 @@ echo "::suggest access | command | events -access"
 
 You can also update modules by callback. This is better for scripts that run on their own schedule.
 
+## Termux Apps
+
+Termux apps are a first-pass session surface for interactive Bash tools that should feel closer to an application than a one-shot module. Re:T-UI owns the app window, input field, styling, suggestions, and local commands. Termux owns the running process through `tmux`.
+
+Common commands:
+
+```text
+termux -apps
+termux -app terminalphone
+terminalphone
+termux -app-add myapp bash ~/retui/myapp.sh
+termux -app-info terminalphone
+termux -app-sync terminalphone
+termux -app-actions terminalphone
+termux -app-action myapp "restart service" r
+```
+
+`terminalphone` is a built-in profile. It starts `~/terminalphone/terminalphone.sh` when that clone exists, or `~/retui/terminalphone.sh` as a fallback.
+
+Re:T-UI owns app registration. A cloned shell project does not need to include a Re:T-UI manifest. When an app is registered or opened, Re:T-UI mirrors metadata into:
+
+```text
+~/.retui/apps/<id>/app.json
+~/.retui/apps/<id>/state.json
+~/.retui/apps/<id>/memory/
+~/.retui/apps/<id>/logs/
+```
+
+The tmux session is launched with these environment variables:
+
+```text
+RETUI_APP_ID
+RETUI_APP_HOME
+RETUI_APP_STATE
+RETUI_APP_MANIFEST
+```
+
+Scripts can use `RETUI_APP_STATE` for their own JSON state and `RETUI_APP_HOME` for persistent files. `termux -app-sync <id>` rewrites this manifest on demand and reports the sync result in the console. This does not add Android manifest permissions; it uses the existing Termux RUN_COMMAND bridge.
+
+Static app actions are RetUI-owned command chips. They send fixed input into the tmux session, then refresh the captured pane. The built-in TerminalPhone profile includes `start tor`, `status`, `show onion`, and `stop tor`. Custom apps can add actions with:
+
+```text
+termux -app-action myapp "show status" 6
+termux -app-action myapp "continue"
+```
+
+Inside the app surface:
+
+```text
+7
+:refresh
+:restart
+:stop
+:detach
+:open
+```
+
+Plain input is sent into the tmux session and followed by Enter. Colon-prefixed input is handled by Re:T-UI. This v2 bridge keeps sessions alive, mirrors a RetUI-owned manifest, exposes static actions, and lets Re:T-UI capture the current tmux pane, but it is not a full streaming PTY. Captures are sequenced so stale RunCommand results cannot overwrite newer frames, and refresh polling now backs off unless the captured pane is still changing.
+
 ## TBridge Role
 
 Use TBridge for:

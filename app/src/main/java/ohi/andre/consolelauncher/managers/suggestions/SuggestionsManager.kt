@@ -55,6 +55,7 @@ import ohi.andre.consolelauncher.managers.settings.LauncherSettings.getBoolean
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache.dirs
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache.files
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeCache.shouldRequest
+import ohi.andre.consolelauncher.managers.termux.TermuxAppManager
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeManager
 import ohi.andre.consolelauncher.managers.termux.TermuxBridgeManager.dispatchShell
 import ohi.andre.consolelauncher.managers.widgets.LuaWidgetEngine
@@ -1502,12 +1503,78 @@ class SuggestionsManager(
             suggestions.add(
                 Suggestion(
                     null,
+                    "termux -apps",
+                    true,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
                     "termux -run",
                     false,
                     Suggestion.Companion.TYPE_PERMANENT
                 )
             )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -app",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -app-add",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -app-info",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -app-sync",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -app-action",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -app-actions",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -app-action-rm",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
         }
+
+        suggestTermuxAppRoots(suggestions, lower)
 
         if ("tbridge".startsWith(lower)) {
             suggestions.add(
@@ -1858,7 +1925,71 @@ class SuggestionsManager(
             suggestions.add(
                 Suggestion(
                     beforeLastSpace,
+                    "-apps",
+                    true,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
                     "-run",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-app",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-app-add",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-app-info",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-app-sync",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-app-actions",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-app-action",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-app-action-rm",
                     false,
                     Suggestion.Companion.TYPE_COMMAND
                 )
@@ -1871,6 +2002,15 @@ class SuggestionsManager(
                 beforeLastSpace,
                 AliasManager.SCOPE_SCRIPT
             )
+        } else if ("termux -app" == normalized || "termux app" == normalized) {
+            suggestTermuxAppIds(suggestions, afterLastSpace, beforeLastSpace)
+        } else if ("termux -app-actions" == normalized || "termux app-actions" == normalized
+            || "termux -app-action" == normalized || "termux app-action" == normalized
+            || "termux -app-action-rm" == normalized || "termux app-action-rm" == normalized
+            || "termux -app-info" == normalized || "termux app-info" == normalized
+            || "termux -app-sync" == normalized || "termux app-sync" == normalized
+        ) {
+            suggestTermuxAppIds(suggestions, afterLastSpace, beforeLastSpace)
         } else if ("tbridge" == normalized) {
             for (option in arrayOf<String>(
                 "-status",
@@ -2241,6 +2381,24 @@ class SuggestionsManager(
         }
     }
 
+    private fun suggestTermuxAppRoots(suggestions: MutableList<Suggestion?>, lower: String) {
+        if (lower.length == 0) {
+            return
+        }
+        for (app in TermuxAppManager.list(pack.context)) {
+            if (app.id.startsWith(lower)) {
+                suggestions.add(
+                    Suggestion(
+                        null,
+                        app.id,
+                        true,
+                        Suggestion.Companion.TYPE_COMMAND
+                    )
+                )
+            }
+        }
+    }
+
     private fun suggestWidgetIds(
         suggestions: MutableList<Suggestion?>,
         lastWord: String?,
@@ -2433,6 +2591,26 @@ class SuggestionsManager(
                         a!!.name,
                         false,
                         Suggestion.Companion.TYPE_ALIAS
+                    )
+                )
+            }
+        }
+    }
+
+    private fun suggestTermuxAppIds(
+        suggestions: MutableList<Suggestion?>,
+        lastWord: String?,
+        beforeLastSpace: String?
+    ) {
+        val filter = if (lastWord == null) Tuils.EMPTYSTRING else lastWord.lowercase(Locale.getDefault())
+        for (app in TermuxAppManager.list(pack.context)) {
+            if (filter.length == 0 || app.id.startsWith(filter)) {
+                suggestions.add(
+                    Suggestion(
+                        beforeLastSpace,
+                        app.id,
+                        true,
+                        Suggestion.Companion.TYPE_COMMAND
                     )
                 )
             }

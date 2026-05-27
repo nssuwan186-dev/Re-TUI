@@ -225,6 +225,36 @@ Create or update a script to output:
 - Output unknown `::metadata`.
 - Confirm it does not show in the body.
 
+### Termux App Sessions
+
+- Build/install the normal `playstoreDebug` package, not a `.dev` package.
+- In Termux, install `tmux`.
+- Confirm TerminalPhone is present at `~/terminalphone/terminalphone.sh` or `~/retui/terminalphone.sh`.
+- In Re:T-UI, type `terminalphone`.
+- Confirm the Termux app surface opens with a `TerminalPhone` label.
+- Confirm action chips appear for `START TOR`, `STATUS`, `SHOW ONION`, and `STOP TOR`.
+- Tap `STATUS`.
+- Confirm input is sent to the session and the pane refreshes.
+- Type `6` and press Enter.
+- Confirm the tmux pane refreshes inside Re:T-UI.
+- Type `:refresh`.
+- Confirm Re:T-UI captures the existing session instead of starting a new process.
+- In Termux, run `cat ~/.retui/apps/terminalphone/app.json`.
+- Confirm the manifest includes `id`, `command`, `state`, `actions`, and `homeDir`.
+- Run `termux -app-info terminalphone`.
+- Confirm Re:T-UI prints the local command, workdir, manifest path, state path, and action count.
+- Run `termux -app-sync terminalphone`.
+- Confirm Re:T-UI reports `Manifest synced: terminalphone`.
+- In TerminalPhone, run or inspect environment from a launched script.
+- Confirm `RETUI_APP_ID`, `RETUI_APP_HOME`, `RETUI_APP_STATE`, and `RETUI_APP_MANIFEST` are set.
+- Type `:detach`.
+- Reopen `terminalphone`.
+- Confirm the previous tmux session is still attached.
+- Type `:stop`.
+- Confirm the session stops cleanly.
+- Run `termux -app-action terminalphone "continue"`.
+- Confirm `continue` appears in `termux -app-actions terminalphone` without changing Android permissions.
+
 ## Cross-Phase Regression
 
 - Confirm `help` still works while a module is active.

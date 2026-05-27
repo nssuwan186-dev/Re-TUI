@@ -32,6 +32,7 @@ import ohi.andre.consolelauncher.managers.music.MusicService
 import ohi.andre.consolelauncher.managers.notifications.KeeperService
 import ohi.andre.consolelauncher.managers.onboarding.GuideManager
 import ohi.andre.consolelauncher.managers.settings.MusicSettings.enabled
+import ohi.andre.consolelauncher.managers.termux.TermuxAppManager
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager
 import ohi.andre.consolelauncher.managers.xml.options.Behavior
 import ohi.andre.consolelauncher.managers.xml.options.Theme
@@ -107,6 +108,7 @@ class MainManager(private val mContext: LauncherActivity) {
         GroupTrigger(),
         AliasTrigger(),
         TuiCommandTrigger(),
+        TermuxAppTrigger(),
         AppTrigger(),
         ShellCommandTrigger()
     )
@@ -626,6 +628,22 @@ class MainManager(private val mContext: LauncherActivity) {
                 return performLaunch(info, i, input)
             }
             return false
+        }
+    }
+
+    private inner class TermuxAppTrigger : CmdTrigger {
+        override fun trigger(info: MainPack?, input: String?): Boolean {
+            val info = info ?: return false
+            val raw = input?.trim { it <= ' ' } ?: return false
+            val id = TermuxAppManager.normalizeId(input)
+            if (id.length == 0 || raw.contains(Tuils.SPACE) || !raw.equals(id, ignoreCase = true)) {
+                return false
+            }
+            val app = TermuxAppManager.resolve(info.context, id) ?: return false
+            val intent = Intent(UIManager.ACTION_TERMUX_CONSOLE)
+            intent.putExtra(UIManager.EXTRA_TERMUX_COMMAND, "app " + app.id)
+            LocalBroadcastManager.getInstance(info.context.applicationContext).sendBroadcast(intent)
+            return true
         }
     }
 

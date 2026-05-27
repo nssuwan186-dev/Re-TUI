@@ -270,6 +270,14 @@ Common commands:
 - `termux -setup`
 - `termux -open`
 - `termux -run <script_path> [args...]`
+- `termux -apps`
+- `termux -app <id>`
+- `termux -app-add <id> <command>`
+- `termux -app-info <id>`
+- `termux -app-sync <id>`
+- `termux -app-actions <id>`
+- `termux -app-action <id> <label> [input]`
+- `termux -app-action-rm <id> <label>`
 
 Script aliases use the `-s` alias scope:
 
@@ -277,6 +285,10 @@ Script aliases use the `-s` alias scope:
 - `termux -run test`
 
 Use this for scripts that print output and exit. Open Termux directly for interactive shells, editors, SSH sessions, and REPLs.
+
+Termux apps are tmux-backed sessions shown inside the Re:T-UI Termux surface. `terminalphone` is available as a built-in profile and opens `~/terminalphone/terminalphone.sh` or `~/retui/terminalphone.sh` when present. Inside a Termux app, normal input is sent to the session; local commands use a colon prefix: `:refresh`, `:restart`, `:stop`, `:detach`, and `:open`.
+
+Re:T-UI mirrors a small app manifest into `~/.retui/apps/<id>/app.json` when an app is registered or opened. Scripts launched through the app surface receive `RETUI_APP_ID`, `RETUI_APP_HOME`, `RETUI_APP_STATE`, and `RETUI_APP_MANIFEST`. Use `termux -app-info <id>` to inspect the local registration and `termux -app-sync <id>` to explicitly rewrite the Termux-side manifest. Static action chips can be added with `termux -app-action <id> <label> [input]`; the built-in TerminalPhone profile includes chips for starting Tor, status, showing the onion address, and stopping Tor.
 
 ### `tbridge`
 
