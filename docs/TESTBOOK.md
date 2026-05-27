@@ -21,7 +21,7 @@ Use this as the phone test pass for the workstation rollout. Test on a clean ins
 
 - Type `help` but do not press enter yet.
 - Confirm the suggestion row shows workstation quickstart actions:
-  - `apps -l`
+  - `apps -ls`
   - `alias -add`
   - `apps -hide`
   - `wallpaper -auto`
@@ -37,7 +37,7 @@ Use this as the phone test pass for the workstation rollout. Test on a clean ins
   - apply theme / wallpaper auto
   - add or show module
 - Run or inspect the linked commands from help:
-  - `apps -l`
+  - `apps -ls`
   - `alias`
   - `apps -hide`
   - `wallpaper -auto`
@@ -79,7 +79,7 @@ Use this as the phone test pass for the workstation rollout. Test on a clean ins
 - Confirm app suggestions still launch directly.
 - Tap an app suggestion.
 - Confirm it opens the app, not an app-management action list.
-- Run `apps -l`.
+- Run `apps -ls`.
 - Confirm package/app listing still works.
 - Run or dry-check the existing app management commands:
   - `apps -hide`

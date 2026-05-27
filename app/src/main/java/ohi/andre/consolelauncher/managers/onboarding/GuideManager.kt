@@ -169,7 +169,7 @@ object GuideManager {
             .putString(KEY_PATH, path.id)
             .putInt(KEY_STEP, step)
             .putInt(stepKey(path.id), step)
-            .commit()
+            .apply()
         notifySuggestionsChanged(context)
 
         val action = if (step > 0 && !reset) "Resumed guide: " else "Started guide: "
@@ -209,7 +209,7 @@ object GuideManager {
     }
 
     fun reset(context: Context): String {
-        prefs(context).edit().clear().commit()
+        prefs(context).edit().clear().apply()
         notifySuggestionsChanged(context)
         return "Guide reset." + Tuils.NEWLINE + overview(context)
     }
@@ -218,7 +218,7 @@ object GuideManager {
         val prefs = prefs(context)
         val message = prefs.getString(KEY_PENDING_RESUME_MESSAGE, null)
         if (!message.isNullOrEmpty()) {
-            prefs.edit().remove(KEY_PENDING_RESUME_MESSAGE).commit()
+            prefs.edit().remove(KEY_PENDING_RESUME_MESSAGE).apply()
         }
         return message
     }
@@ -358,7 +358,7 @@ object GuideManager {
             .putString(KEY_PATH, path.id)
             .putInt(KEY_STEP, normalized)
             .putInt(stepKey(path.id), normalized)
-            .commit()
+            .apply()
         notifySuggestionsChanged(context)
     }
 
@@ -369,7 +369,7 @@ object GuideManager {
     }
 
     private fun savePendingResumeMessage(context: Context, message: String) {
-        prefs(context).edit().putString(KEY_PENDING_RESUME_MESSAGE, message).commit()
+        prefs(context).edit().putString(KEY_PENDING_RESUME_MESSAGE, message).apply()
     }
 
     private fun findPath(id: String?): Path? {
@@ -385,7 +385,7 @@ object GuideManager {
     private fun stepKey(pathId: String): String = KEY_STEP + "_" + pathId
 
     private fun stopInternal(context: Context) {
-        prefs(context).edit().putBoolean(KEY_ACTIVE, false).commit()
+        prefs(context).edit().putBoolean(KEY_ACTIVE, false).apply()
         notifySuggestionsChanged(context)
     }
 

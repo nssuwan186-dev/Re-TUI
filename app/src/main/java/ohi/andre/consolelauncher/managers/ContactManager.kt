@@ -205,92 +205,97 @@ class ContactManager(private val context: Context) {
     }
 
     fun about(phone: String?): Array<String?>? {
-        var mCursor = context.getContentResolver().query(
+        val firstCursor = context.getContentResolver().query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             arrayOf<String>(ContactsContract.CommonDataKinds.Phone.CONTACT_ID),
             ContactsContract.CommonDataKinds.Phone.NUMBER + " = ?", arrayOf<String?>(phone),
             null
-        )
+        ) ?: return null
 
-        if (mCursor == null || mCursor.getCount() == 0) return null
-        val about = arrayOfNulls<String>(SIZE)
+        firstCursor.use { cursor ->
+            if (cursor.getCount() == 0) return null
+            val about = arrayOfNulls<String>(SIZE)
 
-        mCursor.moveToNext()
+            cursor.moveToNext()
 
-        val contactIdIndex =
-            mCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
-        val id = if (contactIdIndex != -1) mCursor.getString(contactIdIndex) else null
-        about[CONTACT_ID] = id
+            val contactIdIndex =
+                cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
+            val id = if (contactIdIndex != -1) cursor.getString(contactIdIndex) else null
+            about[CONTACT_ID] = id
 
-        mCursor.close()
-        mCursor = context.getContentResolver().query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            arrayOf<String>(
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                ContactsContract.CommonDataKinds.Phone.TIMES_CONTACTED,
-                ContactsContract.CommonDataKinds.Phone.LAST_TIME_CONTACTED,
-                ContactsContract.CommonDataKinds.Phone.NUMBER
-            ),
-            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", arrayOf<String?>(id),
-            null
-        )
+            val detailsCursor = context.getContentResolver().query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf<String>(
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                    ContactsContract.CommonDataKinds.Phone.TIMES_CONTACTED,
+                    ContactsContract.CommonDataKinds.Phone.LAST_TIME_CONTACTED,
+                    ContactsContract.CommonDataKinds.Phone.NUMBER
+                ),
+                ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", arrayOf<String?>(id),
+                null
+            ) ?: return null
 
-        if (mCursor == null || mCursor.getCount() == 0) return null
-        mCursor.moveToNext()
+            detailsCursor.use { details ->
+                if (details.getCount() == 0) return null
+                details.moveToNext()
 
-        val displayNameIndex =
-            mCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-        val timesContactedIndex =
-            mCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TIMES_CONTACTED)
-        val lastTimeContactedIndex =
-            mCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LAST_TIME_CONTACTED)
-        val numberIndex = mCursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val displayNameIndex =
+                    details.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val timesContactedIndex =
+                    details.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TIMES_CONTACTED)
+                val lastTimeContactedIndex =
+                    details.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LAST_TIME_CONTACTED)
+                val numberIndex = details.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
 
-        about[NAME] = if (displayNameIndex != -1) mCursor.getString(displayNameIndex) else null
-        about[NUMBERS] = Tuils.EMPTYSTRING
+                about[NAME] = if (displayNameIndex != -1) details.getString(displayNameIndex) else null
+                about[NUMBERS] = Tuils.EMPTYSTRING
 
-        var timesContacted = -1
-        var lastContacted = Long.Companion.MAX_VALUE
-        do {
-            val tempT = if (timesContactedIndex != -1) mCursor.getInt(timesContactedIndex) else 0
-            val tempL =
-                if (lastTimeContactedIndex != -1) mCursor.getLong(lastTimeContactedIndex) else 0
+                var timesContacted = -1
+                var lastContacted = Long.Companion.MAX_VALUE
+                do {
+                    val tempT = if (timesContactedIndex != -1) details.getInt(timesContactedIndex) else 0
+                    val tempL =
+                        if (lastTimeContactedIndex != -1) details.getLong(lastTimeContactedIndex) else 0
 
-            timesContacted = if (tempT > timesContacted) tempT else timesContacted
-            if (tempL > 0) lastContacted = if (tempL < lastContacted) tempL else lastContacted
+                    timesContacted = if (tempT > timesContacted) tempT else timesContacted
+                    if (tempL > 0) lastContacted = if (tempL < lastContacted) tempL else lastContacted
 
-            val n = if (numberIndex != -1) mCursor.getString(numberIndex) else null
-            about[NUMBERS] =
-                (if (about[NUMBERS]!!.length > 0) about[NUMBERS] + Tuils.NEWLINE else Tuils.EMPTYSTRING) + n
-        } while (mCursor.moveToNext())
+                    val n = if (numberIndex != -1) details.getString(numberIndex) else null
+                    about[NUMBERS] =
+                        (if (about[NUMBERS]!!.length > 0) about[NUMBERS] + Tuils.NEWLINE else Tuils.EMPTYSTRING) + n
+                } while (details.moveToNext())
 
-        about[TIME_CONTACTED] = timesContacted.toString()
-        if (lastContacted != Long.Companion.MAX_VALUE) {
-            val difference = System.currentTimeMillis() - lastContacted
-            var sc = difference / 1000
-            if (sc < 60) {
-                about[LAST_CONTACTED] = "sec: " + lastContacted.toString()
-            } else {
-                var ms = (sc / 60).toInt()
-                sc = (ms % 60).toLong()
-                if (ms < 60) {
-                    about[LAST_CONTACTED] = "min: " + ms + ", sec: " + sc
-                } else {
-                    var h = ms / 60
-                    ms = h % 60
-                    if (h < 24) {
-                        about[LAST_CONTACTED] = "h: " + h + ", min: " + ms + ", sec: " + sc
+                about[TIME_CONTACTED] = timesContacted.toString()
+                if (lastContacted != Long.Companion.MAX_VALUE) {
+                    val difference = System.currentTimeMillis() - lastContacted
+                    var sc = difference / 1000
+                    if (sc < 60) {
+                        about[LAST_CONTACTED] = "sec: " + lastContacted.toString()
                     } else {
-                        val days = h / 24
-                        h = days % 24
-                        about[LAST_CONTACTED] =
-                            "d: " + days + ", h: " + h + ", min: " + ms + ", sec: " + sc
+                        var ms = (sc / 60).toInt()
+                        sc = (ms % 60).toLong()
+                        if (ms < 60) {
+                            about[LAST_CONTACTED] = "min: " + ms + ", sec: " + sc
+                        } else {
+                            var h = ms / 60
+                            ms = h % 60
+                            if (h < 24) {
+                                about[LAST_CONTACTED] = "h: " + h + ", min: " + ms + ", sec: " + sc
+                            } else {
+                                val days = h / 24
+                                h = days % 24
+                                about[LAST_CONTACTED] =
+                                    "d: " + days + ", h: " + h + ", min: " + ms + ", sec: " + sc
+                            }
+                        }
                     }
                 }
+
+                return about
             }
         }
 
-        return about
+        return null
     }
 
     fun findNumber(name: kotlin.String?): kotlin.String? {

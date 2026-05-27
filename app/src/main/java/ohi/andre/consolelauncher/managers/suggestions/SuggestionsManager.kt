@@ -87,6 +87,7 @@ import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.Map
 import java.util.Set
+import java.util.concurrent.atomic.AtomicLong
 import java.util.regex.Matcher
 import ohi.andre.consolelauncher.managers.ContactManager
 import ohi.andre.consolelauncher.managers.FileManager
@@ -130,6 +131,7 @@ class SuggestionsManager(
     private var lastFirst: Suggestion? = null
 
     private val luaSuggestionEngines = LinkedHashMap<String?, LuaWidgetEngine?>()
+    private val suggestionRequestId = AtomicLong(0L)
 
     private val clickListener = View.OnClickListener { v: View? ->
         val suggestion = v!!.getTag(R.id.suggestion_id) as Suggestion
@@ -138,8 +140,6 @@ class SuggestionsManager(
 
     private var lastSuggestionThread: StoppableThread? = null
     private val handler: Handler? = Handler()
-
-    private val removeAllSuggestions: RemoverRunnable
 
     private val spaces: IntArray
 
@@ -208,12 +208,21 @@ class SuggestionsManager(
         if (lastSuggestionThread != null) lastSuggestionThread!!.interrupt()
     }
 
-    fun dispose() {
+    private fun cancelPendingSuggestionRequests() {
+        suggestionRequestId.incrementAndGet()
         stop()
     }
 
+    private fun isLatestSuggestionRequest(requestId: Long): Boolean {
+        return suggestionRequestId.get() == requestId
+    }
+
+    fun dispose() {
+        cancelPendingSuggestionRequests()
+    }
+
     fun clear() {
-        stop()
+        cancelPendingSuggestionRequests()
         suggestionsView.removeAllViews()
     }
 
@@ -246,8 +255,6 @@ class SuggestionsManager(
 
         this.suggestionsPerCategory = XMLPrefsManager.getInt(Suggestions.suggestions_per_category)
         this.suggestionsDeadline = XMLPrefsManager.get(Suggestions.suggestions_deadline).toFloat()
-
-        this.removeAllSuggestions = RemoverRunnable(suggestionsView)
 
         doubleSpaceFirstSuggestion =
             XMLPrefsManager.getBoolean(Suggestions.double_space_click_first_suggestion)
@@ -432,6 +439,7 @@ class SuggestionsManager(
 
     fun requestSuggestion(input: String) {
         if (!enabled) return
+        val requestId = suggestionRequestId.incrementAndGet()
 
         if (suggestionViewParams == null) {
             suggestionViewParams = LinearLayout.LayoutParams(
@@ -530,9 +538,17 @@ class SuggestionsManager(
                     return
                 }
 
+                if (!isLatestSuggestionRequest(requestId) || interrupted()) {
+                    suggestionRunnable!!.interrupt()
+                    return
+                }
+
                 if (suggestions.size == 0) {
-                    (pack.context as Activity).runOnUiThread(removeAllSuggestions)
-                    removeAllSuggestions.isGoingToRun = true
+                    (pack.context as Activity).runOnUiThread(Runnable {
+                        if (isLatestSuggestionRequest(requestId)) {
+                            suggestionsView.removeAllViews()
+                        }
+                    })
 
                     if (hideViewValue == HideSuggestionViewValues.ALWAYS || (hideViewValue == HideSuggestionViewValues.TRUE && input.length == 0)) {
                         hide()
@@ -540,10 +556,6 @@ class SuggestionsManager(
 
                     return
                 } else {
-                    if (removeAllSuggestions.isGoingToRun) {
-                        removeAllSuggestions.stop = true
-                    }
-
                     show()
                 }
 
@@ -590,7 +602,11 @@ class SuggestionsManager(
                 suggestionRunnable!!.setToAdd(toAdd!!)
                 suggestionRunnable!!.setToRecycle(toRecycle!!)
                 suggestionRunnable!!.reset()
-                (pack.context as Activity).runOnUiThread(suggestionRunnable)
+                (pack.context as Activity).runOnUiThread(Runnable {
+                    if (isLatestSuggestionRequest(requestId)) {
+                        suggestionRunnable!!.run()
+                    }
+                })
             }
         }
 
@@ -948,7 +964,7 @@ class SuggestionsManager(
     }
 
     private fun suggestHelpQuickstartActions(suggestions: MutableList<Suggestion?>) {
-        suggestions.add(Suggestion(null, "apps -l", true, Suggestion.Companion.TYPE_PERMANENT))
+        suggestions.add(Suggestion(null, "apps -ls", true, Suggestion.Companion.TYPE_PERMANENT))
         suggestions.add(Suggestion(null, "alias -add", false, Suggestion.Companion.TYPE_PERMANENT))
         suggestions.add(Suggestion(null, "apps -hide", false, Suggestion.Companion.TYPE_PERMANENT))
         suggestions.add(

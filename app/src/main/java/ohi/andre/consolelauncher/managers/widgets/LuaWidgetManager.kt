@@ -989,6 +989,7 @@ object LuaWidgetManager {
                 + "    pomodoro_line(clock:pomodoro())\n"
                 + "    ui:suggest_command(\"25m\", \"timer 25m\")\n"
                 + "    ui:suggest_command(\"+5m\", \"timer -add 5m\")\n"
+                + "    ui:suggest_command(\"+15m\", \"timer -add 15m\")\n"
                 + "    ui:suggest_command(\"stop\", \"timer -stop\")\n"
                 + "    ui:suggest_command(\"status\", \"timer -status\")\n"
                 + "    ui:suggest_command(\"watch\", \"stopwatch\")\n"

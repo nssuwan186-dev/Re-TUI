@@ -5,10 +5,9 @@ open class StoppableThread : Thread() {
     private var stopped = false
 
     init {
-        setDefaultUncaughtExceptionHandler { _, e ->
+        uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, e ->
             Tuils.log(e)
             Tuils.toFile(e)
-            System.exit(1)
         }
     }
 
