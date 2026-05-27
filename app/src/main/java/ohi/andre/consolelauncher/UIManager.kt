@@ -291,6 +291,7 @@ class UIManager(
     private var termuxWindowLabel: TextView? = null
     private var termuxClose: TextView? = null
     private var termuxOutput: TextView? = null
+    private var termuxRichOutput: LinearLayout? = null
     private var termuxPrefix: TextView? = null
     private var termuxInput: EditText? = null
     private var termuxScroll: ScrollView? = null
@@ -2532,16 +2533,21 @@ class UIManager(
         )
     }
 
-    private fun renderLuaLayout(parent: LinearLayout, module: String?, rawJson: String?): Boolean {
+    private fun renderLuaLayout(
+        parent: LinearLayout,
+        module: String?,
+        rawJson: String?,
+        appSurface: Boolean = false
+    ): Boolean {
         if (TextUtils.isEmpty(rawJson)) {
             return false
         }
         try {
             val trimmed = rawJson!!.trim { it <= ' ' }
             if (trimmed.startsWith("[")) {
-                renderLuaLayoutArray(parent, module, JSONArray(trimmed))
+                renderLuaLayoutArray(parent, module, JSONArray(trimmed), appSurface)
             } else {
-                renderLuaLayoutObject(parent, module, JSONObject(trimmed))
+                renderLuaLayoutObject(parent, module, JSONObject(trimmed), appSurface)
             }
             return true
         } catch (e: Exception) {
@@ -2550,20 +2556,30 @@ class UIManager(
         }
     }
 
-    private fun renderLuaLayoutArray(parent: LinearLayout, module: String?, array: JSONArray) {
+    private fun renderLuaLayoutArray(
+        parent: LinearLayout,
+        module: String?,
+        array: JSONArray,
+        appSurface: Boolean
+    ) {
         for (i in 0..<array.length()) {
             val item = array.opt(i)
             if (item is JSONObject) {
-                renderLuaLayoutObject(parent, module, item)
+                renderLuaLayoutObject(parent, module, item, appSurface)
             } else if (item is JSONArray) {
-                renderLuaLayoutCompact(parent, module, item)
+                renderLuaLayoutCompact(parent, module, item, appSurface)
             } else if (item != null) {
                 addLuaText(parent, item.toString(), module)
             }
         }
     }
 
-    private fun renderLuaLayoutCompact(parent: LinearLayout, module: String?, array: JSONArray) {
+    private fun renderLuaLayoutCompact(
+        parent: LinearLayout,
+        module: String?,
+        array: JSONArray,
+        appSurface: Boolean
+    ) {
         if (array.length() == 0) {
             return
         }
@@ -2576,10 +2592,15 @@ class UIManager(
         } else {
             obj.put("text", array.optString(1, ""))
         }
-        renderLuaLayoutObject(parent, module, obj)
+        renderLuaLayoutObject(parent, module, obj, appSurface)
     }
 
-    private fun renderLuaLayoutObject(parent: LinearLayout, module: String?, obj: JSONObject) {
+    private fun renderLuaLayoutObject(
+        parent: LinearLayout,
+        module: String?,
+        obj: JSONObject,
+        appSurface: Boolean
+    ) {
         val type = obj.optString("type", obj.optString("kind", "text")).lowercase(Locale.US)
         if ("column" == type || "container" == type) {
             val column = LinearLayout(mContext)
@@ -2591,7 +2612,7 @@ class UIManager(
                 )
             )
             parent.addView(column)
-            renderLuaLayoutChildren(column, module, obj.optJSONArray("children"))
+            renderLuaLayoutChildren(column, module, obj.optJSONArray("children"), appSurface)
             return
         }
         if ("row" == type) {
@@ -2615,23 +2636,15 @@ class UIManager(
                     lp.setMargins(margin, margin, margin, margin)
                     childBox.setLayoutParams(lp)
                     row.addView(childBox)
-                    renderLuaLayoutObject(childBox, module, child)
+                    renderLuaLayoutObject(childBox, module, child, appSurface)
                 }
             }
             return
         }
-        if ("button" == type || "command" == type || "module" == type) {
-            val label = obj.optString("label", obj.optString("text", "button"))
-            val command = commandFromLuaLayoutObject(obj)
+        if ("button" == type || "action" == type || "command" == type || "module" == type) {
             addLuaButtonGrid(
                 parent,
-                mutableListOf(
-                    LuaSurfaceAction(label) {
-                        if (!TextUtils.isEmpty(command)) {
-                            executeLuaWidgetCommand(command)
-                        }
-                    }
-                )
+                mutableListOf(luaLayoutSurfaceAction(module, obj, appSurface))
             )
             return
         }
@@ -2662,16 +2675,44 @@ class UIManager(
         addLuaText(parent, text, module)
     }
 
-    private fun renderLuaLayoutChildren(parent: LinearLayout, module: String?, children: JSONArray?) {
+    private fun renderLuaLayoutChildren(
+        parent: LinearLayout,
+        module: String?,
+        children: JSONArray?,
+        appSurface: Boolean
+    ) {
         if (children == null) {
             return
         }
         for (i in 0..<children.length()) {
             val child = children.opt(i)
             if (child is JSONObject) {
-                renderLuaLayoutObject(parent, module, child)
+                renderLuaLayoutObject(parent, module, child, appSurface)
             } else if (child is JSONArray) {
-                renderLuaLayoutCompact(parent, module, child)
+                renderLuaLayoutCompact(parent, module, child, appSurface)
+            }
+        }
+    }
+
+    private fun luaLayoutSurfaceAction(
+        module: String?,
+        obj: JSONObject,
+        appSurface: Boolean
+    ): LuaSurfaceAction {
+        val label = obj.optString("label", obj.optString("text", "button"))
+        val localValue = obj.optString("action", obj.optString("value", label))
+        val hasLocalAction = obj.has("action") || obj.has("value") || "action" == obj.optString(
+            "type",
+            obj.optString("kind", "")
+        ).lowercase(Locale.US)
+        val command = commandFromLuaLayoutObject(obj)
+        return LuaSurfaceAction(label) {
+            if (!TextUtils.isEmpty(command)) {
+                executeLuaWidgetCommand(command)
+            } else if (appSurface) {
+                actionLuaApp(localValue)
+            } else if (hasLocalAction) {
+                actionLuaWidget(module, localValue)
             }
         }
     }
@@ -3654,6 +3695,7 @@ class UIManager(
         termuxWindowLabel = rootView.findViewById<TextView?>(R.id.termux_window_label)
         termuxClose = rootView.findViewById<TextView?>(R.id.termux_close)
         termuxOutput = rootView.findViewById<TextView?>(R.id.termux_output)
+        termuxRichOutput = rootView.findViewById<LinearLayout?>(R.id.termux_rich_output)
         termuxPrefix = rootView.findViewById<TextView?>(R.id.termux_prefix)
         termuxInput = rootView.findViewById<EditText?>(R.id.termux_input)
         termuxScroll = rootView.findViewById<ScrollView?>(R.id.termux_scroll)
@@ -3690,9 +3732,16 @@ class UIManager(
                 termuxInput!!.setShowSoftInputOnFocus(hasFocus)
             })
             termuxInput!!.setOnEditorActionListener(OnEditorActionListener { v: TextView?, actionId: Int, event: KeyEvent? ->
-                val enter =
-                    event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP
-                if (actionId == EditorInfo.IME_ACTION_GO || enter) {
+                if (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
+                    if (event.getAction() != KeyEvent.ACTION_UP) {
+                        return@OnEditorActionListener true
+                    }
+                    val command = termuxInput!!.getText().toString()
+                    termuxInput!!.setText(Tuils.EMPTYSTRING)
+                    submitTermuxConsoleCommand(command)
+                    return@OnEditorActionListener true
+                }
+                if (actionId == EditorInfo.IME_ACTION_GO) {
                     val command = termuxInput!!.getText().toString()
                     termuxInput!!.setText(Tuils.EMPTYSTRING)
                     submitTermuxConsoleCommand(command)
@@ -5814,6 +5863,14 @@ class UIManager(
 
     private fun renderLuaAppFrame(result: LuaWidgetEngine.RenderResult?, status: String?) {
         val id = luaAppId ?: return
+        if (result != null
+            && TextUtils.isEmpty(result.error)
+            && !TextUtils.isEmpty(result.layoutJson)
+            && renderLuaAppRichFrame(id, result, status)
+        ) {
+            return
+        }
+        showPlainTermuxOutput()
         val out = StringBuilder()
         out.append("Re:T-UI Lua app: ").append(luaAppTitle()).append('\n')
         out.append("script: ").append(id).append('\n')
@@ -5839,6 +5896,47 @@ class UIManager(
         termuxBuffer.setLength(0)
         termuxBuffer.append(out.toString().trimEnd { it <= ' ' })
         updateTermuxOutput()
+    }
+
+    private fun renderLuaAppRichFrame(
+        id: String,
+        result: LuaWidgetEngine.RenderResult,
+        status: String?
+    ): Boolean {
+        val container = termuxRichOutput ?: return false
+        showRichTermuxOutput()
+        termuxBuffer.setLength(0)
+        if (termuxOutput != null) {
+            termuxOutput!!.text = Tuils.EMPTYSTRING
+        }
+
+        addLuaText(container, "Re:T-UI Lua app: " + luaAppTitle(), id, MODULE_TEXT_FONT_MONO)
+        addLuaText(container, "script: " + id, id, MODULE_TEXT_FONT_MONO)
+        addLuaText(
+            container,
+            "local commands: :help :refresh :restart :config :edit :clear :close",
+            id,
+            MODULE_TEXT_FONT_MONO
+        )
+        if (!TextUtils.isEmpty(status)) {
+            addLuaText(container, "status: " + status, id, MODULE_TEXT_FONT_MONO)
+        }
+        addLuaText(container, "----------------", id, MODULE_TEXT_FONT_MONO)
+
+        renderLuaLayout(container, id, result.layoutJson, true)
+        if (!TextUtils.isEmpty(result.body)) {
+            val spacer = View(mContext)
+            spacer.setLayoutParams(
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    Tuils.dpToPx(mContext, 8)
+                )
+            )
+            container.addView(spacer)
+            addLuaBodyText(container, result.body, id)
+        }
+        scrollTermuxOutputToTop(this.isTermuxConsoleVisible && termuxInput != null && termuxInput!!.hasFocus())
+        return true
     }
 
     private fun luaAppTitle(): String {
@@ -5899,21 +5997,31 @@ class UIManager(
     private fun clickLuaApp(index: Int) {
         val engine = luaAppEngine ?: return
         renderLuaAppResult(engine.click(index), "button " + index)
+        restoreLuaAppInputFocusSoon()
     }
 
     private fun actionLuaApp(value: String?) {
         val engine = luaAppEngine ?: return
         renderLuaAppResult(engine.action(value), if (TextUtils.isEmpty(value)) "action" else "action: " + value)
+        restoreLuaAppInputFocusSoon()
     }
 
     private fun dialogLuaApp(index: Int) {
         val engine = luaAppEngine ?: return
         renderLuaAppResult(engine.dialog(index), if (index < 0) "dialog canceled" else "dialog: " + index)
+        restoreLuaAppInputFocusSoon()
     }
 
     private fun setLuaAppExpanded(expanded: Boolean) {
         val engine = luaAppEngine ?: return
         renderLuaAppResult(engine.setExpanded(expanded), if (expanded) "expanded" else "collapsed")
+        restoreLuaAppInputFocusSoon()
+    }
+
+    private fun restoreLuaAppInputFocusSoon() {
+        if (luaAppId != null && this.isTermuxConsoleVisible) {
+            scheduleTermuxConsoleFocusCapture(true)
+        }
     }
 
     private fun scheduleLuaAppTickIfNeeded(result: LuaWidgetEngine.RenderResult?) {
@@ -6045,9 +6153,8 @@ class UIManager(
         }
         appendTermuxLine("Termux apps")
         for (app in apps) {
-            val builtIn = if (TermuxAppManager.TERMINALPHONE_ID == app.id) " [built-in]" else ""
             val actionInfo = if (app.actions.isEmpty()) "" else " [" + app.actions.size + " actions]"
-            appendTermuxLine(app.id + " -> " + app.title + builtIn + actionInfo)
+            appendTermuxLine(app.id + " -> " + app.title + actionInfo)
             appendTermuxLine("  home: " + app.homeDir)
         }
         appendTermuxLine("Open with: app <id>")
@@ -6154,7 +6261,7 @@ class UIManager(
         val parts = Tuils.splitArgs(command)
         if (parts.size < 3) {
             appendTermuxLine("usage: app-action <id> <label> [input]")
-            appendTermuxLine("example: app-action terminalphone \"start tor\" 8")
+            appendTermuxLine("example: app-action myapp \"show status\" 6")
             return
         }
         val id = parts.get(1)
@@ -7445,11 +7552,36 @@ class UIManager(
         updateTermuxOutput()
     }
 
+    private fun showPlainTermuxOutput() {
+        if (termuxRichOutput != null) {
+            termuxRichOutput!!.removeAllViews()
+            termuxRichOutput!!.visibility = View.GONE
+        }
+        if (termuxOutput != null) {
+            termuxOutput!!.visibility = View.VISIBLE
+        }
+    }
+
+    private fun showRichTermuxOutput() {
+        if (termuxOutput != null) {
+            termuxOutput!!.visibility = View.GONE
+        }
+        if (termuxRichOutput != null) {
+            termuxRichOutput!!.removeAllViews()
+            termuxRichOutput!!.visibility = View.VISIBLE
+        }
+    }
+
     private fun updateTermuxOutput() {
         val shouldKeepInputFocus = this.isTermuxConsoleVisible && termuxInput != null && termuxInput!!.hasFocus()
+        showPlainTermuxOutput()
         if (termuxOutput != null) {
             termuxOutput!!.setText(termuxBuffer.toString())
         }
+        scrollTermuxOutputToBottom(shouldKeepInputFocus)
+    }
+
+    private fun scrollTermuxOutputToBottom(shouldKeepInputFocus: Boolean) {
         if (termuxScroll != null) {
             termuxScroll!!.post(Runnable {
                 if (termuxScroll == null) {
@@ -7459,6 +7591,20 @@ class UIManager(
                 if (scrollChild != null) {
                     termuxScroll!!.scrollTo(0, scrollChild.getBottom())
                 }
+                restoreTermuxInputFocusAfterOutputUpdate(shouldKeepInputFocus)
+            })
+        } else {
+            restoreTermuxInputFocusAfterOutputUpdate(shouldKeepInputFocus)
+        }
+    }
+
+    private fun scrollTermuxOutputToTop(shouldKeepInputFocus: Boolean) {
+        if (termuxScroll != null) {
+            termuxScroll!!.post(Runnable {
+                if (termuxScroll == null) {
+                    return@Runnable
+                }
+                termuxScroll!!.scrollTo(0, 0)
                 restoreTermuxInputFocusAfterOutputUpdate(shouldKeepInputFocus)
             })
         } else {

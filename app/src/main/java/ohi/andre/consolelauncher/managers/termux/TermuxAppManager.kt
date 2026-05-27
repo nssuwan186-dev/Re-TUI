@@ -6,7 +6,6 @@ import android.text.TextUtils
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.ArrayList
-import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.Locale
 
@@ -18,8 +17,6 @@ object TermuxAppManager {
     private const val KEY_WORKDIR_PREFIX = "workdir_"
     private const val KEY_ACTIONS_PREFIX = "actions_"
     private const val APP_ROOT = TermuxBridgeManager.TERMUX_HOME + "/.retui/apps"
-
-    const val TERMINALPHONE_ID = "terminalphone"
 
     fun normalizeId(value: String?): String {
         if (value == null) {
@@ -33,10 +30,8 @@ object TermuxAppManager {
     fun list(context: Context): MutableList<TermuxApp> {
         val out = ArrayList<TermuxApp>()
         val store = prefs(context)
-        out.add(defaultTerminalPhone(store))
 
         val seen = LinkedHashSet<String>()
-        seen.add(TERMINALPHONE_ID)
         for (rawId in store.getStringSet(KEY_IDS, LinkedHashSet<String>()) ?: LinkedHashSet()) {
             val id = normalizeId(rawId)
             if (TextUtils.isEmpty(id) || seen.contains(id)) {
@@ -57,9 +52,6 @@ object TermuxAppManager {
             return null
         }
         val store = prefs(context)
-        if (TERMINALPHONE_ID == normalized) {
-            return defaultTerminalPhone(store)
-        }
         return storedApp(store, normalized)
     }
 
@@ -84,7 +76,7 @@ object TermuxAppManager {
 
     fun remove(context: Context, id: String?): Boolean {
         val normalized = normalizeId(id)
-        if (TextUtils.isEmpty(normalized) || TERMINALPHONE_ID == normalized) {
+        if (TextUtils.isEmpty(normalized)) {
             return false
         }
         val store = prefs(context)
@@ -189,37 +181,6 @@ object TermuxAppManager {
         )
     }
 
-    private fun defaultTerminalPhone(store: SharedPreferences?): TermuxApp {
-        val command = (
-                "if [ -f \"\$HOME/terminalphone/terminalphone.sh\" ]; then " +
-                        "cd \"\$HOME/terminalphone\" && exec bash terminalphone.sh; " +
-                        "elif [ -f \"\$HOME/retui/terminalphone.sh\" ]; then " +
-                        "cd \"\$HOME/retui\" && exec bash terminalphone.sh; " +
-                        "else " +
-                        "printf '%s\\n' 'TerminalPhone was not found in ~/terminalphone or ~/retui.' " +
-                        "'Clone it in Termux, then reopen this app.' " +
-                        "'git clone https://gitlab.com/here_forawhile/terminalphone.git ~/terminalphone'; " +
-                        "exec sh; " +
-                        "fi"
-                )
-        return TermuxApp(
-            TERMINALPHONE_ID,
-            "TerminalPhone",
-            command,
-            TermuxBridgeManager.TERMUX_HOME,
-            mergeActions(defaultTerminalPhoneActions(), readStoredActions(store, TERMINALPHONE_ID))
-        )
-    }
-
-    private fun defaultTerminalPhoneActions(): List<TermuxAppAction> {
-        val actions = ArrayList<TermuxAppAction>()
-        actions.add(TermuxAppAction("start tor", "8"))
-        actions.add(TermuxAppAction("status", "6"))
-        actions.add(TermuxAppAction("show onion", "3"))
-        actions.add(TermuxAppAction("stop tor", "9"))
-        return actions
-    }
-
     private fun readStoredActions(store: SharedPreferences?, id: String): List<TermuxAppAction> {
         if (store == null) {
             return emptyList()
@@ -252,20 +213,6 @@ object TermuxAppManager {
             )
         }
         return array.toString()
-    }
-
-    private fun mergeActions(
-        defaults: List<TermuxAppAction>,
-        stored: List<TermuxAppAction>
-    ): List<TermuxAppAction> {
-        val merged = LinkedHashMap<String, TermuxAppAction>()
-        for (action in defaults) {
-            merged[action.label.lowercase(Locale.getDefault())] = action
-        }
-        for (action in stored) {
-            merged[action.label.lowercase(Locale.getDefault())] = action
-        }
-        return ArrayList(merged.values)
     }
 
     private fun sameActionLabel(left: String?, right: String?): Boolean {

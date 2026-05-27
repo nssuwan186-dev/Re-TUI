@@ -273,7 +273,7 @@
         \n$ lua -export habit
         \n$ lua -disable habit
         \n$ lua -enable habit
-        \n\nLua apps run inside Re:T-UI, not Termux. They use the same sandbox, prefs, files, permissions, and editor as Lua modules, but open in a focused terminal-styled surface. Inside a Lua app, plain input is sent to on_input(text). Local commands use a colon prefix: :help, :refresh, :restart, :config, :edit, :clear, and :close.</string>
+        \n\nLua apps run inside Re:T-UI, not Termux. They use the same sandbox, prefs, files, permissions, editor, and ui:render layout objects as Lua modules, but open in a focused terminal-styled surface. Inside a Lua app, plain input is sent to on_input(text), and renderer buttons with action/value are sent to on_action(value). Local commands use a colon prefix: :help, :refresh, :restart, :config, :edit, :clear, and :close.</string>
     <string name="help_widget">Legacy aliases for Lua modules. Prefer the module command for new work.
         \n\nUsage:
         \n$ widget -ls

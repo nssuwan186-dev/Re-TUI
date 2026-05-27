@@ -39,7 +39,7 @@ Changing the document name in the editor updates the module title. If the name c
 
 ## Lua Apps
 
-Lua apps are launcher-native, not Termux-backed. Use them when a script needs a larger focused surface, typed input, and step-by-step state rather than a glanceable dock panel.
+Lua apps are launcher-native, not Termux-backed. Use them when a script needs a larger focused surface, typed input, native layout rendering, and step-by-step state rather than a glanceable dock panel.
 
 ```text
 lua -apps
@@ -54,6 +54,8 @@ lua -export habit
 ```
 
 Inside a Lua app, plain input is delivered to `on_input(text)`. Colon-prefixed input is handled by Re:T-UI: `:help`, `:refresh`, `:restart`, `:config`, `:edit`, `:clear`, and `:close`.
+
+Lua apps can use `ui:show_text(...)` for terminal-style output or `ui:render({...})` for richer native layout objects. Renderer buttons with `action` or `value` dispatch to the app's `on_action(value)` handler.
 
 ```lua
 -- name = "Scratch"
@@ -193,13 +195,14 @@ The active Lua module no longer needs a default refresh chip. Opening a module r
 
 ## Native Layout and Buttons
 
-`ui:render(table)` lets a Lua module describe a small native panel instead of only returning text. The renderer currently supports:
+`ui:render(table)` lets a Lua module or focused Lua app describe a small native panel instead of only returning text. The renderer currently supports:
 
 - `text` objects: `{ type = "text", text = "..." }`
 - `row` objects with `children`
 - `column` / `container` objects with `children`
 - `progress` objects: `{ type = "progress", label = "Done", value = 2, max = 5, width = 8 }`
-- `button`, `command`, and `module` objects that run launcher commands
+- `button` / `action` objects that dispatch local app/module actions when they include `action` or `value`
+- `command` and `module` objects that run launcher commands
 - `divider` and `spacer`
 - `pre`, `ascii`, and `code` objects for explicitly monospace blocks
 

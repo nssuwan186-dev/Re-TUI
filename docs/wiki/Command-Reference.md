@@ -286,9 +286,9 @@ Script aliases use the `-s` alias scope:
 
 Use this for scripts that print output and exit. Open Termux directly for interactive shells, editors, SSH sessions, and REPLs.
 
-Termux apps are tmux-backed sessions shown inside the Re:T-UI Termux surface. `terminalphone` is available as a built-in profile and opens `~/terminalphone/terminalphone.sh` or `~/retui/terminalphone.sh` when present. Inside a Termux app, normal input is sent to the session; local commands use a colon prefix: `:refresh`, `:restart`, `:stop`, `:detach`, and `:open`.
+Termux apps are tmux-backed sessions shown inside the Re:T-UI Termux surface. Register one with `termux -app-add <id> <command>`, then open it with `termux -app <id>`. Inside a Termux app, normal input is sent to the session; local commands use a colon prefix: `:refresh`, `:restart`, `:stop`, `:detach`, and `:open`.
 
-Re:T-UI mirrors a small app manifest into `~/.retui/apps/<id>/app.json` when an app is registered or opened. Scripts launched through the app surface receive `RETUI_APP_ID`, `RETUI_APP_HOME`, `RETUI_APP_STATE`, and `RETUI_APP_MANIFEST`. Use `termux -app-info <id>` to inspect the local registration and `termux -app-sync <id>` to explicitly rewrite the Termux-side manifest. Static action chips can be added with `termux -app-action <id> <label> [input]`; the built-in TerminalPhone profile includes chips for starting Tor, status, showing the onion address, and stopping Tor.
+Re:T-UI mirrors a small app manifest into `~/.retui/apps/<id>/app.json` when an app is registered or opened. Scripts launched through the app surface receive `RETUI_APP_ID`, `RETUI_APP_HOME`, `RETUI_APP_STATE`, and `RETUI_APP_MANIFEST`. Use `termux -app-info <id>` to inspect the local registration and `termux -app-sync <id>` to explicitly rewrite the Termux-side manifest. Static action chips can be added with `termux -app-action <id> <label> [input]`.
 
 ### `tbridge`
 
@@ -357,7 +357,7 @@ TBridge is no longer positioned as the file manager backend. Use `files` for fil
 
 ### `lua`
 
-Create and open launcher-native Lua apps. Lua apps use the same sandboxed runtime as Lua modules, but open in a focused terminal-styled surface with typed input.
+Create and open launcher-native Lua apps. Lua apps use the same sandboxed runtime as Lua modules, but open in a focused terminal-styled surface with typed input and native `ui:render(...)` layout support.
 
 Useful forms:
 
@@ -373,7 +373,7 @@ Useful forms:
 - `lua -disable habit`
 - `lua -enable habit`
 
-Inside a Lua app, normal input is delivered to `on_input(text)`. Local commands use a colon prefix: `:help`, `:refresh`, `:restart`, `:config`, `:edit`, `:clear`, and `:close`.
+Inside a Lua app, normal input is delivered to `on_input(text)`. Local commands use a colon prefix: `:help`, `:refresh`, `:restart`, `:config`, `:edit`, `:clear`, and `:close`. Renderer buttons with `action` or `value` are delivered to `on_action(value)`.
 
 ### `widget`
 

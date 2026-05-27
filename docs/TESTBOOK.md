@@ -229,31 +229,33 @@ Create or update a script to output:
 
 - Build/install the normal `playstoreDebug` package, not a `.dev` package.
 - In Termux, install `tmux`.
-- Confirm TerminalPhone is present at `~/terminalphone/terminalphone.sh` or `~/retui/terminalphone.sh`.
-- In Re:T-UI, type `terminalphone`.
-- Confirm the Termux app surface opens with a `TerminalPhone` label.
-- Confirm action chips appear for `START TOR`, `STATUS`, `SHOW ONION`, and `STOP TOR`.
-- Tap `STATUS`.
+- In Termux, create `~/retui/test-app.sh` with a simple read loop that prints `RETUI_APP_ID`, `RETUI_APP_HOME`, `RETUI_APP_STATE`, and `RETUI_APP_MANIFEST`, then echoes submitted input.
+- In Re:T-UI, run `termux -app-add testapp bash ~/retui/test-app.sh`.
+- Run `termux -app testapp`.
+- Confirm the Termux app surface opens with a `testapp` label.
+- Run `termux -app-action testapp "continue"`.
+- Confirm `CONTINUE` appears as an action chip.
+- Tap `CONTINUE`.
 - Confirm input is sent to the session and the pane refreshes.
-- Type `6` and press Enter.
+- Type `hello` and press Enter.
 - Confirm the tmux pane refreshes inside Re:T-UI.
 - Type `:refresh`.
 - Confirm Re:T-UI captures the existing session instead of starting a new process.
-- In Termux, run `cat ~/.retui/apps/terminalphone/app.json`.
+- In Termux, run `cat ~/.retui/apps/testapp/app.json`.
 - Confirm the manifest includes `id`, `command`, `state`, `actions`, and `homeDir`.
-- Run `termux -app-info terminalphone`.
+- Run `termux -app-info testapp`.
 - Confirm Re:T-UI prints the local command, workdir, manifest path, state path, and action count.
-- Run `termux -app-sync terminalphone`.
-- Confirm Re:T-UI reports `Manifest synced: terminalphone`.
-- In TerminalPhone, run or inspect environment from a launched script.
+- Run `termux -app-sync testapp`.
+- Confirm Re:T-UI reports `Manifest synced: testapp`.
+- Inspect the test app output.
 - Confirm `RETUI_APP_ID`, `RETUI_APP_HOME`, `RETUI_APP_STATE`, and `RETUI_APP_MANIFEST` are set.
 - Type `:detach`.
-- Reopen `terminalphone`.
+- Reopen `termux -app testapp`.
 - Confirm the previous tmux session is still attached.
 - Type `:stop`.
 - Confirm the session stops cleanly.
-- Run `termux -app-action terminalphone "continue"`.
-- Confirm `continue` appears in `termux -app-actions terminalphone` without changing Android permissions.
+- Run `termux -app-action-rm testapp "continue"`.
+- Confirm `continue` no longer appears in `termux -app-actions testapp`.
 
 ## Cross-Phase Regression
 
