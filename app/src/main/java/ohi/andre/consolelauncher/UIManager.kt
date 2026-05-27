@@ -3052,7 +3052,23 @@ class UIManager(
                 break
             }
         }
+        addCalendarModuleButtons(content)
         return content
+    }
+
+    private fun addCalendarModuleButtons(parent: LinearLayout) {
+        val actions = ArrayList<LuaSurfaceAction>()
+        actions.add(
+            LuaSurfaceAction("today") {
+                executeLuaWidgetCommand("module -show calendar")
+            }
+        )
+        actions.add(
+            LuaSurfaceAction("timer") {
+                executeLuaWidgetCommand("module -show timer")
+            }
+        )
+        addLuaButtonGrid(parent, actions)
     }
 
     private fun calendarRow(): LinearLayout {

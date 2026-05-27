@@ -408,16 +408,17 @@ object LuaWidgetManager {
                 + "local function render()\n"
                 + "    ui:set_title(\"" + title + "\")\n"
                 + "    ui:show_text(\"Hello from \" .. \"" + normalized + "\" .. \"\\nCount: \" .. count)\n"
-                + "    ui:show_buttons({\"Increase\", \"Reset\"})\n"
+                + "    ui:suggest_action(\"Increase\", \"increase\")\n"
+                + "    ui:suggest_action(\"Reset\", \"reset\")\n"
                 + "end\n"
                 + "\n"
                 + "function on_load()\n"
                 + "    render()\n"
                 + "end\n"
                 + "\n"
-                + "function on_click(index)\n"
-                + "    if index == 1 then count = count + 1 end\n"
-                + "    if index == 2 then count = 0 end\n"
+                + "function on_action(action)\n"
+                + "    if action == \"increase\" then count = count + 1 end\n"
+                + "    if action == \"reset\" then count = 0 end\n"
                 + "    render()\n"
                 + "end\n")
     }
@@ -455,35 +456,8 @@ object LuaWidgetManager {
             appendDirective(out, "body", "No Lua module output yet.")
         }
 
-        var index = 1
-        for (button in result.buttons) {
-            appendSuggest(out, button, "module -click " + normalizeId(id) + " " + index)
-            index += 1
-        }
-        for (action in result.valueActions) {
-            appendSuggest(
-                out,
-                action!!.label,
-                "module -action " + normalizeId(id) + " " + quoteArg(action.value)
-            )
-        }
-        if (result.dialogOpen) {
-            var dialogIndex = 1
-            for (item in result.dialogItems) {
-                val label = if (dialogIndex == result.dialogSelected) "* " + item else item
-                appendSuggest(out, label, "module -dialog " + normalizeId(id) + " " + dialogIndex)
-                dialogIndex += 1
-            }
-            appendSuggest(out, "cancel", "module -dialog " + normalizeId(id) + " -1")
-        }
-        for (action in result.commands) {
+        for (action in result.suggestions) {
             appendSuggest(out, action!!.label, action.command)
-        }
-        if (result.expandable) {
-            appendSuggest(
-                out, if (result.expanded) "collapse" else "expand",
-                "module " + (if (result.expanded) "-collapse " else "-expand ") + normalizeId(id)
-            )
         }
         if (hasConfig(id)) {
             appendSuggest(out, "edit", "module -config " + normalizeId(id))
@@ -777,7 +751,11 @@ object LuaWidgetManager {
                     || code.contains("ui:show_shortcut")
                     || code.contains("shortcut -"), "shortcuts"
         )
-        addCapability(capabilities, code.contains("suggest:"), "suggestions")
+        addCapability(
+            capabilities,
+            code.contains("suggest:")
+                    || code.contains("ui:suggest_"), "suggestions"
+        )
         return capabilities
     }
 
@@ -1009,14 +987,14 @@ object LuaWidgetManager {
                 + "    countdown_line(\"Timer\", clock:timer())\n"
                 + "    stopwatch_line(clock:stopwatch())\n"
                 + "    pomodoro_line(clock:pomodoro())\n"
-                + "    ui:show_command(\"25m\", \"timer 25m\")\n"
-                + "    ui:show_command(\"+5m\", \"timer -add 5m\")\n"
-                + "    ui:show_command(\"stop\", \"timer -stop\")\n"
-                + "    ui:show_command(\"status\", \"timer -status\")\n"
-                + "    ui:show_command(\"watch\", \"stopwatch\")\n"
-                + "    ui:show_command(\"reset watch\", \"stopwatch -reset\")\n"
-                + "    ui:show_command(\"pomodoro\", \"pomodoro\")\n"
-                + "    ui:show_command(\"stop pomo\", \"pomodoro -stop\")\n"
+                + "    ui:suggest_command(\"25m\", \"timer 25m\")\n"
+                + "    ui:suggest_command(\"+5m\", \"timer -add 5m\")\n"
+                + "    ui:suggest_command(\"stop\", \"timer -stop\")\n"
+                + "    ui:suggest_command(\"status\", \"timer -status\")\n"
+                + "    ui:suggest_command(\"watch\", \"stopwatch\")\n"
+                + "    ui:suggest_command(\"reset watch\", \"stopwatch -reset\")\n"
+                + "    ui:suggest_command(\"pomodoro\", \"pomodoro\")\n"
+                + "    ui:suggest_command(\"stop pomo\", \"pomodoro -stop\")\n"
                 + "end\n"
                 + "\n"
                 + "function on_load() render() end\n"
@@ -1032,7 +1010,7 @@ object LuaWidgetManager {
                         + "-- name = \"Re:TUI Counter\"\n"
                         + "-- type = \"module\"\n"
                         + "-- retui = \"1\"\n"
-                        + "-- description = \"Persistent counter using Re:TUI prefs and dock actions\"\n"
+                        + "-- description = \"Persistent counter using Re:TUI prefs and suggestion actions\"\n"
                         + "\n"
                         + "local prefs = require \"prefs\"\n"
                         + "\n"
@@ -1044,16 +1022,19 @@ object LuaWidgetManager {
                         + "local function render()\n"
                         + "    ui:set_title(\"Re:TUI Counter\")\n"
                         + "    ui:show_text(\"Count: \" .. prefs.count .. \"\\nStep: \" .. prefs.step .. \"\\nModule: \" .. aio:self_name())\n"
-                        + "    ui:show_buttons({\"+\" .. prefs.step, \"-\" .. prefs.step, \"Reset\", \"Prefs\"})\n"
+                        + "    ui:suggest_action(\"+\" .. prefs.step, \"inc\")\n"
+                        + "    ui:suggest_action(\"-\" .. prefs.step, \"dec\")\n"
+                        + "    ui:suggest_action(\"Reset\", \"reset\")\n"
+                        + "    ui:suggest_action(\"Prefs\", \"prefs\")\n"
                         + "end\n"
                         + "\n"
                         + "function on_resume() render() end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 1 then prefs.count = prefs.count + prefs.step end\n"
-                        + "    if index == 2 then prefs.count = prefs.count - prefs.step end\n"
-                        + "    if index == 3 then prefs.count = 0 end\n"
-                        + "    if index == 4 then prefs:show_dialog() else render() end\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"inc\" then prefs.count = prefs.count + prefs.step end\n"
+                        + "    if action == \"dec\" then prefs.count = prefs.count - prefs.step end\n"
+                        + "    if action == \"reset\" then prefs.count = 0 end\n"
+                        + "    if action == \"prefs\" then prefs:show_dialog() else render() end\n"
                         + "end\n")
             )
         )
@@ -1078,16 +1059,19 @@ object LuaWidgetManager {
                         + "    ui:show_text(\"Progress: \" .. prefs.progress .. \"%\\nBattery: \" .. battery.percent .. \"%\")\n"
                         + "    ui:show_progress_bar(\"Module progress\", prefs.progress, 100, 14)\n"
                         + "    ui:set_progress(prefs.progress)\n"
-                        + "    ui:show_buttons({\"+\" .. prefs.step, \"-\" .. prefs.step, \"Reset\", \"Prefs\"})\n"
+                        + "    ui:suggest_action(\"+\" .. prefs.step, \"inc\")\n"
+                        + "    ui:suggest_action(\"-\" .. prefs.step, \"dec\")\n"
+                        + "    ui:suggest_action(\"Reset\", \"reset\")\n"
+                        + "    ui:suggest_action(\"Prefs\", \"prefs\")\n"
                         + "end\n"
                         + "\n"
                         + "function on_resume() render() end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 1 then prefs.progress = math.min(100, prefs.progress + prefs.step) end\n"
-                        + "    if index == 2 then prefs.progress = math.max(0, prefs.progress - prefs.step) end\n"
-                        + "    if index == 3 then prefs.progress = 50 end\n"
-                        + "    if index == 4 then prefs:show_dialog() else render() end\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"inc\" then prefs.progress = math.min(100, prefs.progress + prefs.step) end\n"
+                        + "    if action == \"dec\" then prefs.progress = math.max(0, prefs.progress - prefs.step) end\n"
+                        + "    if action == \"reset\" then prefs.progress = 50 end\n"
+                        + "    if action == \"prefs\" then prefs:show_dialog() else render() end\n"
                         + "end\n")
             )
         )
@@ -1118,14 +1102,16 @@ object LuaWidgetManager {
                         + "        network = network.type .. (network.connected and \" connected\" or \" offline\"),\n"
                         + "        refreshes = prefs.refreshes,\n"
                         + "    })\n"
-                        + "    ui:show_buttons({\"Refresh\", \"Copy\", \"Vibrate\"})\n"
+                        + "    ui:suggest_action(\"Refresh\", \"refresh\")\n"
+                        + "    ui:suggest_action(\"Copy\", \"copy\")\n"
+                        + "    ui:suggest_action(\"Vibrate\", \"vibrate\")\n"
                         + "end\n"
                         + "\n"
                         + "function on_resume() render() end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 2 then system:to_clipboard(os.date(\"%Y-%m-%d %H:%M:%S\")) end\n"
-                        + "    if index == 3 then system:vibrate(60) end\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"copy\" then system:to_clipboard(os.date(\"%Y-%m-%d %H:%M:%S\")) end\n"
+                        + "    if action == \"vibrate\" then system:vibrate(60) end\n"
                         + "    render()\n"
                         + "end\n")
             )
@@ -1142,30 +1128,35 @@ object LuaWidgetManager {
                         + "\n"
                         + "function on_load()\n"
                         + "    if prefs.opens == nil then prefs.opens = 0 end\n"
+                        + "    if prefs.expanded == nil then prefs.expanded = false end\n"
                         + "end\n"
                         + "\n"
                         + "local function render()\n"
                         + "    ui:set_title(\"Expandable\")\n"
-                        + "    ui:set_expandable(true)\n"
                         + "    prefs.opens = prefs.opens + 1\n"
-                        + "    if ui:is_expanded() then\n"
+                        + "    if prefs.expanded then\n"
                         + "        ui:show_kv({\n"
                         + "            mode = \"expanded\",\n"
                         + "            opens = prefs.opens,\n"
                         + "            time = os.date(\"%H:%M:%S\"),\n"
                         + "        })\n"
-                        + "        ui:show_command(\"Settings\", \"config -ls\")\n"
-                        + "        ui:show_buttons({\"Refresh\", \"Toast\"})\n"
+                        + "        ui:suggest_command(\"Settings\", \"config -ls\")\n"
+                        + "        ui:suggest_action(\"Refresh\", \"refresh\")\n"
+                        + "        ui:suggest_action(\"Toast\", \"toast\")\n"
+                        + "        ui:suggest_action(\"Compact\", \"compact\")\n"
                         + "    else\n"
                         + "        ui:show_text(\"Standard mode\")\n"
-                        + "        ui:show_buttons({\"Refresh\"})\n"
+                        + "        ui:suggest_action(\"Refresh\", \"refresh\")\n"
+                        + "        ui:suggest_action(\"Expand\", \"expand\")\n"
                         + "    end\n"
                         + "end\n"
                         + "\n"
                         + "function on_resume() render() end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 2 then ui:show_toast(\"Hello from Lua\") end\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"expand\" then prefs.expanded = true end\n"
+                        + "    if action == \"compact\" then prefs.expanded = false end\n"
+                        + "    if action == \"toast\" then ui:show_toast(\"Hello from Lua\") end\n"
                         + "    render()\n"
                         + "end\n")
             )
@@ -1193,7 +1184,8 @@ object LuaWidgetManager {
                         + "        ticks = prefs.ticks,\n"
                         + "        time = os.date(\"%H:%M:%S\"),\n"
                         + "    })\n"
-                        + "    ui:show_buttons({\"Reset\", \"Stop\"})\n"
+                        + "    ui:suggest_action(\"Reset\", \"reset\")\n"
+                        + "    ui:suggest_action(\"Stop\", \"stop\")\n"
                         + "end\n"
                         + "\n"
                         + "function on_resume() render(\"active\", true) end\n"
@@ -1203,9 +1195,9 @@ object LuaWidgetManager {
                         + "    render(\"tick\", true)\n"
                         + "end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 1 then prefs.ticks = 0 end\n"
-                        + "    render(index == 2 and \"stopped\" or \"reset\", index ~= 2)\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"reset\" then prefs.ticks = 0 end\n"
+                        + "    render(action == \"stop\" and \"stopped\" or \"reset\", action ~= \"stop\")\n"
                         + "end\n")
             )
         )
@@ -1235,12 +1227,13 @@ object LuaWidgetManager {
                         + "        has_tui = tostring(strings.contains(\"Re:TUI\", \"TUI\")),\n"
                         + "        accent = colors.accent,\n"
                         + "    })\n"
-                        + "    ui:show_buttons({\"Debug\", \"Copy\"})\n"
+                        + "    ui:suggest_action(\"Debug\", \"debug\")\n"
+                        + "    ui:suggest_action(\"Copy\", \"copy\")\n"
                         + "end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 1 then debug:show() end\n"
-                        + "    if index == 2 then system:to_clipboard(date.format(\"%H:%M:%S\")) end\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"debug\" then debug:show() end\n"
+                        + "    if action == \"copy\" then system:to_clipboard(date.format(\"%H:%M:%S\")) end\n"
                         + "end\n")
             )
         )
@@ -1284,15 +1277,17 @@ object LuaWidgetManager {
                         + "local function render()\n"
                         + "    ui:set_title(\"Prefs Demo\")\n"
                         + "    ui:show_text(\"Persistent count: \" .. prefs.count)\n"
-                        + "    ui:show_buttons({\"+1\", \"Reset\", \"Prefs\"})\n"
+                        + "    ui:suggest_action(\"+1\", \"inc\")\n"
+                        + "    ui:suggest_action(\"Reset\", \"reset\")\n"
+                        + "    ui:suggest_action(\"Prefs\", \"prefs\")\n"
                         + "end\n"
                         + "\n"
                         + "function on_resume() render() end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 1 then prefs.count = prefs.count + 1 end\n"
-                        + "    if index == 2 then prefs.count = 0 end\n"
-                        + "    if index == 3 then prefs:show_dialog() else render() end\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"inc\" then prefs.count = prefs.count + 1 end\n"
+                        + "    if action == \"reset\" then prefs.count = 0 end\n"
+                        + "    if action == \"prefs\" then prefs:show_dialog() else render() end\n"
                         + "end\n")
             )
         )
@@ -1312,14 +1307,15 @@ object LuaWidgetManager {
                         + "    local n = number()\n"
                         + "    ui:set_title(\"Files Demo\")\n"
                         + "    ui:show_text(\"Stored in Lua module local files/count.txt\\nValue: \" .. n)\n"
-                        + "    ui:show_buttons({\"Write +1\", \"Delete\"})\n"
+                        + "    ui:suggest_action(\"Write +1\", \"write\")\n"
+                        + "    ui:suggest_action(\"Delete\", \"delete\")\n"
                         + "end\n"
                         + "\n"
                         + "function on_resume() render() end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 1 then files:write(\"count.txt\", tostring(number() + 1)); files:append(\"log.txt\", os.date(\"%H:%M:%S\") .. \" +1\\n\") end\n"
-                        + "    if index == 2 then files:delete(\"count.txt\") end\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"write\" then files:write(\"count.txt\", tostring(number() + 1)); files:append(\"log.txt\", os.date(\"%H:%M:%S\") .. \" +1\\n\") end\n"
+                        + "    if action == \"delete\" then files:delete(\"count.txt\") end\n"
                         + "    render()\n"
                         + "end\n")
             )
@@ -1353,16 +1349,18 @@ object LuaWidgetManager {
                         + "        files = #names,\n"
                         + "        joined = strings.join(names, \", \"),\n"
                         + "    })\n"
-                        + "    ui:show_command(\"Modules\", \"module -ls\")\n"
-                        + "    ui:show_buttons({\"Write Log\", \"Copy ID\", \"Clear\"})\n"
+                        + "    ui:suggest_command(\"Modules\", \"module -ls\")\n"
+                        + "    ui:suggest_action(\"Write Log\", \"write\")\n"
+                        + "    ui:suggest_action(\"Copy ID\", \"copy\")\n"
+                        + "    ui:suggest_action(\"Clear\", \"clear\")\n"
                         + "end\n"
                         + "\n"
                         + "function on_resume() render() end\n"
                         + "\n"
-                        + "function on_click(index)\n"
-                        + "    if index == 1 then files:append(\"platform.log\", os.date(\"%H:%M:%S\") .. \" opened\\n\") end\n"
-                        + "    if index == 2 then system:to_clipboard(system:widget_id()) end\n"
-                        + "    if index == 3 then files:delete(\"platform.log\"); prefs:unset(\"opens\") end\n"
+                        + "function on_action(action)\n"
+                        + "    if action == \"write\" then files:append(\"platform.log\", os.date(\"%H:%M:%S\") .. \" opened\\n\") end\n"
+                        + "    if action == \"copy\" then system:to_clipboard(system:widget_id()) end\n"
+                        + "    if action == \"clear\" then files:delete(\"platform.log\"); prefs:unset(\"opens\") end\n"
                         + "    render()\n"
                         + "end\n")
             )
@@ -1381,7 +1379,7 @@ object LuaWidgetManager {
                         + "function on_alarm()\n"
                         + "    ui:set_title(\"Public IP\")\n"
                         + "    ui:show_text(\"Loading...\")\n"
-                        + "    ui:show_buttons({\"Refresh\"})\n"
+                        + "    ui:suggest_action(\"Refresh\", \"refresh\")\n"
                         + "    http:get(\"https://api.ipify.org?format=json\", \"ip\")\n"
                         + "end\n"
                         + "\n"
@@ -1393,16 +1391,16 @@ object LuaWidgetManager {
                         + "    else\n"
                         + "        ui:show_text(\"Request failed: \" .. tostring(code))\n"
                         + "    end\n"
-                        + "    ui:show_buttons({\"Refresh\"})\n"
+                        + "    ui:suggest_action(\"Refresh\", \"refresh\")\n"
                         + "end\n"
                         + "\n"
                         + "function on_network_error_ip(error)\n"
                         + "    ui:set_title(\"Public IP\")\n"
                         + "    ui:show_text(\"Network error: \" .. tostring(error))\n"
-                        + "    ui:show_buttons({\"Refresh\"})\n"
+                        + "    ui:suggest_action(\"Refresh\", \"refresh\")\n"
                         + "end\n"
                         + "\n"
-                        + "function on_click(index)\n"
+                        + "function on_action(action)\n"
                         + "    on_alarm()\n"
                         + "end\n")
             )

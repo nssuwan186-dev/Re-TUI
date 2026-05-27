@@ -139,8 +139,8 @@ class widget : CommandAbstraction {
                     + "\nTitle: " + (if (TextUtils.isEmpty(result.title)) LuaWidgetManager.getName(
                 id
             ) else result.title)
-                    + "\nActions: " + result.buttons.size
-                    + "\nCommands: " + result.commands.size)
+                    + "\nModule buttons: " + (result.buttons.size + result.valueActions.size + result.commands.size)
+                    + "\nSuggestion chips: " + result.suggestions.size)
         }
 
         if ("-info" == option) {

@@ -895,7 +895,7 @@ class SuggestionsManager(
                 }
                 val engine = luaSuggestionEngine(id, script)
                 val result = engine.suggest(safeQuery)
-                for (action in result.commands) {
+                for (action in result.suggestions) {
                     val renderAction = action ?: continue
                     suggestions.add(
                         Suggestion(

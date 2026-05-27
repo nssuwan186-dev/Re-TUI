@@ -551,6 +551,7 @@ class LuaWidgetEngine(
             lastResult.buttons.clear()
             lastResult.commands.clear()
             lastResult.valueActions.clear()
+            lastResult.suggestions.clear()
             lastResult.dialogOpen = false
             lastResult.dialogTitle = ""
             lastResult.dialogItems.clear()
@@ -620,7 +621,14 @@ class LuaWidgetEngine(
         ui.set("button", UiFunction(UiAction { args: Varargs -> this.addButton(args) }))
         ui.set("show_action", UiFunction(UiAction { args: Varargs -> this.addValueAction(args) }))
         ui.set("action", UiFunction(UiAction { args: Varargs -> this.addValueAction(args) }))
+        ui.set("action_button", UiFunction(UiAction { args: Varargs -> this.addValueAction(args) }))
         ui.set("add_action", UiFunction(UiAction { args: Varargs -> this.addValueAction(args) }))
+        ui.set("suggest_action", UiFunction(UiAction { args: Varargs -> this.addSuggestionAction(args) }))
+        ui.set("suggest_command", UiFunction(UiAction { args: Varargs ->
+            addSuggestionCommand(stringAt(args, 1, ""), stringAt(args, 2, ""))
+        }))
+        ui.set("suggest_module", UiFunction(UiAction { args: Varargs -> this.addSuggestionModule(args) }))
+        ui.set("suggest_text", UiFunction(UiAction { args: Varargs -> this.addSuggestionText(args) }))
         ui.set("show_command", UiFunction(UiAction { args: Varargs ->
             val label: String = stringAt(args, 1, "")
             val command: String = stringAt(args, 2, "")
@@ -754,22 +762,13 @@ class LuaWidgetEngine(
         suggest.set("command", UiFunction(UiAction { args: Varargs ->
             val label: String = stringAt(args, 1, "")
             val command: String = stringAt(args, 2, "")
-            if (!TextUtils.isEmpty(label) && !TextUtils.isEmpty(command)) {
-                lastResult.commands.add(RenderAction(label, command))
-            }
+            addSuggestionCommand(label, command)
         }))
         suggest.set("module", UiFunction(UiAction { args: Varargs ->
-            val module: String = stringAt(args, 1, "")
-            val label: String = stringAt(args, 2, module)
-            if (!TextUtils.isEmpty(module)) {
-                lastResult.commands.add(RenderAction(label, "module -show " + module))
-            }
+            addSuggestionModule(args)
         }))
         suggest.set("text", UiFunction(UiAction { args: Varargs ->
-            val text: String = stringArg(args)
-            if (!TextUtils.isEmpty(text)) {
-                lastResult.commands.add(RenderAction(text, text))
-            }
+            addSuggestionText(args)
         }))
         return suggest
     }
@@ -1039,7 +1038,7 @@ class LuaWidgetEngine(
             vars.set("apps", LuaValue.valueOf("list, find, launch_command, button"))
             vars.set("intents", LuaValue.valueOf("view, activity, button"))
             vars.set("shortcuts", LuaValue.valueOf("use_command, button"))
-            vars.set("ui", LuaValue.valueOf("render, button, command_button, module_button, app_button, intent_button, shortcut_button"))
+            vars.set("ui", LuaValue.valueOf("render, button, command_button, module_button, app_button, intent_button, shortcut_button, suggest_action, suggest_command, suggest_module, suggest_text"))
             vars
         }))
         launcher.set("command_button", UiFunction(UiAction { args: Varargs ->
@@ -1682,6 +1681,35 @@ class LuaWidgetEngine(
         }
     }
 
+    private fun addSuggestionAction(args: Varargs) {
+        val label: String = stringAt(args, 1, "")
+        val value: String = stringAt(args, 2, label)
+        if (!TextUtils.isEmpty(label)) {
+            addSuggestionCommand(label, "module -action " + id + " " + quoteCommandArg(value))
+        }
+    }
+
+    private fun addSuggestionModule(args: Varargs) {
+        val module: String = stringAt(args, 1, "")
+        val label: String = stringAt(args, 2, module)
+        if (!TextUtils.isEmpty(module)) {
+            addSuggestionCommand(label, "module -show " + module)
+        }
+    }
+
+    private fun addSuggestionText(args: Varargs) {
+        val text: String = stringArg(args)
+        if (!TextUtils.isEmpty(text)) {
+            addSuggestionCommand(text, text)
+        }
+    }
+
+    private fun addSuggestionCommand(label: String?, command: String?) {
+        if (!TextUtils.isEmpty(label) && !TextUtils.isEmpty(command)) {
+            lastResult.suggestions.add(RenderAction(label, command))
+        }
+    }
+
     private fun setLayout(args: Varargs) {
         val value: LuaValue = args.arg(rawIndex(args, 1))
         if (!value.istable()) {
@@ -2319,6 +2347,7 @@ class LuaWidgetEngine(
         var buttons: MutableList<String?> = ArrayList<String?>()
         var commands: MutableList<RenderAction?> = ArrayList<RenderAction?>()
         var valueActions: MutableList<RenderValueAction?> = ArrayList<RenderValueAction?>()
+        var suggestions: MutableList<RenderAction?> = ArrayList<RenderAction?>()
         var dialogOpen: Boolean = false
         var dialogTitle: String? = ""
         var dialogItems: MutableList<String?> = ArrayList<String?>()
@@ -2340,6 +2369,7 @@ class LuaWidgetEngine(
             copy.buttons = ArrayList<String?>(buttons)
             copy.commands = ArrayList<RenderAction?>(commands)
             copy.valueActions = ArrayList<RenderValueAction?>(valueActions)
+            copy.suggestions = ArrayList<RenderAction?>(suggestions)
             copy.dialogOpen = dialogOpen
             copy.dialogTitle = dialogTitle
             copy.dialogItems = ArrayList<String?>(dialogItems)

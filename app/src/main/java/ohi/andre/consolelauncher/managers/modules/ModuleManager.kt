@@ -426,8 +426,7 @@ object ModuleManager {
             suggestions.add(ModuleSuggestion.Companion.command("rules", "notifications -ls"))
             suggestions.add(ModuleSuggestion.Companion.command("filters", "notifications -file"))
         } else if (CALENDAR == id) {
-            suggestions.add(ModuleSuggestion.Companion.command("today", "module -show calendar"))
-            suggestions.add(ModuleSuggestion.Companion.command("timer", "module -show timer"))
+            // Calendar is the built-in module-button example; its controls live in-panel.
         } else if (REMINDER == id) {
             if (ModulePromptManager.isActive(context)) {
                 suggestions.addAll(ModulePromptManager.getSuggestions(context))

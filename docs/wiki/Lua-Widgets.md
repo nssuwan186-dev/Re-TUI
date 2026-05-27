@@ -4,7 +4,7 @@ Lua modules are Re:TUI's in-app scripting surface. They are meant for users who 
 
 Lua modules live under Re:TUI's local `widgets/<id>/` storage folder for compatibility and are included in personal backup/restore. A saved Lua module is registered as a `lua:<id>` module, so it shares the same module dock as built-in modules and Termux-backed modules. The document name is the user-facing module title; the id is the generated slug used for commands and storage.
 
-Lua files can also be suggestion scripts with `-- type = "suggest"`. These are installed locally like Lua modules, but they do not appear in the module dock. They contribute command chips while the user types.
+Lua files can also be suggestion scripts with `-- type = "suggest"`. These are installed locally like Lua modules, but they do not appear in the module dock. They contribute suggestion chips while the user types.
 
 ## Commands
 
@@ -62,12 +62,13 @@ end
 function on_resume()
     ui:set_title("Counter")
     ui:show_text("Count: " .. prefs.count)
-    ui:show_buttons({"+1", "Reset"})
+    ui:suggest_action("+1", "inc")
+    ui:suggest_action("Reset", "reset")
 end
 
-function on_click(index)
-    if index == 1 then prefs.count = prefs.count + 1 end
-    if index == 2 then prefs.count = 0 end
+function on_action(action)
+    if action == "inc" then prefs.count = prefs.count + 1 end
+    if action == "reset" then prefs.count = 0 end
     on_resume()
 end
 ```
@@ -78,8 +79,8 @@ end
 - `on_resume()` runs when the Lua module is rendered, including when the module is shown.
 - `on_alarm()` runs on the first render, then no more than once every 30 minutes unless the user runs `module -refresh` or taps the module title to force a refresh.
 - `on_tick(n)` runs only while the Lua module is the active open module and only after the script opts in with `ui:set_tick_interval(seconds)`. Intervals are clamped between 1 and 60 seconds.
-- `on_click(index)` runs when a module button suggestion is tapped.
-- `on_action(value)` runs when a parameterized action suggestion is tapped. `on_command(value)` and `on_submit(value)` are fallback names for the same event.
+- `on_click(index)` runs when a module button is tapped.
+- `on_action(value)` runs when a parameterized module action or suggestion action is tapped. `on_command(value)` and `on_submit(value)` are fallback names for the same event.
 - `on_dialog_action(index)` runs when a script-owned choice list is answered. `-1` means cancel.
 - `on_network_result(body, code, headers)` runs after `http:get/post/put/delete`.
 - `on_network_result_id(body, code, headers)` runs when a request is made with an id, for example `http:get(url, "id")`.
@@ -102,10 +103,15 @@ end
 - `ui:button(label[, action])`
 - `ui:add_button(label)`
 - `ui:show_action(label, value)`
+- `ui:action_button(label, value)`
 - `ui:show_command(label, command)`
 - `ui:show_module(module, label)`
 - `ui:command_button(label, command)`
 - `ui:module_button(label, module)`
+- `ui:suggest_action(label, value)`
+- `ui:suggest_command(label, command)`
+- `ui:suggest_module(module, label)`
+- `ui:suggest_text(text)`
 - `ui:app_button(label, app_query)`
 - `ui:intent_button(label, intent_spec)`
 - `ui:shortcut_button(label, shortcut_id, app)`
@@ -124,10 +130,13 @@ end
 - `ui:collapse()`
 - `ui:toggle()`
 
-Button labels render as native module buttons and matching dock suggestion chips. Tapping either dispatches `module -click <id> <index>`.
-Action labels become dock suggestion chips that dispatch `module -action <id> <value>`, which lets Lua modules receive text or other small parameters without parsing the whole command line.
-Dialog/list items become suggestion chips that dispatch `module -dialog <id> <index>`, keeping choices in the Re:TUI suggestion surface instead of opening a separate Android modal.
-Command labels render as native module buttons and matching chips that execute the command directly.
+Button labels render as native module buttons. Tapping one dispatches `module -click <id> <index>`.
+Action labels render as native module buttons that dispatch `module -action <id> <value>`, which lets Lua modules receive text or other small parameters without parsing the whole command line.
+Dialog/list items render as native module choice buttons that dispatch `module -dialog <id> <index>`.
+Command labels render as native module buttons that execute the command directly.
+Suggestion APIs render suggestion-row chips only. `ui:suggest_action` dispatches `module -action <id> <value>`, `ui:suggest_command` executes a command directly, `ui:suggest_module` opens another module, and `ui:suggest_text` inserts or runs text like a normal suggestion.
+
+Use module buttons when the controls should be visible inside the active module panel. Use suggestion chips when the panel should stay clean and the actions should live in the launcher suggestion row. The default built-in modules ship with suggestion chips; Calendar is the built-in module-button example.
 
 The active Lua module no longer needs a default refresh chip. Opening a module renders it, and tapping the module title forces a refresh. Manual `module -refresh <id>` still works.
 
@@ -199,8 +208,8 @@ end
 function render()
     ui:set_title("Quick Todo")
     ui:show_lines(lines())
-    ui:show_action("Add create good modules", "create good modules")
-    ui:show_action("Add review release", "review release")
+    ui:suggest_action("Add create good modules", "create good modules")
+    ui:suggest_action("Add review release", "review release")
 end
 
 function on_resume()
@@ -313,7 +322,7 @@ end
 
 ## Suggestion Scripts
 
-Suggestion scripts let Lua add command chips without becoming dock modules.
+Suggestion scripts let Lua add suggestion chips without becoming dock modules.
 
 ```lua
 -- name = "Quick Config"

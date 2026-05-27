@@ -618,7 +618,7 @@ $ notifications -reply</pre>
         </div>
         <span>module id: calendar</span>
       </div>
-      <p>The calendar module is intentionally simple: a glanceable month panel for the home screen. It is useful docked near timer and reminder because those workflows often start from date/time context.</p>
+      <p>The calendar module is intentionally simple: a glanceable month panel for the home screen. It also ships as the built-in module-button example, while the other default modules keep their controls in the suggestion row.</p>
       <pre>$ module -show calendar
 $ module -dock add calendar
 $ module -dock remove calendar</pre>
@@ -754,11 +754,12 @@ echo "::end"</pre>
         </div>
         <span>module source: lua:&lt;id&gt;</span>
       </div>
-      <p>Lua modules share the same dock as built-ins and Termux modules. They are launcher-native scripts stored locally by Re:T-UI, so they can render text, rows, containers, progress glyphs, and native buttons inside the active module panel while still publishing matching suggestion chips for keyboard-first use.</p>
+      <p>Lua modules share the same dock as built-ins and Termux modules. They are launcher-native scripts stored locally by Re:T-UI, so they can render text, rows, containers, progress glyphs, and native buttons inside the active module panel, or keep the panel clean and publish suggestion chips for keyboard-first use.</p>
       <div class="command-list">
         <div><strong>Create:</strong> <code>module -new lua name</code>, save the Lua source, then <code>module -show name</code>.</div>
         <div><strong>Edit/check:</strong> <code>module -edit name</code>, <code>module -config name</code>, <code>module -check name</code>, and <code>module -approve name</code>.</div>
-        <div><strong>Controls:</strong> <code>ui:button</code>, <code>ui:command_button</code>, <code>ui:module_button</code>, <code>ui:app_button</code>, <code>ui:intent_button</code>, and <code>ui:shortcut_button</code>.</div>
+        <div><strong>Module buttons:</strong> <code>ui:button</code>, <code>ui:command_button</code>, <code>ui:module_button</code>, <code>ui:app_button</code>, <code>ui:intent_button</code>, and <code>ui:shortcut_button</code>.</div>
+        <div><strong>Suggestion chips:</strong> <code>ui:suggest_action</code>, <code>ui:suggest_command</code>, <code>ui:suggest_module</code>, and <code>ui:suggest_text</code>.</div>
         <div><strong>Layout:</strong> <code>ui:render</code> / <code>ui:layout</code> can declare small rows, columns, text, buttons, progress bars, dividers, spacers, and explicit preformatted blocks with <code>pre</code>, <code>ascii</code>, or <code>code</code>.</div>
         <div><strong>Refresh:</strong> opening the module renders it; tapping the module title forces a refresh. Manual <code>module -refresh</code> remains available.</div>
       </div>

@@ -81,13 +81,13 @@ module -expand counter
 module -collapse counter
 ```
 
-The current platform supports launcher-native UI output, native module buttons, declarative rows/containers/progress layouts, persistent `prefs`, module-local `files`, JSON, small standard libraries, async HTTP callbacks, expandable state, indexed buttons, parameterized action chips, choice-dialog chips, direct command chips, app/intent/shortcut buttons, active ticking, Lua suggestion scripts, editor paste flow, clipboard export, and launcher/system helpers. See the full scripting reference: [Lua Modules](./Lua-Widgets.md).
+The current platform supports launcher-native UI output, native module buttons, declarative rows/containers/progress layouts, persistent `prefs`, module-local `files`, JSON, small standard libraries, async HTTP callbacks, expandable state, indexed buttons, parameterized actions, choice-dialog buttons, direct command buttons, suggestion-row chips, app/intent/shortcut buttons, active ticking, Lua suggestion scripts, editor paste flow, clipboard export, and launcher/system helpers. See the full scripting reference: [Lua Modules](./Lua-Widgets.md).
 
 Lua permissions are script-level consent only. Scripts that use `network`, `clipboard`, `vibrate`, `local-files`, `active-tick`, `notifications`, `apps`, `intents`, or `shortcuts` must declare `-- permissions = "..."` and be approved with `module -approve <id>`. Re:T-UI does not add Android manifest permissions for Lua.
 
 Lua scripts can declare `-- retui = "1"` for API compatibility. Runtime failures show recovery controls, and `module -disable <id>` parks a broken script without deleting it.
 
-Button labels become native module buttons and matching module suggestion chips. Tapping either dispatches `module -click <id> <index>`, which calls the module's `on_click(index)` handler and repaints the active module. Scripts can also expose payload chips with `ui:show_action(label, value)` and handle them with `on_action(value)`.
+Module button APIs render native controls in the module panel only. `ui:show_buttons` dispatches `module -click <id> <index>` into `on_click(index)`, while `ui:show_action(label, value)` dispatches `module -action <id> <value>` into `on_action(value)`. Use `ui:suggest_action`, `ui:suggest_command`, `ui:suggest_module`, or `ui:suggest_text` when the same module should keep its panel clean and expose controls as suggestion-row chips instead.
 
 Active Lua modules refresh when they are shown. Tapping the module title forces a refresh, so scripts no longer need to add a default refresh chip just to keep state current. Manual `module -refresh <id>` still works for explicit rerenders. The older `widget` command remains as a compatibility alias for existing shared Lua packages.
 

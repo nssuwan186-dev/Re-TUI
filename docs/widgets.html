@@ -568,7 +568,7 @@ $ module -edit focus_sprint</pre>
           </div>
           <div class="step">
             <div class="step-number">3</div>
-            <div><h3>Open</h3><p>Run <code>module -show counter</code>. In-panel buttons and matching chips call <code>on_click(index)</code>.</p></div>
+            <div><h3>Open</h3><p>Run <code>module -show counter</code>. The panel stays clean while suggestion chips call <code>on_action(value)</code>.</p></div>
           </div>
         </div>
       </div>
@@ -584,16 +584,17 @@ local function render()
     if prefs.count == nil then prefs.count = 0 end
     ui:set_title("Counter")
     ui:show_kv({ count = prefs.count })
-    ui:show_buttons({"+1", "Reset"})
+    ui:suggest_action("+1", "inc")
+    ui:suggest_action("Reset", "reset")
 end
 
 function on_resume()
     render()
 end
 
-function on_click(index)
-    if index == 1 then prefs.count = prefs.count + 1 end
-    if index == 2 then prefs.count = 0 end
+function on_action(action)
+    if action == "inc" then prefs.count = prefs.count + 1 end
+    if action == "reset" then prefs.count = 0 end
     render()
 end</pre>
       </div>
@@ -607,7 +608,7 @@ end</pre>
         </div>
         <span>entry point: on_config</span>
       </div>
-      <p>Use config for user-editable values such as task names, intervals, units, display preferences, note bodies, todo text, and module modes. Runtime buttons still belong in the live preview surface.</p>
+      <p>Use config for user-editable values such as task names, intervals, units, display preferences, note bodies, todo text, and module modes. Runtime module buttons belong in the live preview surface; runtime suggestion chips belong in the launcher suggestion row.</p>
       <div class="two-grid">
         <div>
           <h3>Declare fields</h3>
@@ -658,11 +659,12 @@ end</pre>
     <section class="guide split" id="native-controls">
       <div>
         <div class="kicker">Native controls</div>
-        <h2>Buttons can live in the module, not only in suggestions.</h2>
-        <p>Lua modules still publish suggestion chips for keyboard-first use, but they can also render clickable controls directly inside the module panel. Use this for actions the user should see even when they ignore the suggestion row.</p>
+        <h2>Buttons and suggestions are separate surfaces.</h2>
+        <p>Lua modules can render clickable controls directly inside the module panel, or they can publish suggestion chips for keyboard-first use. Use module buttons for always-visible controls and suggestion chips when the panel should stay clean.</p>
         <div class="command-list">
           <div><strong>Callbacks:</strong> <code>ui:button(label)</code> maps to <code>on_click(index)</code>.</div>
           <div><strong>Commands:</strong> <code>ui:command_button</code> and <code>ui:module_button</code> run launcher commands from the module.</div>
+          <div><strong>Suggestions:</strong> <code>ui:suggest_action</code>, <code>ui:suggest_command</code>, <code>ui:suggest_module</code>, and <code>ui:suggest_text</code> add suggestion-row chips without adding module buttons.</div>
           <div><strong>Android:</strong> <code>ui:app_button</code>, <code>ui:intent_button</code>, and <code>ui:shortcut_button</code> require declared permissions and route through Re:T-UI commands.</div>
           <div><strong>Preformatted:</strong> plain text follows the theme font; <code>progress</code>, <code>divider</code>, <code>pre</code>, <code>ascii</code>, and <code>code</code> layout objects stay monospace.</div>
           <div><strong>Refresh:</strong> opening a Lua module re-renders it; tapping its title forces a refresh, so a default refresh chip is no longer needed.</div>
@@ -720,7 +722,7 @@ end</pre>
     <section class="guide" id="suggestions">
       <div class="kicker">Suggestion scripts</div>
       <h2>Not every Lua script needs to become a dock module.</h2>
-      <p>Lua suggestion scripts use <code>-- type = "suggest"</code>. They are installed locally like Lua modules, but they do not render into the dock. They add command chips while the user types at the root prompt.</p>
+      <p>Lua suggestion scripts use <code>-- type = "suggest"</code>. They are installed locally like Lua modules, but they do not render into the dock. They add suggestion chips while the user types at the root prompt.</p>
       <div class="two-grid">
         <div>
           <h3>Suggestion script</h3>
@@ -745,7 +747,7 @@ end</pre>
           <div class="command-list">
             <div><strong>Good fit:</strong> command shortcuts, context-aware chips, search helpers, aliases with logic.</div>
             <div><strong>Poor fit:</strong> visible panels, timers, status cards, note editors, or anything needing config UI.</div>
-            <div><strong>Rule:</strong> if users need to inspect state, make a Lua module. If users need command hints, make a suggestion script.</div>
+            <div><strong>Rule:</strong> if users need to inspect state, make a Lua module. If the same module needs a clean panel with chips below, use <code>ui:suggest_*</code>. If users only need command hints, make a suggestion script.</div>
           </div>
         </div>
       </div>
@@ -761,7 +763,7 @@ end</pre>
         </div>
         <div class="tile">
           <h3>Render</h3>
-          <p><code>ui:set_title</code>, <code>ui:show_text</code>, <code>ui:render</code>, <code>ui:layout</code>, <code>ui:show_lines</code>, <code>ui:show_kv</code>, <code>ui:show_table</code>, <code>ui:show_buttons</code>, <code>ui:button</code>, <code>ui:show_action</code>, <code>ui:show_command</code>.</p>
+          <p><code>ui:set_title</code>, <code>ui:show_text</code>, <code>ui:render</code>, <code>ui:layout</code>, <code>ui:show_lines</code>, <code>ui:show_kv</code>, <code>ui:show_table</code>, <code>ui:show_buttons</code>, <code>ui:button</code>, <code>ui:show_action</code>, <code>ui:show_command</code>, <code>ui:suggest_action</code>, <code>ui:suggest_command</code>, <code>ui:suggest_module</code>, <code>ui:suggest_text</code>.</p>
         </div>
         <div class="tile">
           <h3>Panels</h3>
