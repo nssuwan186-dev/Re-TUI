@@ -184,6 +184,7 @@ termux -app-info myapp
 termux -app-sync myapp
 termux -app-actions myapp
 termux -app-action myapp "restart service" r
+termux -app-rm myapp
 ```
 
 Re:T-UI owns app registration. A cloned shell project does not need to include a Re:T-UI manifest. When an app is registered or opened, Re:T-UI mirrors metadata into:

@@ -278,6 +278,7 @@ Common commands:
 - `termux -app-actions <id>`
 - `termux -app-action <id> <label> [input]`
 - `termux -app-action-rm <id> <label>`
+- `termux -app-rm <id>` or `termux -rm-app <id>`
 
 Script aliases use the `-s` alias scope:
 
@@ -286,7 +287,7 @@ Script aliases use the `-s` alias scope:
 
 Use this for scripts that print output and exit. Open Termux directly for interactive shells, editors, SSH sessions, and REPLs.
 
-Termux apps are tmux-backed sessions shown inside the Re:T-UI Termux surface. Register one with `termux -app-add <id> <command>`, then open it with `termux -app <id>`. Inside a Termux app, normal input is sent to the session; local commands use a colon prefix: `:refresh`, `:restart`, `:stop`, `:detach`, and `:open`.
+Termux apps are tmux-backed sessions shown inside the Re:T-UI Termux surface. Register one with `termux -app-add <id> <command>`, remove one with `termux -app-rm <id>`, then open it with `termux -app <id>`. Inside a Termux app, normal input is sent to the session; local commands use a colon prefix: `:refresh`, `:restart`, `:stop`, `:detach`, and `:open`.
 
 Re:T-UI mirrors a small app manifest into `~/.retui/apps/<id>/app.json` when an app is registered or opened. Scripts launched through the app surface receive `RETUI_APP_ID`, `RETUI_APP_HOME`, `RETUI_APP_STATE`, and `RETUI_APP_MANIFEST`. Use `termux -app-info <id>` to inspect the local registration and `termux -app-sync <id>` to explicitly rewrite the Termux-side manifest. Static action chips can be added with `termux -app-action <id> <label> [input]`.
 

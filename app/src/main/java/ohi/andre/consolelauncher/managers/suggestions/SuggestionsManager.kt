@@ -1551,6 +1551,14 @@ class SuggestionsManager(
             suggestions.add(
                 Suggestion(
                     null,
+                    "termux -add-app",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
                     "termux -app-info",
                     false,
                     Suggestion.Companion.TYPE_PERMANENT
@@ -1584,6 +1592,22 @@ class SuggestionsManager(
                 Suggestion(
                     null,
                     "termux -app-action-rm",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -app-rm",
+                    false,
+                    Suggestion.Companion.TYPE_PERMANENT
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    null,
+                    "termux -rm-app",
                     false,
                     Suggestion.Companion.TYPE_PERMANENT
                 )
@@ -1981,6 +2005,14 @@ class SuggestionsManager(
             suggestions.add(
                 Suggestion(
                     beforeLastSpace,
+                    "-add-app",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
                     "-app-info",
                     false,
                     Suggestion.Companion.TYPE_COMMAND
@@ -2014,6 +2046,22 @@ class SuggestionsManager(
                 Suggestion(
                     beforeLastSpace,
                     "-app-action-rm",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-app-rm",
+                    false,
+                    Suggestion.Companion.TYPE_COMMAND
+                )
+            )
+            suggestions.add(
+                Suggestion(
+                    beforeLastSpace,
+                    "-rm-app",
                     false,
                     Suggestion.Companion.TYPE_COMMAND
                 )
@@ -2067,6 +2115,8 @@ class SuggestionsManager(
             || "termux -app-action-rm" == normalized || "termux app-action-rm" == normalized
             || "termux -app-info" == normalized || "termux app-info" == normalized
             || "termux -app-sync" == normalized || "termux app-sync" == normalized
+            || "termux -app-rm" == normalized || "termux app-rm" == normalized
+            || "termux -rm-app" == normalized || "termux rm-app" == normalized
         ) {
             suggestTermuxAppIds(suggestions, afterLastSpace, beforeLastSpace)
         } else if ("tbridge" == normalized) {

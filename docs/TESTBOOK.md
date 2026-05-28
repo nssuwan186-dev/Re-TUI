@@ -256,6 +256,8 @@ Create or update a script to output:
 - Confirm the session stops cleanly.
 - Run `termux -app-action-rm testapp "continue"`.
 - Confirm `continue` no longer appears in `termux -app-actions testapp`.
+- Run `termux -app-rm testapp`.
+- Confirm `testapp` no longer appears in `termux -apps`.
 
 ## Cross-Phase Regression
 

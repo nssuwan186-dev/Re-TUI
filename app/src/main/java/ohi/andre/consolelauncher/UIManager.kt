@@ -6217,13 +6217,13 @@ class UIManager(
             appendTermuxLine("run <script|alias> [args...] -> dispatch a Termux script")
             appendTermuxLine("apps    -> list Re:T-UI Termux apps")
             appendTermuxLine("app <id> -> open a persistent tmux-backed app session")
-            appendTermuxLine("app-add <id> <command> -> register a custom Termux app")
+            appendTermuxLine("app-add/add-app <id> <command> -> register a custom Termux app")
             appendTermuxLine("app-info <id> -> inspect a registered Termux app")
             appendTermuxLine("app-sync <id> -> write its manifest into Termux")
             appendTermuxLine("app-actions <id> -> list static app action chips")
             appendTermuxLine("app-action <id> <label> [input] -> add an app action chip")
             appendTermuxLine("app-action-rm <id> <label> -> remove a custom app action")
-            appendTermuxLine("app-rm <id> -> remove a custom Termux app")
+            appendTermuxLine("app-rm/rm-app <id> -> remove a custom Termux app")
             appendTermuxLine("clear   -> clear this console")
             appendTermuxLine("exit    -> close this console")
         } else if ("status" == lower) {
@@ -6242,7 +6242,9 @@ class UIManager(
             syncTermuxCustomApp(command)
         } else if ("app" == lower || lower.startsWith("app ")) {
             openTermuxCustomApp(command)
-        } else if ("app-add" == lower || lower.startsWith("app-add ")) {
+        } else if ("app-add" == lower || lower.startsWith("app-add ")
+            || "add-app" == lower || lower.startsWith("add-app ")
+        ) {
             addTermuxCustomApp(command)
         } else if ("app-actions" == lower || lower.startsWith("app-actions ")) {
             appendTermuxAppActions(command)
@@ -6252,6 +6254,8 @@ class UIManager(
             addTermuxAppAction(command)
         } else if ("app-rm" == lower || lower.startsWith("app-rm ")
             || "app-remove" == lower || lower.startsWith("app-remove ")
+            || "rm-app" == lower || lower.startsWith("rm-app ")
+            || "remove-app" == lower || lower.startsWith("remove-app ")
         ) {
             removeTermuxCustomApp(command)
         } else if ("cd" == lower || lower.startsWith("cd ")) {
@@ -6428,6 +6432,7 @@ class UIManager(
         val parts = Tuils.splitArgs(command)
         if (parts.size < 2) {
             appendTermuxLine("usage: app-rm <id>")
+            appendTermuxLine("alias: rm-app <id>")
             return
         }
         val id = TermuxAppManager.normalizeId(parts.get(1))
