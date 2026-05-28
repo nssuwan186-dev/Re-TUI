@@ -8,7 +8,7 @@ import ohi.andre.consolelauncher.UIManager
 import ohi.andre.consolelauncher.tuils.Tuils
 
 object GuideManager {
-    private const val PREFS = "retui_guide"
+    const val PREFS = "retui_guide"
     private const val KEY_ACTIVE = "active"
     private const val KEY_PATH = "path"
     private const val KEY_STEP = "step"

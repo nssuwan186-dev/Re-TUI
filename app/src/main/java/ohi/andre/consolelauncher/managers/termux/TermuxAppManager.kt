@@ -10,7 +10,7 @@ import java.util.LinkedHashSet
 import java.util.Locale
 
 object TermuxAppManager {
-    private const val PREFS = "retui_termux_apps"
+    const val PREFS = "retui_termux_apps"
     private const val KEY_IDS = "ids"
     private const val KEY_TITLE_PREFIX = "title_"
     private const val KEY_COMMAND_PREFIX = "command_"

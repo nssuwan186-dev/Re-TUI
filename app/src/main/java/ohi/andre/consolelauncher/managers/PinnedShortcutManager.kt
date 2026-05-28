@@ -19,7 +19,7 @@ import java.util.Locale
 object PinnedShortcutManager {
     const val HANDLE_PREFIX: String = "@"
 
-    private const val PREFS = "pinned_shortcuts"
+    const val PREFS = "pinned_shortcuts"
     private const val KEY_PREFIX = "shortcut."
 
     fun normalizeHandle(handle: String?): String {

@@ -30,6 +30,9 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
+import ohi.andre.consolelauncher.managers.onboarding.GuideManager
+import ohi.andre.consolelauncher.managers.termux.TermuxAppManager
+import ohi.andre.consolelauncher.managers.widgets.LuaWidgetReminderManager
 import ohi.andre.consolelauncher.managers.xml.XMLPrefsManager
 import ohi.andre.consolelauncher.tuils.Tuils
 
@@ -63,11 +66,15 @@ object BackupManager {
     private val PERSONAL_PREFS = kotlin.arrayOf<kotlin.String?>(
         "ui",
         "apps",
+        PinnedShortcutManager.PREFS,
         "retui_modules",
         "retui_reminders",
+        LuaWidgetReminderManager.PREFS,
+        TermuxAppManager.PREFS,
         "retui_module_prompt",
         "retui_callback_auth",
         "pomodoro_state",
+        GuideManager.PREFS,
         "changelogPrefs"
     )
 

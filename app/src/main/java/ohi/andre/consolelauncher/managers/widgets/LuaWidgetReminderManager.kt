@@ -18,7 +18,7 @@ import kotlin.math.abs
 object LuaWidgetReminderManager {
     const val EXTRA_KEY: String = "lua_widget_reminder_key"
 
-    private const val PREFS = "retui_lua_widget_reminders"
+    const val PREFS = "retui_lua_widget_reminders"
     private const val KEY_IDS = "ids"
     private const val KEY_WIDGET_PREFIX = "widget_"
     private const val KEY_REMINDER_PREFIX = "reminder_"
